@@ -1,0 +1,13 @@
+id,name,amount,description,office_id,permit_type
+sf-departments-fee-1,Building Permit Application Fee,175.0,Base fee for building permit application review,sf-departments,Building
+sf-departments-fee-2,Plan Review Fee,350.0,Fee for detailed plan review by department engineers,sf-departments,Building
+sf-departments-fee-3,Inspection Fee,250.0,Fee for on-site inspections during construction,sf-departments,Building
+sf-department-of-building-inspection-fee-1,Building Permit Application Fee,175.0,Base fee for building permit application review,sf-department-of-building-inspection,Building
+sf-department-of-building-inspection-fee-2,Plan Review Fee,350.0,Fee for detailed plan review by department engineers,sf-department-of-building-inspection,Building
+sf-department-of-building-inspection-fee-3,Inspection Fee,250.0,Fee for on-site inspections during construction,sf-department-of-building-inspection,Building
+sf-sf-planning-fee-1,Building Permit Application Fee,175.0,Base fee for building permit application review,sf-sf-planning,Building
+sf-sf-planning-fee-2,Plan Review Fee,350.0,Fee for detailed plan review by department engineers,sf-sf-planning,Building
+sf-sf-planning-fee-3,Inspection Fee,250.0,Fee for on-site inspections during construction,sf-sf-planning,Building
+sf-fire-department-fee-1,Building Permit Application Fee,175.0,Base fee for building permit application review,sf-fire-department,Building
+sf-fire-department-fee-2,Plan Review Fee,350.0,Fee for detailed plan review by department engineers,sf-fire-department,Building
+sf-fire-department-fee-3,Inspection Fee,250.0,Fee for on-site inspections during construction,sf-fire-department,Building

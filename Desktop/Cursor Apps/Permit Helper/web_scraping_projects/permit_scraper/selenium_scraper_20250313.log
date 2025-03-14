@@ -1,0 +1,307 @@
+2025-03-13 20:53:04,639 - WDM - INFO - ====== WebDriver manager ======
+2025-03-13 20:53:04,778 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-03-13 20:53:05,835 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-03-13 20:53:05,889 - WDM - INFO - There is no [mac64] chromedriver "134.0.6998.88" for browser google-chrome "134.0.6998" in cache
+2025-03-13 20:53:05,895 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-03-13 20:53:13,954 - WDM - INFO - WebDriver version 134.0.6998.88 selected
+2025-03-13 20:53:13,956 - WDM - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.88/mac-arm64/chromedriver-mac-arm64.zip
+2025-03-13 20:53:13,956 - WDM - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.88/mac-arm64/chromedriver-mac-arm64.zip
+2025-03-13 20:53:14,073 - WDM - INFO - Driver downloading response is 200
+2025-03-13 20:53:18,371 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-03-13 20:53:18,516 - WDM - INFO - Driver has been saved in cache [/Users/edwardharrison/.wdm/drivers/chromedriver/mac64/134.0.6998.88]
+2025-03-13 20:53:20,365 - __main__ - INFO - WebDriver set up successfully
+2025-03-13 20:53:20,365 - __main__ - INFO - Initialized Selenium scraper
+2025-03-13 20:53:20,365 - __main__ - INFO - Searching for permit offices near 123 Main St, San Francisco, CA
+2025-03-13 20:53:34,642 - __main__ - INFO - No cookie consent dialog found or it was already accepted
+2025-03-13 20:53:49,928 - __main__ - ERROR - Error processing result: Message: element not interactable
+  (Session info: chrome=134.0.6998.89)
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1d1c cxxbridge1$string$len + 92532
+3   chromedriver                        0x000000010461a12c cxxbridge1$string$len + 388484
+4   chromedriver                        0x000000010460edec cxxbridge1$string$len + 342596
+5   chromedriver                        0x000000010460e878 cxxbridge1$string$len + 341200
+6   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+7   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+8   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+9   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+10  chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+11  chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+12  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+13  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+14  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+15  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+16  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+17  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:54:10,161 - __main__ - WARNING - Could not find address for City and County of San Francisco Permit Center
+2025-03-13 20:54:20,178 - __main__ - WARNING - Could not find phone for City and County of San Francisco Permit Center
+2025-03-13 20:54:30,197 - __main__ - WARNING - Could not find website for City and County of San Francisco Permit Center
+2025-03-13 20:54:40,235 - __main__ - WARNING - Could not find hours for City and County of San Francisco Permit Center
+2025-03-13 20:54:50,290 - __main__ - ERROR - Error processing result: Message: no such element: Unable to locate element: {"method":"xpath","selector":"//button[@aria-label='Back']"}
+  (Session info: chrome=134.0.6998.89); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x00000001046191d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+6   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:55:12,195 - __main__ - WARNING - Could not find hours for City and County of San Francisco Permit Center
+2025-03-13 20:55:22,221 - __main__ - ERROR - Error processing result: Message: no such element: Unable to locate element: {"method":"xpath","selector":"//button[@aria-label='Back']"}
+  (Session info: chrome=134.0.6998.89); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x00000001046191d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+6   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:55:42,366 - __main__ - WARNING - Could not find hours for City and County of San Francisco Permit Center
+2025-03-13 20:55:52,418 - __main__ - ERROR - Error processing result: Message: no such element: Unable to locate element: {"method":"xpath","selector":"//button[@aria-label='Back']"}
+  (Session info: chrome=134.0.6998.89); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x00000001046191d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+6   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:56:12,597 - __main__ - WARNING - Could not find hours for City and County of San Francisco Permit Center
+2025-03-13 20:56:22,662 - __main__ - ERROR - Error processing result: Message: no such element: Unable to locate element: {"method":"xpath","selector":"//button[@aria-label='Back']"}
+  (Session info: chrome=134.0.6998.89); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x00000001046191d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+6   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:56:32,711 - __main__ - INFO - Found 4 permit offices
+2025-03-13 20:56:32,741 - __main__ - INFO - Saved data to output/selenium_permit_offices.csv
+2025-03-13 20:56:32,741 - __main__ - INFO - Fetching permit forms for office city-and-county-of-san-francisco-permit-center
+2025-03-13 20:56:56,250 - __main__ - ERROR - Error fetching permit forms: Message: 
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x00000001046191d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+6   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:56:56,251 - __main__ - INFO - Using mock form data
+2025-03-13 20:56:56,251 - __main__ - INFO - Using 2 mock permit forms for office city-and-county-of-san-francisco-permit-center
+2025-03-13 20:56:56,251 - __main__ - INFO - Fetching permit forms for office city-and-county-of-san-francisco-permit-center
+2025-03-13 20:57:13,538 - __main__ - ERROR - Error fetching permit forms: Message: 
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x00000001046191d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+6   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:57:13,538 - __main__ - INFO - Using mock form data
+2025-03-13 20:57:13,538 - __main__ - INFO - Using 2 mock permit forms for office city-and-county-of-san-francisco-permit-center
+2025-03-13 20:57:13,538 - __main__ - INFO - Fetching permit forms for office city-and-county-of-san-francisco-permit-center
+2025-03-13 20:57:24,348 - __main__ - ERROR - Error fetching permit forms: Message: 
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x00000001046191d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+6   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:57:24,348 - __main__ - INFO - Using mock form data
+2025-03-13 20:57:24,348 - __main__ - INFO - Using 2 mock permit forms for office city-and-county-of-san-francisco-permit-center
+2025-03-13 20:57:24,349 - __main__ - INFO - Fetching permit forms for office city-and-county-of-san-francisco-permit-center
+2025-03-13 20:57:47,345 - __main__ - ERROR - Error fetching permit forms: Message: 
+Stacktrace:
+0   chromedriver                        0x0000000104a85804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x0000000104a7dddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x00000001045d1ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x00000001046191d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x000000010465a678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x000000010460d35c cxxbridge1$string$len + 335796
+6   chromedriver                        0x0000000104a4acd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x0000000104a4dfa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x0000000104a2ad04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x0000000104a4e800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x0000000104a1bba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x0000000104a6e45c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x0000000104a6e5e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x0000000104a7da50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 20:57:47,345 - __main__ - INFO - Using mock form data
+2025-03-13 20:57:47,346 - __main__ - INFO - Using 2 mock permit forms for office city-and-county-of-san-francisco-permit-center
+2025-03-13 20:57:47,349 - __main__ - INFO - Saved data to output/selenium_permit_forms.csv
+2025-03-13 20:57:47,349 - __main__ - INFO - Scraping completed successfully
+2025-03-13 20:57:47,505 - __main__ - INFO - WebDriver closed
+2025-03-13 21:04:46,626 - __main__ - INFO - Processing city: atlanta
+2025-03-13 21:04:46,626 - WDM - INFO - ====== WebDriver manager ======
+2025-03-13 21:04:46,745 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-03-13 21:04:46,895 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-03-13 21:04:47,052 - WDM - INFO - Driver [/Users/edwardharrison/.wdm/drivers/chromedriver/mac64/134.0.6998.88/chromedriver-mac-arm64/chromedriver] found in cache
+2025-03-13 21:04:48,250 - __main__ - INFO - WebDriver set up successfully
+2025-03-13 21:04:48,250 - __main__ - INFO - Initialized Selenium scraper for atlanta
+2025-03-13 21:04:48,250 - __main__ - INFO - Searching for permit offices in Atlanta, GA
+2025-03-13 21:04:48,251 - __main__ - INFO - Executing function for: atlanta_permit_offices
+2025-03-13 21:05:00,052 - __main__ - INFO - No cookie consent dialog found or it was already accepted
+2025-03-13 21:05:14,231 - __main__ - ERROR - Error searching for permit offices: Message: element not interactable
+  (Session info: chrome=134.0.6998.89)
+Stacktrace:
+0   chromedriver                        0x00000001032f9804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x00000001032f1ddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x0000000102e45d1c cxxbridge1$string$len + 92532
+3   chromedriver                        0x0000000102e8e12c cxxbridge1$string$len + 388484
+4   chromedriver                        0x0000000102e82dec cxxbridge1$string$len + 342596
+5   chromedriver                        0x0000000102e82878 cxxbridge1$string$len + 341200
+6   chromedriver                        0x0000000102ece678 cxxbridge1$string$len + 651984
+7   chromedriver                        0x0000000102e8135c cxxbridge1$string$len + 335796
+8   chromedriver                        0x00000001032becd4 cxxbridge1$str$ptr + 2545532
+9   chromedriver                        0x00000001032c1fa0 cxxbridge1$str$ptr + 2558536
+10  chromedriver                        0x000000010329ed04 cxxbridge1$str$ptr + 2414508
+11  chromedriver                        0x00000001032c2800 cxxbridge1$str$ptr + 2560680
+12  chromedriver                        0x000000010328fba0 cxxbridge1$str$ptr + 2352712
+13  chromedriver                        0x00000001032e245c cxxbridge1$str$ptr + 2690820
+14  chromedriver                        0x00000001032e25e4 cxxbridge1$str$ptr + 2691212
+15  chromedriver                        0x00000001032f1a50 cxxbridge1$str$ptr + 2753784
+16  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+17  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 21:05:14,232 - __main__ - INFO - Using mock data instead
+2025-03-13 21:05:14,240 - __main__ - INFO - Saved data to output/atlanta_permit_offices.csv
+2025-03-13 21:05:14,240 - __main__ - INFO - Saved data to output/atlanta_permit_offices.json
+2025-03-13 21:05:14,240 - __main__ - INFO - Fetching permit forms for Atlanta
+2025-03-13 21:05:14,240 - __main__ - INFO - Executing function for: atlanta_permit_forms
+2025-03-13 21:05:25,391 - __main__ - INFO - No cookie consent dialog found or it was already accepted
+2025-03-13 21:05:35,493 - __main__ - ERROR - Error searching for permit forms: Message: 
+Stacktrace:
+0   chromedriver                        0x00000001032f9804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x00000001032f1ddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x0000000102e45ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x0000000102e8d1d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x0000000102ece678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x0000000102e8135c cxxbridge1$string$len + 335796
+6   chromedriver                        0x00000001032becd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x00000001032c1fa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x000000010329ed04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x00000001032c2800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x000000010328fba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x00000001032e245c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x00000001032e25e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x00000001032f1a50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 21:05:35,494 - __main__ - INFO - Using mock form data
+2025-03-13 21:05:35,494 - __main__ - INFO - Using 2 mock permit forms for Atlanta
+2025-03-13 21:05:35,495 - __main__ - INFO - Saved data to output/atlanta_permit_forms.csv
+2025-03-13 21:05:35,495 - __main__ - INFO - Saved data to output/atlanta_permit_forms.json
+2025-03-13 21:05:35,495 - __main__ - INFO - Fetching permit forms for Atlanta
+2025-03-13 21:05:35,495 - __main__ - INFO - Executing function for: ga-atlanta-building-permit-office_forms
+2025-03-13 21:06:06,126 - __main__ - INFO - No cookie consent dialog found or it was already accepted
+2025-03-13 21:06:16,808 - __main__ - ERROR - Error searching for permit forms: Message: 
+Stacktrace:
+0   chromedriver                        0x00000001032f9804 cxxbridge1$str$ptr + 2785964
+1   chromedriver                        0x00000001032f1ddc cxxbridge1$str$ptr + 2754692
+2   chromedriver                        0x0000000102e45ea8 cxxbridge1$string$len + 92928
+3   chromedriver                        0x0000000102e8d1d0 cxxbridge1$string$len + 384552
+4   chromedriver                        0x0000000102ece678 cxxbridge1$string$len + 651984
+5   chromedriver                        0x0000000102e8135c cxxbridge1$string$len + 335796
+6   chromedriver                        0x00000001032becd4 cxxbridge1$str$ptr + 2545532
+7   chromedriver                        0x00000001032c1fa0 cxxbridge1$str$ptr + 2558536
+8   chromedriver                        0x000000010329ed04 cxxbridge1$str$ptr + 2414508
+9   chromedriver                        0x00000001032c2800 cxxbridge1$str$ptr + 2560680
+10  chromedriver                        0x000000010328fba0 cxxbridge1$str$ptr + 2352712
+11  chromedriver                        0x00000001032e245c cxxbridge1$str$ptr + 2690820
+12  chromedriver                        0x00000001032e25e4 cxxbridge1$str$ptr + 2691212
+13  chromedriver                        0x00000001032f1a50 cxxbridge1$str$ptr + 2753784
+14  libsystem_pthread.dylib             0x00000001943c42e4 _pthread_start + 136
+15  libsystem_pthread.dylib             0x00000001943bf0fc thread_start + 8
+
+2025-03-13 21:06:16,809 - __main__ - INFO - Using mock form data
+2025-03-13 21:06:16,809 - __main__ - INFO - Using 2 mock permit forms for Atlanta
+2025-03-13 21:06:16,812 - __main__ - INFO - Saved data to output/ga-atlanta-building-permit-office_forms.csv
+2025-03-13 21:06:16,812 - __main__ - INFO - Saved data to output/ga-atlanta-building-permit-office_forms.json
+2025-03-13 21:06:16,812 - __main__ - INFO - Completed scraping for atlanta
+2025-03-13 21:06:16,943 - __main__ - INFO - WebDriver closed
+2025-03-13 21:06:16,946 - __main__ - INFO - Scraping completed successfully

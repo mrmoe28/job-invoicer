@@ -1,0 +1,5 @@
+name,id,city,state,website
+Departments,sf-departments,San Francisco,CA,https://sf.gov/departments
+Department of Building Inspection,sf-department-of-building-inspection,San Francisco,CA,https://sf.gov/departments--department-building-inspection
+SF Planning,sf-sf-planning,San Francisco,CA,https://sf.gov/departments--sf-planning
+Fire Department,sf-fire-department,San Francisco,CA,https://sf.gov/departments--fire-department

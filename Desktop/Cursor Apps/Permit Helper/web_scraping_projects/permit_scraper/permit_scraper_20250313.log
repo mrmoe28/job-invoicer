@@ -1,0 +1,22 @@
+2025-03-13 20:52:32,016 - __main__ - INFO - Initialized scraper for https://sf.gov
+2025-03-13 20:52:32,016 - __main__ - INFO - Fetching permit office information from San Francisco government website
+2025-03-13 20:52:33,730 - __main__ - INFO - Found 4 permit offices
+2025-03-13 20:52:33,733 - __main__ - INFO - Saved data to output/permit_offices.csv
+2025-03-13 20:52:33,733 - __main__ - INFO - Fetching permit fees for office sf-departments
+2025-03-13 20:52:34,488 - __main__ - WARNING - Error fetching permit fees: 404 Client Error: Not Found for url: https://sfdbi.org/permit-fees
+2025-03-13 20:52:34,489 - __main__ - INFO - Using mock fee data
+2025-03-13 20:52:34,489 - __main__ - INFO - Using 3 mock permit fees for office sf-departments
+2025-03-13 20:52:34,489 - __main__ - INFO - Fetching permit fees for office sf-department-of-building-inspection
+2025-03-13 20:52:34,559 - __main__ - WARNING - Error fetching permit fees: 404 Client Error: Not Found for url: https://sfdbi.org/permit-fees
+2025-03-13 20:52:34,559 - __main__ - INFO - Using mock fee data
+2025-03-13 20:52:34,559 - __main__ - INFO - Using 3 mock permit fees for office sf-department-of-building-inspection
+2025-03-13 20:52:34,559 - __main__ - INFO - Fetching permit fees for office sf-sf-planning
+2025-03-13 20:52:34,624 - __main__ - WARNING - Error fetching permit fees: 404 Client Error: Not Found for url: https://sfdbi.org/permit-fees
+2025-03-13 20:52:34,624 - __main__ - INFO - Using mock fee data
+2025-03-13 20:52:34,624 - __main__ - INFO - Using 3 mock permit fees for office sf-sf-planning
+2025-03-13 20:52:34,624 - __main__ - INFO - Fetching permit fees for office sf-fire-department
+2025-03-13 20:52:34,701 - __main__ - WARNING - Error fetching permit fees: 404 Client Error: Not Found for url: https://sfdbi.org/permit-fees
+2025-03-13 20:52:34,701 - __main__ - INFO - Using mock fee data
+2025-03-13 20:52:34,701 - __main__ - INFO - Using 3 mock permit fees for office sf-fire-department
+2025-03-13 20:52:34,702 - __main__ - INFO - Saved data to output/permit_fees.csv
+2025-03-13 20:52:34,702 - __main__ - INFO - Scraping completed successfully

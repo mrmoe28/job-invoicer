@@ -1,0 +1,2 @@
+id,name,address,city,state,zip,phone,email,website,hours,distance,source,source_city,scraped_at
+ga-atlanta-building-permit-office,Atlanta Building Permit Office,"55 Trinity Ave SW, Atlanta, GA 30303",Atlanta,GA,30303,(404) 330-6150,buildingpermits@atlantaga.gov,https://www.atlantaga.gov/government/departments/city-planning/office-of-buildings/permits-certificates,Monday-Friday: 8:30 AM - 3:30 PM,0.5,mock_data,atlanta,2025-03-13 21:05:14

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ga-atlanta-building-permit-office-form-1",
+    "title": "Building Permit Application",
+    "description": "Standard application form for building permits in Atlanta",
+    "file_url": "https://www.atlantaga.gov/home/showdocument?id=12345",
+    "file_type": "application/pdf",
+    "file_size": 250000,
+    "last_updated": "2023-01-15",
+    "office_id": "ga-atlanta-building-permit-office",
+    "permit_type": "Building",
+    "source": "mock_data",
+    "source_city": "atlanta",
+    "scraped_at": "2025-03-13 21:06:16"
+  },
+  {
+    "id": "ga-atlanta-building-permit-office-form-2",
+    "title": "Residential Project Worksheet",
+    "description": "Additional worksheet required for residential projects in Atlanta",
+    "file_url": "https://www.atlantaga.gov/home/showdocument?id=67890",
+    "file_type": "application/pdf",
+    "file_size": 180000,
+    "last_updated": "2023-02-10",
+    "office_id": "ga-atlanta-building-permit-office",
+    "permit_type": "Building",
+    "source": "mock_data",
+    "source_city": "atlanta",
+    "scraped_at": "2025-03-13 21:06:16"
+  }
+]
