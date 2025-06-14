@@ -1,0 +1,62 @@
+{
+  "name": "pulsecrm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Modern React-based CRM dashboard for crew management with intelligent interfaces and advanced collaboration tools",
+  "engines": {
+    "node": ">=18.17.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.10.0",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "test": "turbo test",
+    "clean": "turbo clean && rm -rf node_modules",
+    "db:push": "turbo db:push",
+    "db:studio": "turbo db:studio",
+    "db:seed": "turbo db:seed",
+    "storybook": "turbo storybook",
+    "prepare": "husky install",
+    "docker:dev": "docker-compose -f docker/docker-compose.dev.yml up",
+    "docker:build": "docker build -f docker/prod.Dockerfile -t pulsecrm:latest ."
+  },
+  "dependencies": {
+    "dotenv-cli": "^7.3.0",
+    "next": "^15.3.3"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
+    "@types/node": "^20.10.5",
+    "eslint": "^8.56.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.1.1",
+    "turbo": "^1.11.2",
+    "typescript": "^5.3.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "printWidth": 100
+  }
+}
