@@ -1,0 +1,52 @@
+{
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "emmet.includeLanguages": {
+    "typescript": "typescriptreact",
+    "javascript": "javascriptreact"
+  },
+  "tailwindCSS.includeLanguages": {
+    "typescript": "typescript",
+    "typescriptreact": "typescriptreact"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    "cn\\(([^)]*)\\)",
+    "clsx\\(([^)]*)\\)"
+  ],
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/.turbo": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.git": true,
+    "**/coverage": true,
+    "**/.nyc_output": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/.turbo/**": true
+  },
+  "eslint.workingDirectories": [
+    "apps/web",
+    "packages/api",
+    "packages/db",
+    "packages/ui"
+  ],
+  "typescript.preferences.importModuleSpecifier": "relative"
+}

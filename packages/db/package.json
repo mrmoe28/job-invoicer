@@ -1,0 +1,24 @@
+{
+  "name": "@pulsecrm/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "db:push": "drizzle-kit push:pg",
+    "db:studio": "drizzle-kit studio",
+    "db:generate": "drizzle-kit generate:pg"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.29.1",
+    "postgres": "^3.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "drizzle-kit": "^0.20.6",
+    "typescript": "^5.3.3"
+  }
+}

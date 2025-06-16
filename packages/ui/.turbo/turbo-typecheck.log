@@ -1,0 +1,4 @@
+
+> @pulsecrm/ui@0.1.0 typecheck /Volumes/ORICO/Development/constructflow/packages/ui
+> tsc --noEmit
+

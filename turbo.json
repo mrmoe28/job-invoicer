@@ -12,7 +12,6 @@
       "cache": true
     },
     "dev": {
-      "dependsOn": ["^db:push"],
       "cache": false,
       "persistent": true
     },
