@@ -1,0 +1,7 @@
+
+> @pulsecrm/web@0.1.0 typecheck /Volumes/ORICO/Development/constructflow/apps/web
+> tsc --noEmit
+
+app/api/trpc/[trpc]/route.ts(2,27): error TS2307: Cannot find module '@pulsecrm/api' or its corresponding type declarations.
+lib/trpc.ts(2,32): error TS2307: Cannot find module '@pulsecrm/api' or its corresponding type declarations.
+ ELIFECYCLE  Command failed with exit code 2.
