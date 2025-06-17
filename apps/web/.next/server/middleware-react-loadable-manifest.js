@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}"
+self.__REACT_LOADABLE_MANIFEST='{"app/dashboard/documents/page.tsx -> ../../../components/pdf-viewer":{"id":4760,"files":["static/chunks/760.1a8ad0c9036e557f.js"]}}';

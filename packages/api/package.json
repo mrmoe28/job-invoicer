@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@trpc/server": "^10.45.2",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@pulsecrm/db": "workspace:*",
+    "drizzle-orm": "^0.29.1"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",

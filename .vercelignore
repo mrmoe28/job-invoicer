@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+.turbo/
+dist/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Development files
+.vscode/
+.idea/
+*.log
+
+# Database
+*.db
+*.db-journal
+
+# Other
+.DS_Store
+thumbs.db
+deployment/
+docker/
+backups/

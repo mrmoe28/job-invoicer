@@ -16,7 +16,14 @@ export default function TasksPage() {
   const filterTabs = ['All (0)', 'Not Started (0)', 'In Progress (0)', 'Completed (0)'];
 
   // Tasks state and persistence
-  const [tasks, setTasks] = useState(() => {
+  const [tasks, setTasks] = useState<Array<{
+    title: string;
+    priority: string;
+    description: string;
+    dueDate: string;
+    status: string;
+    id?: string;
+  }>>(() => {
     if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem('tasks');
@@ -35,7 +42,7 @@ export default function TasksPage() {
 
   const handleAddTask = useCallback(() => {
     if (!taskForm.title.trim()) return;
-    setTasks(prev => [
+    setTasks((prev: typeof tasks) => [
       ...prev,
       {
         ...taskForm,

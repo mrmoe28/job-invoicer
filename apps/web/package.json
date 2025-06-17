@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@pulsecrm/api": "workspace:*",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@react-pdf-viewer/core": "^3.12.0",
     "@react-pdf-viewer/default-layout": "^3.12.0",
@@ -23,7 +24,6 @@
     "lucide-react": "^0.515.0",
     "next": "^14.2.18",
     "pdfjs-dist": "^5.3.31",
-    "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^3.3.1",
     "zod": "^3.25.64"
@@ -32,7 +32,6 @@
     "@netlify/plugin-nextjs": "^5.11.2",
     "@next/bundle-analyzer": "^15.3.3",
     "@types/node": "^20.10.5",
-    "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.56.0",

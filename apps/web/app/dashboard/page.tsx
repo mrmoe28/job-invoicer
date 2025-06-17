@@ -12,6 +12,8 @@ export default function DashboardPage() {
   const [selectedTimeframe, setSelectedTimeframe] = useState('Monthly');
   const hello = trpc.hello.useQuery({ name: 'Team' });
   const users = trpc.getUsers.useQuery();
+  const dashboardStats = trpc.getDashboardStats.useQuery();
+  const recentJobs = trpc.getJobs.useQuery({});
 
   // Navigation handlers
   const handleAddContact = () => {
@@ -39,57 +41,29 @@ export default function DashboardPage() {
     router.push(`/dashboard/scheduling?date=2025-06-${day.toString().padStart(2, '0')}`);
   };
 
-  // Mock data for dashboard - in a real app, this would come from an API
-  const [metrics] = useState<DashboardMetrics>({
-    totalContacts: 24,
-    activeJobs: 8,
-    completedJobsThisMonth: 12,
-    totalRevenue: 125600,
-    averageJobValue: 10466,
-    conversionRate: 0.68,
-    completionRate: 0.89,
-    crewUtilization: 0.76
-  });
+  // Use real data from the database or fallback to defaults
+  const metrics = dashboardStats.data ? {
+    totalContacts: dashboardStats.data.totalContacts,
+    activeJobs: dashboardStats.data.activeJobs,
+    completedJobsThisMonth: dashboardStats.data.completedJobs,
+    totalRevenue: 125600, // This would come from invoices table when implemented
+    averageJobValue: 10466, // This would be calculated from job budgets
+    conversionRate: 0.68, // This would be calculated from job statuses
+    completionRate: dashboardStats.data.completionRate,
+    crewUtilization: 0.76 // This would be calculated from time entries
+  } : {
+    totalContacts: 0,
+    activeJobs: 0,
+    completedJobsThisMonth: 0,
+    totalRevenue: 0,
+    averageJobValue: 0,
+    conversionRate: 0,
+    completionRate: 0,
+    crewUtilization: 0
+  };
 
-  const [recentJobs] = useState<Job[]>([
-    {
-      id: '1',
-      title: 'Kitchen Renovation - Downtown Condo',
-      contactId: 'c1',
-      status: 'In Progress',
-      priority: 'High',
-      startDate: new Date('2024-01-15'),
-      endDate: new Date('2024-02-28'),
-      budget: 45000,
-      location: '1234 Main St, Downtown',
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-01-20'),
-    },
-    {
-      id: '2',
-      title: 'Bathroom Remodel - Suburban Home',
-      contactId: 'c2',
-      status: 'Scheduled',
-      priority: 'Medium',
-      startDate: new Date('2024-02-01'),
-      budget: 22000,
-      location: '567 Oak Ave, Suburbia',
-      createdAt: new Date('2024-01-18'),
-      updatedAt: new Date('2024-01-18'),
-    },
-    {
-      id: '3',
-      title: 'Deck Installation - Lakeside Property',
-      contactId: 'c3',
-      status: 'Quoted',
-      priority: 'Low',
-      startDate: new Date('2024-03-01'),
-      budget: 15000,
-      location: '890 Lake Dr, Lakeside',
-      createdAt: new Date('2024-01-20'),
-      updatedAt: new Date('2024-01-20'),
-    }
-  ]);
+  // Use real jobs data from the database
+  const jobsData = recentJobs.data || [];
 
   const dashboardCards = [
     {
@@ -253,15 +227,18 @@ export default function DashboardPage() {
           </div>
           
           <div className="space-y-4">
-            {recentJobs.map((job) => (
+            {jobsData.length > 0 ? jobsData.map((job) => (
               <div key={job.id} className="bg-gray-750 border border-gray-650 rounded-lg p-4 hover:bg-gray-700 transition-colors">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
                     <h4 className="text-white font-medium mb-1">{job.title}</h4>
-                    <p className="text-gray-400 text-sm mb-2">{job.location}</p>
+                    <p className="text-gray-400 text-sm mb-2">{job.location || 'No location specified'}</p>
                     <div className="flex items-center space-x-3 text-sm text-gray-300">
-                      <span>Start: {job.startDate.toLocaleDateString()}</span>
-                      {job.budget && <span>Budget: ${job.budget.toLocaleString()}</span>}
+                      {job.estimatedStartDate && (
+                        <span>Start: {new Date(job.estimatedStartDate).toLocaleDateString()}</span>
+                      )}
+                      {job.estimatedBudget && <span>Budget: ${parseFloat(job.estimatedBudget).toLocaleString()}</span>}
+                      <span>Company: {job.companyName}</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
@@ -270,7 +247,11 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8">
+                <p className="text-gray-400">No jobs found. Create your first job to get started!</p>
+              </div>
+            )}
           </div>
         </div>
 

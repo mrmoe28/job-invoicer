@@ -2,6 +2,64 @@
 > @pulsecrm/web@0.1.0 typecheck /Volumes/ORICO/Development/constructflow/apps/web
 > tsc --noEmit
 
-app/api/trpc/[trpc]/route.ts(2,27): error TS2307: Cannot find module '@pulsecrm/api' or its corresponding type declarations.
-lib/trpc.ts(2,32): error TS2307: Cannot find module '@pulsecrm/api' or its corresponding type declarations.
+app/dashboard/jobs/page.tsx(35,7): error TS2820: Type '"In Progress"' is not assignable to type 'JobStatus'. Did you mean '"in_progress"'?
+app/dashboard/jobs/page.tsx(37,7): error TS2820: Type '"High"' is not assignable to type 'JobPriority'. Did you mean '"high"'?
+app/dashboard/jobs/page.tsx(573,57): error TS2322: Type '"Draft"' is not assignable to type 'JobStatus'.
+app/dashboard/jobs/page.tsx(573,66): error TS2820: Type '"Quoted"' is not assignable to type 'JobStatus'. Did you mean '"quoted"'?
+app/dashboard/jobs/page.tsx(573,76): error TS2322: Type '"Approved"' is not assignable to type 'JobStatus'.
+app/dashboard/jobs/page.tsx(573,88): error TS2820: Type '"Scheduled"' is not assignable to type 'JobStatus'. Did you mean '"scheduled"'?
+app/dashboard/jobs/page.tsx(573,101): error TS2820: Type '"In Progress"' is not assignable to type 'JobStatus'. Did you mean '"in_progress"'?
+app/dashboard/jobs/page.tsx(573,116): error TS2820: Type '"On Hold"' is not assignable to type 'JobStatus'. Did you mean '"on_hold"'?
+app/dashboard/jobs/page.tsx(573,127): error TS2820: Type '"Completed"' is not assignable to type 'JobStatus'. Did you mean '"completed"'?
+app/dashboard/jobs/page.tsx(573,140): error TS2820: Type '"Cancelled"' is not assignable to type 'JobStatus'. Did you mean '"cancelled"'?
+app/dashboard/jobs/page.tsx(573,153): error TS2322: Type '"Invoiced"' is not assignable to type 'JobStatus'.
+app/dashboard/jobs/page.tsx(574,61): error TS2820: Type '"Low"' is not assignable to type 'JobPriority'. Did you mean '"low"'?
+app/dashboard/jobs/page.tsx(574,68): error TS2820: Type '"Medium"' is not assignable to type 'JobPriority'. Did you mean '"medium"'?
+app/dashboard/jobs/page.tsx(574,78): error TS2820: Type '"High"' is not assignable to type 'JobPriority'. Did you mean '"high"'?
+app/dashboard/jobs/page.tsx(574,86): error TS2820: Type '"Urgent"' is not assignable to type 'JobPriority'. Did you mean '"urgent"'?
+app/dashboard/jobs/page.tsx(578,31): error TS2345: Argument of type '(prev: Job[]) => (Job | { title: string; contactId: string; status: JobStatus | "Draft"; startDate: Date; priority: JobPriority | "Medium"; ... 21 more ...; image?: string | undefined; })[]' is not assignable to parameter of type 'SetStateAction<Job[]>'.
+  Type '(prev: Job[]) => (Job | { title: string; contactId: string; status: JobStatus | "Draft"; startDate: Date; priority: JobPriority | "Medium"; ... 21 more ...; image?: string | undefined; })[]' is not assignable to type '(prevState: Job[]) => Job[]'.
+    Type '(Job | { title: string; contactId: string; status: JobStatus | "Draft"; startDate: Date; priority: JobPriority | "Medium"; budget: number; description: string; ... 19 more ...; image?: string | undefined; })[]' is not assignable to type 'Job[]'.
+      Type 'Job | { title: string; contactId: string; status: JobStatus | "Draft"; startDate: Date; priority: JobPriority | "Medium"; budget: number; description: string; ... 19 more ...; image?: string | undefined; }' is not assignable to type 'Job'.
+        Type '{ title: string; contactId: string; status: JobStatus | "Draft"; startDate: Date; priority: JobPriority | "Medium"; budget: number; description: string; ... 19 more ...; image?: string; }' is not assignable to type 'Job'.
+          Types of property 'status' are incompatible.
+            Type 'JobStatus | "Draft"' is not assignable to type 'JobStatus'.
+              Type '"Draft"' is not assignable to type 'JobStatus'.
+app/dashboard/jobs/page.tsx(587,25): error TS2322: Type 'JobStatus | "Draft"' is not assignable to type 'JobStatus'.
+  Type '"Draft"' is not assignable to type 'JobStatus'.
+app/dashboard/jobs/page.tsx(589,25): error TS2322: Type 'JobPriority | "Medium"' is not assignable to type 'JobPriority'.
+  Type '"Medium"' is not assignable to type 'JobPriority'. Did you mean '"medium"'?
+app/dashboard/page.tsx(245,36): error TS2322: Type 'string' is not assignable to type 'JobPriority'.
+app/dashboard/page.tsx(246,37): error TS2322: Type 'string' is not assignable to type 'JobStatus'.
+components/job-form.tsx(25,5): error TS2322: Type 'JobStatus | "Draft"' is not assignable to type 'JobStatus'.
+  Type '"Draft"' is not assignable to type 'JobStatus'.
+components/job-form.tsx(26,5): error TS2322: Type 'JobPriority | "Medium"' is not assignable to type 'JobPriority'.
+  Type '"Medium"' is not assignable to type 'JobPriority'. Did you mean '"medium"'?
+components/job-form.tsx(108,5): error TS2322: Type '"Draft"' is not assignable to type 'JobStatus'.
+components/job-form.tsx(108,14): error TS2820: Type '"Quoted"' is not assignable to type 'JobStatus'. Did you mean '"quoted"'?
+components/job-form.tsx(108,24): error TS2322: Type '"Approved"' is not assignable to type 'JobStatus'.
+components/job-form.tsx(108,36): error TS2820: Type '"Scheduled"' is not assignable to type 'JobStatus'. Did you mean '"scheduled"'?
+components/job-form.tsx(108,49): error TS2820: Type '"In Progress"' is not assignable to type 'JobStatus'. Did you mean '"in_progress"'?
+components/job-form.tsx(109,5): error TS2820: Type '"On Hold"' is not assignable to type 'JobStatus'. Did you mean '"on_hold"'?
+components/job-form.tsx(109,16): error TS2820: Type '"Completed"' is not assignable to type 'JobStatus'. Did you mean '"completed"'?
+components/job-form.tsx(109,29): error TS2820: Type '"Cancelled"' is not assignable to type 'JobStatus'. Did you mean '"cancelled"'?
+components/job-form.tsx(109,42): error TS2322: Type '"Invoiced"' is not assignable to type 'JobStatus'.
+components/job-form.tsx(112,41): error TS2820: Type '"Low"' is not assignable to type 'JobPriority'. Did you mean '"low"'?
+components/job-form.tsx(112,48): error TS2820: Type '"Medium"' is not assignable to type 'JobPriority'. Did you mean '"medium"'?
+components/job-form.tsx(112,58): error TS2820: Type '"High"' is not assignable to type 'JobPriority'. Did you mean '"high"'?
+components/job-form.tsx(112,66): error TS2820: Type '"Urgent"' is not assignable to type 'JobPriority'. Did you mean '"urgent"'?
+components/status-badge.tsx(55,14): error TS2678: Type '"Draft"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(57,14): error TS2678: Type '"Quoted"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(59,14): error TS2678: Type '"Approved"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(61,14): error TS2678: Type '"Scheduled"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(63,14): error TS2678: Type '"In Progress"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(65,14): error TS2678: Type '"On Hold"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(67,14): error TS2678: Type '"Completed"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(69,14): error TS2678: Type '"Cancelled"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(71,14): error TS2678: Type '"Invoiced"' is not comparable to type 'JobStatus'.
+components/status-badge.tsx(97,14): error TS2678: Type '"Low"' is not comparable to type 'JobPriority'.
+components/status-badge.tsx(99,14): error TS2678: Type '"Medium"' is not comparable to type 'JobPriority'.
+components/status-badge.tsx(101,14): error TS2678: Type '"High"' is not comparable to type 'JobPriority'.
+components/status-badge.tsx(103,14): error TS2678: Type '"Urgent"' is not comparable to type 'JobPriority'.
+lib/hooks.ts(316,11): error TS2367: This comparison appears to be unintentional because the types 'JobStatus' and '"Completed"' have no overlap.
  ELIFECYCLE  Command failed with exit code 2.

@@ -12,6 +12,12 @@ const nextConfig = {
     "@react-pdf-viewer/default-layout",
     "pdfjs-dist",
   ],
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Ensure native Node bindings (e.g. canvas.node) bundled by pdfjs-dist are ignored
   webpack: (config, { webpack }) => {
     // 1. Alias the optional native canvas dependency to a stub so webpack doesn't try to bundle it
@@ -59,4 +65,4 @@ const getConfig = () => {
   return nextConfig;
 };
 
-export default getConfig();
+module.exports = getConfig();

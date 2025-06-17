@@ -59,17 +59,14 @@ export interface Job {
 }
 
 export type JobStatus = 
-  | 'Draft'           // Job is being planned
-  | 'Quoted'          // Quote has been sent to client
-  | 'Approved'        // Client has approved the job
-  | 'Scheduled'       // Job has been scheduled
-  | 'In Progress'     // Work has started
-  | 'On Hold'         // Job is temporarily paused
-  | 'Completed'       // Work is finished
-  | 'Cancelled'       // Job was cancelled
-  | 'Invoiced';       // Invoice has been sent
+  | 'quoted'          // Quote has been sent to client
+  | 'scheduled'       // Job has been scheduled
+  | 'in_progress'     // Work has started
+  | 'completed'       // Work is finished
+  | 'cancelled'       // Job was cancelled
+  | 'on_hold';        // Job is temporarily paused
 
-export type JobPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+export type JobPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export type CreateJobPayload = Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'completedAt'>
 export interface UpdateJobPayload extends Partial<CreateJobPayload> {
@@ -339,15 +336,12 @@ export type RequireAtLeastOne<T, Keys extends keyof T = keyof T> =
 // =============================================================================
 
 export const JOB_STATUS_COLORS: Record<JobStatus, string> = {
-  'Draft': 'bg-gray-600',
-  'Quoted': 'bg-blue-600',
-  'Approved': 'bg-green-600',
-  'Scheduled': 'bg-purple-600',
-  'In Progress': 'bg-orange-500',
-  'On Hold': 'bg-yellow-600',
-  'Completed': 'bg-green-700',
-  'Cancelled': 'bg-red-600',
-  'Invoiced': 'bg-indigo-600',
+  'quoted': 'bg-blue-600',
+  'scheduled': 'bg-purple-600',
+  'in_progress': 'bg-orange-500',
+  'on_hold': 'bg-yellow-600',
+  'completed': 'bg-green-700',
+  'cancelled': 'bg-red-600',
 };
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
@@ -358,10 +352,10 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 export const PRIORITY_COLORS: Record<JobPriority, string> = {
-  'Low': 'bg-green-600',
-  'Medium': 'bg-yellow-600',
-  'High': 'bg-orange-600',
-  'Urgent': 'bg-red-600',
+  'low': 'bg-green-600',
+  'medium': 'bg-yellow-600',
+  'high': 'bg-orange-600',
+  'urgent': 'bg-red-600',
 };
 
 export const CONTACT_TYPE_COLORS: Record<ContactType, string> = {

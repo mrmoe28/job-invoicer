@@ -8,16 +8,23 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "db:push": "drizzle-kit push:pg",
-    "db:studio": "drizzle-kit studio",
-    "db:generate": "drizzle-kit generate:pg"
+    "db:migrate": "node scripts/migrate.js migrate",
+    "db:generate": "node scripts/migrate.js generate",
+    "db:seed": "node scripts/migrate.js seed",
+    "db:reset": "node scripts/migrate.js reset",
+    "db:reset-seed": "node scripts/migrate.js reset-seed",
+    "db:studio": "node scripts/migrate.js studio",
+    "db:status": "node scripts/migrate.js status",
+    "db:push": "drizzle-kit push:pg"
   },
   "dependencies": {
     "drizzle-orm": "^0.29.1",
-    "postgres": "^3.4.3"
+    "postgres": "^3.4.3",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
+    "@types/pg": "^8.10.9",
     "drizzle-kit": "^0.20.6",
     "typescript": "^5.3.3"
   }

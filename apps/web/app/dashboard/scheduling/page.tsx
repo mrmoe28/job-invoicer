@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../components/dashboard-layout';
 
@@ -12,7 +12,7 @@ type Schedule = {
   endTime: string;
 };
 
-export default function SchedulingPage() {
+function SchedulingContent() {
   const searchParams = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date(2025, 5, 14)); // June 14, 2025
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -377,5 +377,19 @@ export default function SchedulingPage() {
         )}
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function SchedulingPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+        </div>
+      </DashboardLayout>
+    }>
+      <SchedulingContent />
+    </Suspense>
   );
 }

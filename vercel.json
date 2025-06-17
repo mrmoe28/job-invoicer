@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm install && pnpm build --filter=@pulsecrm/web",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "npm install -g pnpm && pnpm install",
+  "framework": null,
+  "build": {
+    "env": {
+      "NODE_ENV": "production",
+      "SKIP_ENV_VALIDATION": "1"
+    }
+  }
+}
