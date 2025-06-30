@@ -1,17 +1,30 @@
 {
   "version": 2,
-  "buildCommand": "pnpm build --filter=@pulsecrm/web",
+  "buildCommand": "cd apps/web && pnpm install && pnpm build",
   "outputDirectory": "apps/web/.next",
   "installCommand": "pnpm install",
   "framework": "nextjs",
   "regions": ["iad1"],
+  "functions": {
+    "apps/web/app/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "NEXT_TELEMETRY_DISABLED": "1"
   },
   "build": {
     "env": {
       "NEXT_PUBLIC_APP_URL": "https://$VERCEL_URL",
-      "NEXT_PUBLIC_API_URL": "https://$VERCEL_URL/api"
+      "NEXT_PUBLIC_API_URL": "https://$VERCEL_URL/api",
+      "NODE_ENV": "production"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
 }
