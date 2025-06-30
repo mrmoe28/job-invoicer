@@ -41,16 +41,16 @@ export default function DashboardPage() {
     router.push(`/dashboard/scheduling?date=2025-06-${day.toString().padStart(2, '0')}`);
   };
 
-  // Use real data from the database or fallback to defaults
+  // Use real data from the database
   const metrics = dashboardStats.data ? {
     totalContacts: dashboardStats.data.totalContacts,
     activeJobs: dashboardStats.data.activeJobs,
     completedJobsThisMonth: dashboardStats.data.completedJobs,
-    totalRevenue: 125600, // This would come from invoices table when implemented
-    averageJobValue: 10466, // This would be calculated from job budgets
-    conversionRate: 0.68, // This would be calculated from job statuses
+    totalRevenue: 0, // Will be calculated from actual invoices when implemented
+    averageJobValue: 0, // Will be calculated from actual job budgets
+    conversionRate: dashboardStats.data.totalJobs > 0 ? dashboardStats.data.completedJobs / dashboardStats.data.totalJobs : 0,
     completionRate: dashboardStats.data.completionRate,
-    crewUtilization: 0.76 // This would be calculated from time entries
+    crewUtilization: 0 // Will be calculated from actual time entries
   } : {
     totalContacts: 0,
     activeJobs: 0,

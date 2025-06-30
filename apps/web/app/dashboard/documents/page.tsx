@@ -55,71 +55,7 @@ export default function DocumentsPage() {
     url?: string;
   }
 
-  const initialDocuments: DocumentItem[] = [
-    {
-      id: 'doc1',
-      name: 'Smith_Residence_Solar_Plan.pdf',
-      type: 'Installation Plan',
-      status: 'approved',
-      size: '8.2 MB',
-      date: 'Jun 10, 2025',
-      related: 'John Smith - 123 Main St'
-    },
-    {
-      id: 'doc2',
-      name: 'Johnson_Property_Layout.pdf',
-      type: 'Site Survey',
-      status: 'pending',
-      size: '5.7 MB',
-      date: 'Jun 11, 2025',
-      related: 'Sarah Johnson - 456 Oak Ave'
-    },
-    {
-      id: 'doc3',
-      name: 'Rodriguez_System_Specs.pdf',
-      type: 'Technical Document',
-      status: 'approved',
-      size: '12.3 MB',
-      date: 'Jun 12, 2025',
-      related: 'Mike Rodriguez - 789 Pine Rd'
-    },
-    {
-      id: 'doc4',
-      name: 'Chen_Electrical_Permit.pdf',
-      type: 'Permit',
-      status: 'signed',
-      size: '2.1 MB',
-      date: 'Jun 8, 2025',
-      related: 'Lisa Chen - 321 Elm Dr'
-    },
-    {
-      id: 'doc5',
-      name: 'Wilson_Panel_Layout.pdf',
-      type: 'Installation Plan',
-      status: 'draft',
-      size: '9.8 MB',
-      date: 'Jun 13, 2025',
-      related: 'Tom Wilson - 654 Maple St'
-    },
-    {
-      id: 'doc6',
-      name: 'contact-list.csv',
-      type: 'Data Export',
-      status: 'draft',
-      size: '0.8 KB',
-      date: 'Jun 12, 2025',
-      related: 'CRM Export'
-    },
-    {
-      id: 'doc7',
-      name: 'site-inspection-photos.jpg',
-      type: 'Photo',
-      status: 'draft',
-      size: '649.5 KB',
-      date: 'Jun 11, 2025',
-      related: 'Garcia Property'
-    }
-  ];
+  const initialDocuments: DocumentItem[] = [];
 
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
     if (typeof window === 'undefined') return initialDocuments;
@@ -181,16 +117,9 @@ export default function DocumentsPage() {
   }, []);
 
   const loadCSVData = useCallback((document: any) => {
-    // Simulate CSV data loading - in real app, fetch from API
-    const sampleCSVData = [
-      ['Name', 'Email', 'Phone', 'Company', 'Role'],
-      ['John Smith', 'john@smithconstruction.com', '(555) 123-4567', 'Smith Construction', 'Project Manager'],
-      ['Sarah Johnson', 'sarah@citybuilders.com', '(555) 987-6543', 'City Builders Inc', 'Architect'],
-      ['Mike Rodriguez', 'mike@steelworks.net', '(555) 456-7890', 'Rodriguez Steel Works', 'Contractor'],
-      ['Lisa Chen', 'lisa.chen@pulsecrm.com', '(555) 321-0987', 'PulseCRM', 'Developer'],
-      ['David Wilson', 'david@constructtech.com', '(555) 654-3210', 'ConstructTech', 'Engineer']
-    ];
-    setCsvData(sampleCSVData);
+    // In a real application, this would fetch CSV data from the server
+    // For now, we'll just set empty data
+    setCsvData([]);
   }, []);
 
   const handleDocumentAction = useCallback((documentId: string, action: 'view' | 'download' | 'edit' | 'delete') => {

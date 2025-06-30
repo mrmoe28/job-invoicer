@@ -27,26 +27,7 @@ export default function JobsPage() {
     { id: 'image', label: 'Image', visible: false, order: 12 },
     { id: 'actions', label: 'Actions', visible: true, order: 13 }
   ]);
-  const [jobs, setJobs] = useState<Job[]>([
-    {
-      id: 'website-redesign',
-      title: 'Website Redesign',
-      contactId: 'contact-1',
-      status: 'In Progress',
-      startDate: new Date('2023-12-31'),
-      priority: 'High',
-      budget: 15000,
-      address: '',
-      systemType: '',
-      contactPhone: '',
-      notes: '',
-      tasks: [],
-      updates: '',
-      image: '',
-      createdAt: new Date('2023-12-01'),
-      updatedAt: new Date('2023-12-15'),
-    }
-  ]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [viewJob, setViewJob] = useState<Job | null>(null);
   const [editJob, setEditJob] = useState<Job | null>(null);
 
@@ -190,8 +171,6 @@ export default function JobsPage() {
               className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             >
               <option value="">Filter by Contact</option>
-              <option value="john">John Smith</option>
-              <option value="sarah">Sarah Johnson</option>
             </select>
             <button 
               onClick={handleJobColumns}

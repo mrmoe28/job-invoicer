@@ -54,52 +54,7 @@ export default function ContactsPage() {
     if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem('contacts');
-      return stored ? JSON.parse(stored) : [
-        {
-          id: 'john',
-          name: 'John Smith',
-          email: 'john@smithconstruction.com',
-          phone: '(555) 123-4567',
-          company: 'Smith Construction',
-          type: 'Client',
-          dateAdded: '2024-01-15',
-          lastContact: '2024-01-20',
-          status: 'Active'
-        },
-        {
-          id: 'sarah',
-          name: 'Sarah Johnson',
-          email: 'sarah@citybuilders.com',
-          phone: '(555) 987-6543',
-          company: 'City Builders Inc',
-          type: 'Supplier',
-          dateAdded: '2024-01-10',
-          lastContact: '2024-01-18',
-          status: 'Active'
-        },
-        {
-          id: 'mike',
-          name: 'Mike Rodriguez',
-          email: 'mike@steelworks.net',
-          phone: '(555) 456-7890',
-          company: 'Rodriguez Steel Works',
-          type: 'Contractor',
-          dateAdded: '2024-01-12',
-          lastContact: '2024-01-17',
-          status: 'Active'
-        },
-        {
-          id: 'lisa',
-          name: 'Lisa Chen',
-          email: 'lisa.chen@pulsecrm.com',
-          phone: '(555) 321-0987',
-          company: 'PulseCRM',
-          type: 'Employee',
-          dateAdded: '2024-01-08',
-          lastContact: '2024-01-19',
-          status: 'Active'
-        }
-      ];
+      return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
     }
