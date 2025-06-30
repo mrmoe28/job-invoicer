@@ -5,6 +5,6 @@ export default {
   out: './drizzle',
   driver: 'pg',
   dbCredentials: {
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/pulsecrm',
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:@localhost:5432/constructflow_prod',
   },
 } satisfies Config;

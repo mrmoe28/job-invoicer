@@ -16,26 +16,49 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+// Organizations table - for multi-tenancy (each company/signup gets their own org)
+export const organizations = pgTable('organizations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 100 }).notNull().unique(),
+  plan: varchar('plan', { length: 50 }).notNull().default('free'), // free, pro, enterprise
+  status: varchar('status', { length: 50 }).notNull().default('active'),
+  maxUsers: integer('max_users').notNull().default(5),
+  maxJobs: integer('max_jobs').notNull().default(50),
+  maxStorageGb: integer('max_storage_gb').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  slugIdx: index('organizations_slug_idx').on(table.slug),
+  planIdx: index('organizations_plan_idx').on(table.plan),
+}));
+
 // Users table - for authentication and user management
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull().default('user'), // admin, manager, user, crew
+  role: varchar('role', { length: 50 }).notNull().default('member'), // owner, admin, member
   isActive: boolean('is_active').notNull().default(true),
+  emailVerifiedAt: timestamp('email_verified_at'),
+  invitationToken: varchar('invitation_token', { length: 255 }),
+  invitedByUserId: uuid('invited_by_user_id'), // Will add foreign key constraint separately
   lastLoginAt: timestamp('last_login_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
   emailIdx: index('users_email_idx').on(table.email),
   roleIdx: index('users_role_idx').on(table.role),
+  orgIdx: index('users_org_idx').on(table.organizationId),
 }));
 
-// Companies table - for client companies
+// Companies table - for client companies (isolated per organization)
 export const companies = pgTable('companies', {
   id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   industry: varchar('industry', { length: 100 }),
   website: varchar('website', { length: 255 }),
@@ -52,13 +75,14 @@ export const companies = pgTable('companies', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
   nameIdx: index('companies_name_idx').on(table.name),
-  industryIdx: index('companies_industry_idx').on(table.industry),
+  orgIdx: index('companies_org_idx').on(table.organizationId),
 }));
 
-// Contacts table - individual contacts within companies
+// Contacts table - for individual contacts within companies
 export const contacts = pgTable('contacts', {
   id: uuid('id').defaultRandom().primaryKey(),
-  companyId: uuid('company_id').references(() => companies.id),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  companyId: uuid('company_id').references(() => companies.id).notNull(),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
   title: varchar('title', { length: 100 }),
@@ -71,22 +95,24 @@ export const contacts = pgTable('contacts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
-  companyIdx: index('contacts_company_id_idx').on(table.companyId),
-  emailIdx: index('contacts_email_idx').on(table.email),
   nameIdx: index('contacts_name_idx').on(table.firstName, table.lastName),
+  emailIdx: index('contacts_email_idx').on(table.email),
+  companyIdx: index('contacts_company_idx').on(table.companyId),
+  orgIdx: index('contacts_org_idx').on(table.organizationId),
 }));
 
-// Jobs table - main project/job management
+// Jobs table - for construction projects/jobs
 export const jobs = pgTable('jobs', {
   id: uuid('id').defaultRandom().primaryKey(),
-  jobNumber: varchar('job_number', { length: 50 }).notNull().unique(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  jobNumber: varchar('job_number', { length: 50 }).notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
-  companyId: uuid('company_id').notNull().references(() => companies.id),
+  companyId: uuid('company_id').references(() => companies.id).notNull(),
   primaryContactId: uuid('primary_contact_id').references(() => contacts.id),
   assignedUserId: uuid('assigned_user_id').references(() => users.id),
-  status: varchar('status', { length: 50 }).notNull().default('quoted'), // quoted, scheduled, in_progress, completed, cancelled, on_hold
-  priority: varchar('priority', { length: 20 }).notNull().default('medium'), // low, medium, high, urgent
+  status: varchar('status', { length: 50 }).notNull().default('quoted'), // quoted, scheduled, in_progress, completed, cancelled
+  priority: varchar('priority', { length: 50 }).notNull().default('medium'), // low, medium, high, urgent
   estimatedStartDate: date('estimated_start_date'),
   estimatedEndDate: date('estimated_end_date'),
   actualStartDate: date('actual_start_date'),
@@ -96,158 +122,94 @@ export const jobs = pgTable('jobs', {
   location: text('location'),
   requirements: text('requirements'),
   notes: text('notes'),
-  metadata: jsonb('metadata'), // For flexible additional data
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
   jobNumberIdx: index('jobs_job_number_idx').on(table.jobNumber),
-  companyIdx: index('jobs_company_id_idx').on(table.companyId),
   statusIdx: index('jobs_status_idx').on(table.status),
   priorityIdx: index('jobs_priority_idx').on(table.priority),
-  assignedUserIdx: index('jobs_assigned_user_id_idx').on(table.assignedUserId),
-  startDateIdx: index('jobs_start_date_idx').on(table.estimatedStartDate),
+  companyIdx: index('jobs_company_idx').on(table.companyId),
+  assignedIdx: index('jobs_assigned_idx').on(table.assignedUserId),
+  orgIdx: index('jobs_org_idx').on(table.organizationId),
 }));
 
-// Tasks table - individual tasks within jobs
+// Tasks table - for individual tasks within jobs
 export const tasks = pgTable('tasks', {
   id: uuid('id').defaultRandom().primaryKey(),
-  jobId: uuid('job_id').notNull().references(() => jobs.id, { onDelete: 'cascade' }),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  jobId: uuid('job_id').references(() => jobs.id).notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   assignedUserId: uuid('assigned_user_id').references(() => users.id),
   status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, in_progress, completed, cancelled
-  priority: varchar('priority', { length: 20 }).notNull().default('medium'),
-  estimatedHours: decimal('estimated_hours', { precision: 6, scale: 2 }),
-  actualHours: decimal('actual_hours', { precision: 6, scale: 2 }),
+  priority: varchar('priority', { length: 50 }).notNull().default('medium'), // low, medium, high, urgent
+  estimatedHours: decimal('estimated_hours', { precision: 8, scale: 2 }),
+  actualHours: decimal('actual_hours', { precision: 8, scale: 2 }),
   dueDate: date('due_date'),
   completedAt: timestamp('completed_at'),
-  notes: text('notes'),
   orderIndex: integer('order_index').notNull().default(0),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-  jobIdx: index('tasks_job_id_idx').on(table.jobId),
-  statusIdx: index('tasks_status_idx').on(table.status),
-  assignedUserIdx: index('tasks_assigned_user_id_idx').on(table.assignedUserId),
-  dueDateIdx: index('tasks_due_date_idx').on(table.dueDate),
-  orderIdx: index('tasks_order_idx').on(table.jobId, table.orderIndex),
-}));
-
-// Documents table - file management
-export const documents = pgTable('documents', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  jobId: uuid('job_id').references(() => jobs.id, { onDelete: 'cascade' }),
-  companyId: uuid('company_id').references(() => companies.id),
-  uploadedByUserId: uuid('uploaded_by_user_id').notNull().references(() => users.id),
-  fileName: varchar('file_name', { length: 255 }).notNull(),
-  originalFileName: varchar('original_file_name', { length: 255 }).notNull(),
-  fileSize: integer('file_size').notNull(),
-  mimeType: varchar('mime_type', { length: 100 }).notNull(),
-  filePath: varchar('file_path', { length: 500 }).notNull(),
-  category: varchar('category', { length: 100 }), // contract, invoice, photo, plan, etc.
-  description: text('description'),
-  isPublic: boolean('is_public').notNull().default(false),
-  version: integer('version').notNull().default(1),
-  parentDocumentId: uuid('parent_document_id'),
-  metadata: jsonb('metadata'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-  jobIdx: index('documents_job_id_idx').on(table.jobId),
-  companyIdx: index('documents_company_id_idx').on(table.companyId),
-  categoryIdx: index('documents_category_idx').on(table.category),
-  uploadedByIdx: index('documents_uploaded_by_idx').on(table.uploadedByUserId),
-}));
-
-// Time tracking table
-export const timeEntries = pgTable('time_entries', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull().references(() => users.id),
-  jobId: uuid('job_id').references(() => jobs.id),
-  taskId: uuid('task_id').references(() => tasks.id),
-  description: text('description'),
-  startTime: timestamp('start_time').notNull(),
-  endTime: timestamp('end_time'),
-  duration: integer('duration'), // in minutes
-  hourlyRate: decimal('hourly_rate', { precision: 8, scale: 2 }),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-  userIdx: index('time_entries_user_id_idx').on(table.userId),
-  jobIdx: index('time_entries_job_id_idx').on(table.jobId),
-  taskIdx: index('time_entries_task_id_idx').on(table.taskId),
-  startTimeIdx: index('time_entries_start_time_idx').on(table.startTime),
-}));
-
-// Invoices table
-export const invoices = pgTable('invoices', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  invoiceNumber: varchar('invoice_number', { length: 50 }).notNull().unique(),
-  jobId: uuid('job_id').notNull().references(() => jobs.id),
-  companyId: uuid('company_id').notNull().references(() => companies.id),
-  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
-  taxAmount: decimal('tax_amount', { precision: 12, scale: 2 }),
-  totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
-  status: varchar('status', { length: 50 }).notNull().default('draft'), // draft, sent, paid, overdue, cancelled
-  issueDate: date('issue_date').notNull(),
-  dueDate: date('due_date').notNull(),
-  paidDate: date('paid_date'),
   notes: text('notes'),
-  metadata: jsonb('metadata'),
+  isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
-  invoiceNumberIdx: index('invoices_invoice_number_idx').on(table.invoiceNumber),
-  jobIdx: index('invoices_job_id_idx').on(table.jobId),
-  companyIdx: index('invoices_company_id_idx').on(table.companyId),
-  statusIdx: index('invoices_status_idx').on(table.status),
-  dueDateIdx: index('invoices_due_date_idx').on(table.dueDate),
+  statusIdx: index('tasks_status_idx').on(table.status),
+  priorityIdx: index('tasks_priority_idx').on(table.priority),
+  jobIdx: index('tasks_job_idx').on(table.jobId),
+  assignedIdx: index('tasks_assigned_idx').on(table.assignedUserId),
+  orderIdx: index('tasks_order_idx').on(table.orderIndex),
+  orgIdx: index('tasks_org_idx').on(table.organizationId),
 }));
 
-// Activity log for audit trail
-export const activityLog = pgTable('activity_log', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id),
-  entityType: varchar('entity_type', { length: 50 }).notNull(), // job, task, contact, etc.
-  entityId: uuid('entity_id').notNull(),
-  action: varchar('action', { length: 50 }).notNull(), // created, updated, deleted, etc.
-  changes: jsonb('changes'), // What changed
-  ipAddress: varchar('ip_address', { length: 45 }),
-  userAgent: text('user_agent'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (table) => ({
-  userIdx: index('activity_log_user_id_idx').on(table.userId),
-  entityIdx: index('activity_log_entity_idx').on(table.entityType, table.entityId),
-  actionIdx: index('activity_log_action_idx').on(table.action),
-  createdAtIdx: index('activity_log_created_at_idx').on(table.createdAt),
-}));// Define relationships between tables
-export const usersRelations = relations(users, ({ many }) => ({
-  assignedJobs: many(jobs),
-  assignedTasks: many(tasks),
-  timeEntries: many(timeEntries),
-  uploadedDocuments: many(documents),
-  activityLogs: many(activityLog),
-}));
-
-export const companiesRelations = relations(companies, ({ many }) => ({
+// Define relationships
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+  users: many(users),
+  companies: many(companies),
   contacts: many(contacts),
   jobs: many(jobs),
-  documents: many(documents),
-  invoices: many(invoices),
+  tasks: many(tasks),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [users.organizationId],
+    references: [organizations.id],
+  }),
+  invitedBy: one(users, {
+    fields: [users.invitedByUserId],
+    references: [users.id],
+  }),
+  assignedJobs: many(jobs),
+  assignedTasks: many(tasks),
+}));
+
+export const companiesRelations = relations(companies, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [companies.organizationId],
+    references: [organizations.id],
+  }),
+  contacts: many(contacts),
+  jobs: many(jobs),
 }));
 
 export const contactsRelations = relations(contacts, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [contacts.organizationId],
+    references: [organizations.id],
+  }),
   company: one(companies, {
     fields: [contacts.companyId],
     references: [companies.id],
   }),
-  primaryContactJobs: many(jobs),
+  primaryJobs: many(jobs),
 }));
 
 export const jobsRelations = relations(jobs, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [jobs.organizationId],
+    references: [organizations.id],
+  }),
   company: one(companies, {
     fields: [jobs.companyId],
     references: [companies.id],
@@ -261,12 +223,13 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     references: [users.id],
   }),
   tasks: many(tasks),
-  documents: many(documents),
-  timeEntries: many(timeEntries),
-  invoices: many(invoices),
 }));
 
-export const tasksRelations = relations(tasks, ({ one, many }) => ({
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [tasks.organizationId],
+    references: [organizations.id],
+  }),
   job: one(jobs, {
     fields: [tasks.jobId],
     references: [jobs.id],
@@ -275,60 +238,4 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.assignedUserId],
     references: [users.id],
   }),
-  timeEntries: many(timeEntries),
 }));
-
-export const documentsRelations = relations(documents, ({ one }) => ({
-  job: one(jobs, {
-    fields: [documents.jobId],
-    references: [jobs.id],
-  }),
-  company: one(companies, {
-    fields: [documents.companyId],
-    references: [companies.id],
-  }),
-  uploadedBy: one(users, {
-    fields: [documents.uploadedByUserId],
-    references: [users.id],
-  }),
-  parentDocument: one(documents, {
-    fields: [documents.parentDocumentId],
-    references: [documents.id],
-    relationName: "parentDocument"
-  }),
-}));
-
-export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
-  user: one(users, {
-    fields: [timeEntries.userId],
-    references: [users.id],
-  }),
-  job: one(jobs, {
-    fields: [timeEntries.jobId],
-    references: [jobs.id],
-  }),
-  task: one(tasks, {
-    fields: [timeEntries.taskId],
-    references: [tasks.id],
-  }),
-}));
-
-export const invoicesRelations = relations(invoices, ({ one }) => ({
-  job: one(jobs, {
-    fields: [invoices.jobId],
-    references: [jobs.id],
-  }),
-  company: one(companies, {
-    fields: [invoices.companyId],
-    references: [companies.id],
-  }),
-}));
-
-export const activityLogRelations = relations(activityLog, ({ one }) => ({
-  user: one(users, {
-    fields: [activityLog.userId],
-    references: [users.id],
-  }),
-}));
-
-// Tables are already exported above with their definitions

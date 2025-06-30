@@ -280,6 +280,7 @@ export default function CrewPage() {
               <option value="electrician">Electrician</option>
               <option value="carpenter">Carpenter</option>
               <option value="plumber">Plumber</option>
+              <option value="laborer">Laborer</option>
               <option value="safety-inspector">Safety Inspector</option>
             </select>
           </div>
@@ -733,6 +734,7 @@ export default function CrewPage() {
                     <option value="electrician">Electrician</option>
                     <option value="carpenter">Carpenter</option>
                     <option value="plumber">Plumber</option>
+                    <option value="laborer">Laborer</option>
                     <option value="safety-inspector">Safety Inspector</option>
                   </select>
                 </div>

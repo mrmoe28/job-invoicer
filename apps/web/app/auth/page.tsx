@@ -2,36 +2,47 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { trpc } from '@/lib/trpc';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // tRPC mutation hook
+  const loginMutation = trpc.login.useMutation({
+    onSuccess: (result) => {
+      if (result.success) {
+        // Store user session
+        localStorage.setItem('pulse_user', JSON.stringify({
+          id: result.user.id,
+          email: result.user.email,
+          name: `${result.user.firstName} ${result.user.lastName}`,
+          role: result.user.role,
+          organizationId: result.user.organizationId,
+          organizationName: result.organization.name,
+          organizationSlug: result.organization.slug,
+          plan: result.organization.plan,
+        }));
+
+        router.push('/dashboard');
+      }
+    },
+    onError: (error) => {
+      setError(error.message || 'Something went wrong. Please try again.');
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check for specific credentials
-    if (username === 'admin' && password === 'admin123') {
-      localStorage.setItem('pulse_user', JSON.stringify({ 
-        username: 'admin',
-        name: 'Administrator',
-        avatar: 'A',
-        role: 'admin'
-      }));
-      router.push('/dashboard');
-    } else {
-      setError('Invalid username or password');
-    }
-    
-    setIsLoading(false);
+    loginMutation.mutate({
+      email,
+      password,
+    });
   };
 
   return (
@@ -54,17 +65,17 @@ export default function LoginPage() {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
-              User Name
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+              Email Address
             </label>
             <input
-              id="username"
-              type="text"
+              id="email"
+              type="email"
               required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-              placeholder="Enter your username"
+              placeholder="Enter your email address"
             />
           </div>
 
@@ -107,10 +118,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={loginMutation.isPending}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
           >
-            {isLoading ? (
+            {loginMutation.isPending ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                 Signing in...
@@ -120,6 +131,16 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        {/* Signup Link */}
+        <div className="text-center">
+          <p className="text-gray-400">
+            Don't have an account?{' '}
+            <Link href="/auth/signup" className="text-orange-500 hover:text-orange-400 font-semibold">
+              Create your workspace
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

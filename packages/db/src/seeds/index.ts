@@ -1,5 +1,5 @@
 import { db } from '../index';
-import { users, companies, contacts, jobs, tasks } from '../schema';
+import { users, organizations, companies, contacts, jobs, tasks } from '../schema';
 import { hashPassword } from '../utils/auth';
 
 export async function seedDatabase() {
@@ -14,22 +14,35 @@ export async function seedDatabase() {
       await db.delete(contacts);
       await db.delete(companies);
       await db.delete(users);
+      await db.delete(organizations);
     }
+
+    // Create demo organization (for admin user)
+    console.log('🏢 Creating demo organization...');
+    const [demoOrg] = await db.insert(organizations).values({
+      name: 'Demo Construction Company',
+      slug: 'demo-construction',
+      plan: 'pro',
+      status: 'active',
+    }).returning();
 
     // Create admin user (required for authentication)
     console.log('👤 Creating admin user...');
     const [adminUser] = await db.insert(users).values({
+      organizationId: demoOrg.id,
       email: 'admin@pulsecrm.local',
       passwordHash: await hashPassword('admin123'),
       firstName: 'Admin',
       lastName: 'User',
-      role: 'admin',
+      role: 'owner',
+      emailVerifiedAt: new Date(),
     }).returning();
 
-    console.log('✅ Admin user created successfully');
+    console.log('✅ Demo organization and admin user created successfully');
     console.log('🎉 Database seeding completed!');
 
     return {
+      organizations: { demoOrg },
       users: { adminUser },
       companies: {},
       contacts: {},
@@ -52,6 +65,7 @@ export async function resetDatabase() {
     await db.delete(contacts);
     await db.delete(companies);
     await db.delete(users);
+    await db.delete(organizations);
     
     console.log('✅ Database reset completed');
   } catch (error) {
