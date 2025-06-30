@@ -1,18 +1,6 @@
 {
-  "version": 2,
-  "buildCommand": "cd apps/web && pnpm install && pnpm build",
+  "buildCommand": "pnpm build --filter=@pulsecrm/web",
   "outputDirectory": "apps/web/.next",
   "installCommand": "pnpm install",
-  "framework": "nextjs",
-  "regions": ["iad1"],
-  "env": {
-    "NODE_ENV": "production",
-    "NEXT_TELEMETRY_DISABLED": "1"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_APP_URL": "https://$VERCEL_URL",
-      "NEXT_PUBLIC_API_URL": "https://$VERCEL_URL/api"
-    }
-  }
+  "framework": "nextjs"
 }
