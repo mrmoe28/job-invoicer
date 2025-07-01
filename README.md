@@ -201,3 +201,22 @@ Track progress in **GitHub Projects → Roadmap**.
 ## 12 · License
 MIT — Use it, change it, ship it.  
 If it helps your crews, we’re happy! 🚀
+
+
+---
+
+## 13 · Development Commands
+
+### Push Command
+When you enter "Push" in chat, the AI assistant will:
+1. Commit all current changes to Git
+2. Push to the GitHub repository  
+3. Deploy to Vercel automatically
+
+This enables rapid deployment of new features and fixes.
+
+### Feature Notifications
+When new features are added:
+- Update `FEATURE_UPDATES` in `/components/notifications/FeatureNotification.tsx`
+- Users will see a notification popup on their next login
+- See `FEATURE_NOTIFICATIONS.md` for detailed instructions

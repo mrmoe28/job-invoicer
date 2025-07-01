@@ -137,6 +137,77 @@ function SchedulingContent() {
     endTime: '17:00',
   });
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Update form when selected date changes or modal opens
+  useEffect(() => {
+    if (showAddScheduleModal && selectedDate) {
+      setScheduleForm(prev => ({
+        ...prev,
+        date: selectedDate.toISOString().split('T')[0]
+      }));
+    }
+  }, [showAddScheduleModal, selectedDate]);
+
+  const handleSaveSchedule = async () => {
+    setError('');
+    setIsLoading(true);
+
+    // Validation
+    if (!scheduleForm.date) {
+      setError('Please select a date');
+      setIsLoading(false);
+      return;
+    }
+    if (!scheduleForm.employee) {
+      setError('Please select an employee');
+      setIsLoading(false);
+      return;
+    }
+    if (!scheduleForm.job.trim()) {
+      setError('Please enter a job or task description');
+      setIsLoading(false);
+      return;
+    }
+    if (scheduleForm.startTime >= scheduleForm.endTime) {
+      setError('End time must be after start time');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Add schedule to state
+      const newSchedule = { ...scheduleForm };
+      setSchedules((prev: Schedule[]) => [...prev, newSchedule]);
+
+      // Success feedback
+      setSuccessMessage('Schedule created successfully!');
+      
+      // Reset form and close modal after brief delay
+      setTimeout(() => {
+        setShowAddScheduleModal(false);
+        setScheduleForm({ 
+          date: '', 
+          employee: '', 
+          job: '', 
+          startTime: '09:00', 
+          endTime: '17:00' 
+        });
+        setSuccessMessage('');
+      }, 1500);
+
+    } catch (error) {
+      setError('Failed to create schedule. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <DashboardLayout title="Employee Scheduling">
       <div className="space-y-6">
@@ -299,6 +370,19 @@ function SchedulingContent() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold text-white mb-4">Create New Schedule</h3>
+              
+              {/* Error/Success Messages */}
+              {error && (
+                <div className="bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm mb-4">
+                  {error}
+                </div>
+              )}
+              {successMessage && (
+                <div className="bg-green-900 border border-green-700 text-green-300 px-4 py-3 rounded-lg text-sm mb-4">
+                  {successMessage}
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
@@ -361,15 +445,21 @@ function SchedulingContent() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    if (!scheduleForm.date || !scheduleForm.employee || !scheduleForm.job) return;
-                    setSchedules((prev: Schedule[]) => [...prev, { ...scheduleForm }]);
-                    setShowAddScheduleModal(false);
-                    setScheduleForm({ date: '', employee: '', job: '', startTime: '09:00', endTime: '17:00' });
-                  }}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  onClick={handleSaveSchedule}
+                  disabled={isLoading}
+                  className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
                 >
-                  Create Schedule
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Schedule'
+                  )}
                 </button>
               </div>
             </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '../../components/dashboard-layout';
+import FeatureNotification from '../../components/notifications/FeatureNotification';
 import { JobStatusBadge, PriorityBadge } from '../../components/status-badge';
 import { trpc } from '../../lib/trpc';
 import { DashboardMetrics, Job } from '../../lib/types';
@@ -331,6 +332,9 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      
+      {/* Feature Notification Popup */}
+      <FeatureNotification />
     </DashboardLayout>
   );
 }

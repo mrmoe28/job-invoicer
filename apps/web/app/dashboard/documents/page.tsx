@@ -55,7 +55,35 @@ export default function DocumentsPage() {
     url?: string;
   }
 
-  const initialDocuments: DocumentItem[] = [];
+  const initialDocuments: DocumentItem[] = [
+    {
+      id: 'demo-pdf-1',
+      name: 'Sample Contract.pdf',
+      type: 'Contract',
+      status: 'approved',
+      size: '2.4 MB',
+      date: 'Dec 15, 2024',
+      related: 'Johnson Project',
+    },
+    {
+      id: 'demo-img-1', 
+      name: 'Site Photo.jpg',
+      type: 'Photo',
+      status: 'approved', 
+      size: '1.8 MB',
+      date: 'Dec 10, 2024',
+      related: 'Smith Project',
+    },
+    {
+      id: 'demo-csv-1',
+      name: 'Material List.csv', 
+      type: 'Spreadsheet',
+      status: 'draft',
+      size: '0.3 MB', 
+      date: 'Dec 8, 2024',
+      related: 'Wilson Project',
+    }
+  ];
 
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
     if (typeof window === 'undefined') return initialDocuments;
@@ -390,7 +418,7 @@ export default function DocumentsPage() {
     switch (fileType) {
       case 'pdf':
         // Using a more reliable PDF sample that works with CORS
-        return 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf';
+        return 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
       case 'image':
         return 'https://picsum.photos/800/600?random=' + Math.random();
       case 'csv':
