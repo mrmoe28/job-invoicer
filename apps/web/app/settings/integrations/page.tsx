@@ -1,99 +1,293 @@
-'use client';
-
 import DashboardLayout from '../../../components/dashboard-layout';
+
+const apiKeys = [
+  { id: 1, name: 'Mobile App API', key: 'pk_live_51H...', created: '2025-06-15', lastUsed: '2 hours ago', status: 'Active' },
+  { id: 2, name: 'Webhook Integration', key: 'pk_test_4eC3...', created: '2025-06-10', lastUsed: '1 day ago', status: 'Active' },
+  { id: 3, name: 'External CRM Sync', key: 'pk_live_27X...', created: '2025-05-28', lastUsed: 'Never', status: 'Inactive' },
+];
+
+const integrations = [
+  { 
+    name: 'Slack', 
+    description: 'Real-time notifications and crew communication',
+    status: 'Connected',
+    lastSync: '5 minutes ago',
+    icon: '💬'
+  },
+  { 
+    name: 'QuickBooks', 
+    description: 'Automated invoicing and financial tracking',
+    status: 'Connected',
+    lastSync: '2 hours ago',
+    icon: '💰'
+  },
+  { 
+    name: 'Google Calendar', 
+    description: 'Sync schedules and appointments',
+    status: 'Disconnected',
+    lastSync: 'Never',
+    icon: '📅'
+  },
+  { 
+    name: 'Dropbox', 
+    description: 'Cloud storage for documents and files',
+    status: 'Connected',
+    lastSync: '1 hour ago',
+    icon: '📁'
+  },
+];
+
+const webhooks = [
+  { id: 1, name: 'Job Status Updates', url: 'https://api.external.com/webhooks/jobs', events: ['job.created', 'job.updated'], status: 'Active' },
+  { id: 2, name: 'Crew Notifications', url: 'https://slack.company.com/hooks/xyz', events: ['crew.assigned'], status: 'Active' },
+  { id: 3, name: 'Client Portal Sync', url: 'https://portal.client.com/api/sync', events: ['job.completed'], status: 'Inactive' },
+];
 
 export default function IntegrationsPage() {
   return (
-    <DashboardLayout title="API & Integrations">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <h1 className="text-2xl font-bold text-white">API & Integrations</h1>
+    <DashboardLayout title="API & Integrations" subtitle="External service connections, webhooks, and API management">
+      <div className="space-y-8">
+        {/* API Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-6 6c-3 0-5.5-1.5-5.5-4a3.5 3.5 0 00-7 0c0 2.5 2.5 4 5.5 4a6 6 0 016-6z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-white">3</p>
+                <p className="text-gray-400 text-sm">API Keys</p>
+              </div>
+            </div>
           </div>
-          <p className="text-gray-300">Manage your API keys and third-party integrations.</p>
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-white">4</p>
+                <p className="text-gray-400 text-sm">Integrations</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-white">3</p>
+                <p className="text-gray-400 text-sm">Webhooks</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-white">1.2k</p>
+                <p className="text-gray-400 text-sm">API Calls Today</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* API Keys */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl">
-          <div className="p-6 border-b border-gray-700">
-            <h3 className="text-lg font-semibold text-white">API Keys</h3>
-            <p className="text-gray-400 text-sm">Generate and manage API keys for external access</p>
+        {/* Third-party Integrations */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-white">Third-party Integrations</h2>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+              Browse App Store
+            </button>
           </div>
-          <div className="p-6">
-            <div className="bg-gray-700 rounded-lg p-4 mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-white font-medium">Production API Key</div>
-                <span className="bg-green-600 text-white px-2 py-1 rounded text-xs">Active</span>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {integrations.map((integration, index) => (
+              <div key={index} className="bg-gray-900 border border-gray-700 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <span className="text-2xl mr-3">{integration.icon}</span>
+                    <div>
+                      <h3 className="text-white font-semibold">{integration.name}</h3>
+                      <p className="text-gray-400 text-sm">{integration.description}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    integration.status === 'Connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {integration.status}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Last sync: {integration.lastSync}</span>
+                  <div className="flex space-x-2">
+                    {integration.status === 'Connected' ? (
+                      <>
+                        <button className="text-blue-500 hover:text-blue-400">Configure</button>
+                        <button className="text-red-500 hover:text-red-400">Disconnect</button>
+                      </>
+                    ) : (
+                      <button className="text-green-500 hover:text-green-400">Connect</button>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="text-gray-300 font-mono text-sm bg-gray-600 p-2 rounded">
-                pk_live_abc123...xyz789
-              </div>
-              <div className="text-gray-400 text-xs mt-2">Created on Dec 1, 2024 • Last used 2 hours ago</div>
-            </div>
-            
-            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium">
+            ))}
+          </div>
+        </div>
+
+        {/* API Keys Management */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-white">API Keys</h2>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
               Generate New Key
             </button>
           </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">API Key</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Created</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Used</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {apiKeys.map((key) => (
+                  <tr key={key.id} className="hover:bg-gray-700 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-white font-medium">{key.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <code className="bg-gray-900 px-2 py-1 rounded text-gray-300 text-sm font-mono">
+                          {key.key}
+                        </code>
+                        <button className="ml-2 text-gray-400 hover:text-white">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-300">{key.created}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-300">{key.lastUsed}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        key.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {key.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex space-x-2">
+                        <button className="text-blue-500 hover:text-blue-400">Edit</button>
+                        <button className="text-orange-500 hover:text-orange-400">Regenerate</button>
+                        <button className="text-red-500 hover:text-red-400">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Available Integrations */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl">
-          <div className="p-6 border-b border-gray-700">
-            <h3 className="text-lg font-semibold text-white">Available Integrations</h3>
-            <p className="text-gray-400 text-sm">Connect PulseCRM with your favorite tools</p>
+        {/* Webhooks */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-white">Webhooks</h2>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+              Create Webhook
+            </button>
           </div>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 17.93A8.001 8.001 0 0 1 4 12c0-.424.033-.84.097-1.244L7 13.659v1.341c0 1.1.9 2 2 2v3.93zm6.806-2.14A1.99 1.99 0 0 0 16 16h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41A8.008 8.008 0 0 1 20 12a8.06 8.06 0 0 1-2.194 5.79z"/>
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-white font-medium">Slack</div>
-                  <div className="text-gray-400 text-sm">Send notifications to Slack channels</div>
-                </div>
-              </div>
-              <button className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg text-sm">
-                Connect
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">URL</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Events</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {webhooks.map((webhook) => (
+                  <tr key={webhook.id} className="hover:bg-gray-700 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-white font-medium">{webhook.name}</td>
+                    <td className="px-6 py-4">
+                      <code className="bg-gray-900 px-2 py-1 rounded text-gray-300 text-sm font-mono max-w-xs truncate block">
+                        {webhook.url}
+                      </code>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {webhook.events.map((event, index) => (
+                          <span key={index} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                            {event}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        webhook.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {webhook.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex space-x-2">
+                        <button className="text-blue-500 hover:text-blue-400">Edit</button>
+                        <button className="text-purple-500 hover:text-purple-400">Test</button>
+                        <button className="text-red-500 hover:text-red-400">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* API Documentation */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <h2 className="text-xl font-semibold text-white mb-6">API Documentation</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+              <h3 className="text-white font-semibold mb-2">REST API</h3>
+              <p className="text-gray-400 text-sm mb-4">Complete REST API documentation with examples</p>
+              <button className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition-colors">
+                View Documentation
               </button>
             </div>
-            
-            <div className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.533 7.85c-.18-.403-.412-.787-.692-1.148C21.455 5.1 19.631 4.5 17.5 4.5c-1.261 0-2.438.347-3.402.948a7.35 7.35 0 0 0-1.598 1.502c-.597-.45-1.298-.8-2.052-1.022C9.295 5.55 8.074 5.5 6.5 5.5 4.369 5.5 2.545 6.1 1.159 7.702.879 8.063.647 8.447.467 8.85.107 9.653 0 10.622 0 11.5c0 .878.107 1.847.467 2.65.18.403.412.787.692 1.148C2.545 16.9 4.369 17.5 6.5 17.5c1.574 0 2.795-.05 3.948-.428.754-.222 1.455-.572 2.052-1.022.573.442 1.223.787 1.915.992 1.081.318 2.258.458 3.585.458 2.131 0 3.955-.6 5.341-2.202.28-.361.512-.745.692-1.148.36-.803.467-1.772.467-2.65 0-.878-.107-1.847-.467-2.65zM6.5 15.5c-1.574 0-2.795.05-3.948.428-.754.222-1.455.572-2.052 1.022C1.073 16.5.5 15.878.5 15s.573-1.5 1-1.95c.597-.45 1.298-.8 2.052-1.022C4.705 11.55 5.926 11.5 7.5 11.5c1.574 0 2.795.05 3.948.428.754.222 1.455.572 2.052 1.022.427.45 1 1.072 1 1.95s-.573 1.5-1 1.95c-.597.45-1.298.8-2.052 1.022C10.295 18.45 9.074 18.5 7.5 18.5z"/>
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-white font-medium">QuickBooks</div>
-                  <div className="text-gray-400 text-sm">Sync invoices and financial data</div>
-                </div>
-              </div>
-              <span className="bg-green-600 text-white px-3 py-1 rounded text-sm">Connected</span>
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+              <h3 className="text-white font-semibold mb-2">GraphQL</h3>
+              <p className="text-gray-400 text-sm mb-4">GraphQL schema and query examples</p>
+              <button className="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded transition-colors">
+                Explore Schema
+              </button>
             </div>
-            
-            <div className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.04 9.333c-.04-2.293-.204-3.86-.433-5.226-.237-1.413-.585-2.679-1.13-3.905C20.365-.95 19.055-1.952 17.41-2.422c-1.643-.47-3.488-.56-5.41-.56s-3.767.09-5.41.56C4.945-1.952 3.635-.95 2.523.202 1.978 1.428 1.63 2.694 1.393 4.107c-.229 1.366-.393 2.933-.433 5.226C.92 11.626.88 12.293.88 15s.04 3.374.08 5.667c.04 2.293.204 3.86.433 5.226.237 1.413.585 2.679 1.13 3.905 1.112 1.152 2.422 2.154 4.067 2.624 1.643.47 3.488.56 5.41.56s3.767-.09 5.41-.56c1.645-.47 2.955-1.472 4.067-2.624.545-1.226.893-2.492 1.13-3.905.229-1.366.393-2.933.433-5.226.04-2.293.08-2.96.08-5.667s-.04-3.374-.08-5.667zM12 18.333c-3.682 0-6.667-2.985-6.667-6.667S8.318 5 12 5s6.667 2.985 6.667 6.666-2.985 6.667-6.667 6.667zm6.93-12.03c-.86 0-1.56-.7-1.56-1.56s.7-1.56 1.56-1.56 1.56.7 1.56 1.56-.7 1.56-1.56 1.56z"/>
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-white font-medium">Google Calendar</div>
-                  <div className="text-gray-400 text-sm">Sync scheduling and appointments</div>
-                </div>
-              </div>
-              <button className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg text-sm">
-                Connect
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+              <h3 className="text-white font-semibold mb-2">SDKs</h3>
+              <p className="text-gray-400 text-sm mb-4">Client libraries for popular languages</p>
+              <button className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded transition-colors">
+                Download SDKs
               </button>
             </div>
           </div>

@@ -8,3 +8,14 @@ node_modules
 dist
 build
 .turbo
+*.md
+DEVELOPMENT_COMPLETE.md
+DOCKER_SETUP.md
+FEATURE_NOTIFICATIONS.md
+IMPROVEMENTS.md
+docker
+deployment
+backups
+uploads
+.vscode
+constructflow.code-workspace

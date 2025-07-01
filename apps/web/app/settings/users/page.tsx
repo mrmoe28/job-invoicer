@@ -1,216 +1,192 @@
-'use client';
-
 import DashboardLayout from '../../../components/dashboard-layout';
 
-export default function UsersPage() {
+const mockUsers = [
+  { id: 1, name: 'Admin User', email: 'admin@constructflow.com', role: 'Administrator', status: 'Active', lastLogin: '2 hours ago' },
+  { id: 2, name: 'John Doe', email: 'john.doe@constructflow.com', role: 'Project Manager', status: 'Active', lastLogin: '1 day ago' },
+  { id: 3, name: 'Sarah Wilson', email: 'sarah.wilson@constructflow.com', role: 'Crew Leader', status: 'Active', lastLogin: '3 hours ago' },
+  { id: 4, name: 'Mike Johnson', email: 'mike.johnson@constructflow.com', role: 'Worker', status: 'Inactive', lastLogin: '1 week ago' },
+];
+
+const userRoles = [
+  { name: 'Administrator', description: 'Full system access and configuration', users: 1 },
+  { name: 'Project Manager', description: 'Manage jobs, crews, and schedules', users: 3 },
+  { name: 'Crew Leader', description: 'Lead crews and update job progress', users: 5 },
+  { name: 'Worker', description: 'View assigned tasks and update status', users: 12 },
+];
+
+export default function UserManagementPage() {
   return (
-    <DashboardLayout title="User Management">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
-              <div>
-                <h1 className="text-2xl font-bold text-white">User Management</h1>
-                <p className="text-gray-300">Manage users, roles, and access permissions.</p>
-              </div>
-            </div>
-            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium">
+    <DashboardLayout title="User Management" subtitle="Manage crew members, administrators, and access permissions">
+      <div className="space-y-8">
+        {/* Quick Actions */}
+        <div className="flex justify-between items-center">
+          <div className="flex space-x-4">
+            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
               <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              Add User
+              Add New User
+            </button>
+            <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+              Import Users
             </button>
           </div>
-        </div>
-
-        {/* Users Table */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl">
-          <div className="p-6 border-b border-gray-700">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Active Users</h3>
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    className="w-64 pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  />
-                  <svg className="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <select className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
-                  <option>All Roles</option>
-                  <option>Administrator</option>
-                  <option>Manager</option>
-                  <option>Crew Member</option>
-                </select>
-              </div>
+          <div className="flex space-x-4">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search users..."
+                className="pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+              <svg className="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-700">
-                <tr>
-                  <th className="text-left p-4 text-gray-300 font-medium">
-                    <input type="checkbox" className="rounded bg-gray-600 border-gray-500" />
-                  </th>
-                  <th className="text-left p-4 text-gray-300 font-medium">User</th>
-                  <th className="text-left p-4 text-gray-300 font-medium">Email</th>
-                  <th className="text-left p-4 text-gray-300 font-medium">Role</th>
-                  <th className="text-left p-4 text-gray-300 font-medium">Last Login</th>
-                  <th className="text-left p-4 text-gray-300 font-medium">Status</th>
-                  <th className="text-left p-4 text-gray-300 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-t border-gray-700 hover:bg-gray-700">
-                  <td className="p-4">
-                    <input type="checkbox" className="rounded bg-gray-600 border-gray-500" />
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">A</span>
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">Admin User</div>
-                        <div className="text-gray-400 text-sm">System Administrator</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-gray-300">admin@pulsecrm.com</td>
-                  <td className="p-4">
-                    <span className="bg-red-600 text-white px-2 py-1 rounded text-sm">Administrator</span>
-                  </td>
-                  <td className="p-4 text-gray-300">2 hours ago</td>
-                  <td className="p-4">
-                    <span className="bg-green-600 text-white px-2 py-1 rounded text-sm">Active</span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex space-x-2">
-                      <button className="text-blue-400 hover:text-blue-300">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button className="text-yellow-400 hover:text-yellow-300">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                
-                <tr className="border-t border-gray-700 hover:bg-gray-700">
-                  <td className="p-4">
-                    <input type="checkbox" className="rounded bg-gray-600 border-gray-500" />
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">J</span>
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">John Manager</div>
-                        <div className="text-gray-400 text-sm">Project Manager</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-gray-300">john.manager@pulsecrm.com</td>
-                  <td className="p-4">
-                    <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm">Manager</span>
-                  </td>
-                  <td className="p-4 text-gray-300">Yesterday</td>
-                  <td className="p-4">
-                    <span className="bg-green-600 text-white px-2 py-1 rounded text-sm">Active</span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex space-x-2">
-                      <button className="text-blue-400 hover:text-blue-300">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button className="text-yellow-400 hover:text-yellow-300">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-
-                <tr className="border-t border-gray-700 hover:bg-gray-700">
-                  <td className="p-4">
-                    <input type="checkbox" className="rounded bg-gray-600 border-gray-500" />
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">M</span>
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">Mike Worker</div>
-                        <div className="text-gray-400 text-sm">Crew Member</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-gray-300">mike.worker@pulsecrm.com</td>
-                  <td className="p-4">
-                    <span className="bg-green-600 text-white px-2 py-1 rounded text-sm">Crew Member</span>
-                  </td>
-                  <td className="p-4 text-gray-300">3 days ago</td>
-                  <td className="p-4">
-                    <span className="bg-yellow-600 text-white px-2 py-1 rounded text-sm">Inactive</span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex space-x-2">
-                      <button className="text-blue-400 hover:text-blue-300">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button className="text-yellow-400 hover:text-yellow-300">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
 
         {/* User Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <div className="text-gray-400 text-sm">Total Users</div>
-            <div className="text-2xl font-bold text-white">24</div>
-            <div className="text-green-400 text-sm">+3 this month</div>
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-white">21</p>
+                <p className="text-gray-400 text-sm">Total Users</p>
+              </div>
+            </div>
           </div>
           <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <div className="text-gray-400 text-sm">Active Users</div>
-            <div className="text-2xl font-bold text-white">21</div>
-            <div className="text-green-400 text-sm">87.5% online</div>
+            <div className="flex items-center">
+              <div className="p-2 bg-green-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-white">18</p>
+                <p className="text-gray-400 text-sm">Active Users</p>
+              </div>
+            </div>
           </div>
           <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <div className="text-gray-400 text-sm">Administrators</div>
-            <div className="text-2xl font-bold text-white">2</div>
-            <div className="text-gray-400 text-sm">Super users</div>
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-white">3</p>
+                <p className="text-gray-400 text-sm">Pending Invites</p>
+              </div>
+            </div>
           </div>
           <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <div className="text-gray-400 text-sm">Crew Members</div>
-            <div className="text-2xl font-bold text-white">18</div>
-            <div className="text-blue-400 text-sm">Field workers</div>
+            <div className="flex items-center">
+              <div className="p-2 bg-red-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-white">2</p>
+                <p className="text-gray-400 text-sm">Inactive Users</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* User List */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-700">
+            <h2 className="text-xl font-semibold text-white">All Users</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Login</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {mockUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-700 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
+                          <span className="text-white font-medium text-sm">
+                            {user.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-white font-medium">{user.name}</div>
+                          <div className="text-gray-400 text-sm">{user.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-700 text-gray-300">
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        user.status === 'Active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-300 text-sm">
+                      {user.lastLogin}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex space-x-2">
+                        <button className="text-orange-500 hover:text-orange-400">Edit</button>
+                        <button className="text-red-500 hover:text-red-400">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Role Management */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-white">Role Management</h2>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+              Create New Role
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {userRoles.map((role, index) => (
+              <div key={index} className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-white font-semibold">{role.name}</h3>
+                  <span className="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded">
+                    {role.users} users
+                  </span>
+                </div>
+                <p className="text-gray-400 text-sm mb-4">{role.description}</p>
+                <div className="flex space-x-2">
+                  <button className="text-orange-500 hover:text-orange-400 text-sm">Edit</button>
+                  <button className="text-blue-500 hover:text-blue-400 text-sm">View Permissions</button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
