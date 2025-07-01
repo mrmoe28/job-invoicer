@@ -15,6 +15,20 @@ interface FeatureUpdate {
 // Current feature updates - add new ones here when features are added
 const FEATURE_UPDATES: FeatureUpdate[] = [
   {
+    id: 'update-2024-12-30-admin',
+    version: '1.3.0',
+    title: 'Custom Admin Login & Simplified Signup',
+    description: 'We\'ve streamlined the signup process and added custom admin access!',
+    features: [
+      'Added custom admin login with enterprise privileges',
+      'Simplified signup from 3 steps to 2 steps',
+      'Removed subscription complexity for cleaner onboarding',
+      'Professional plan now default for all new organizations'
+    ],
+    date: 'December 30, 2024',
+    type: 'feature'
+  },
+  {
     id: 'update-2024-12-30',
     version: '1.2.0',
     title: 'New Features & Improvements',
