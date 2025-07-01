@@ -66,6 +66,15 @@ export default function DocumentsPage() {
       related: 'Johnson Project',
     },
     {
+      id: 'demo-pdf-2',
+      name: 'Project Proposal.pdf',
+      type: 'Proposal',
+      status: 'draft',
+      size: '1.8 MB',
+      date: 'Dec 12, 2024',
+      related: 'Wilson Project',
+    },
+    {
       id: 'demo-img-1', 
       name: 'Site Photo.jpg',
       type: 'Photo',
@@ -165,9 +174,11 @@ export default function DocumentsPage() {
           if (fileType === 'pdf') {
             // Use advanced PDF viewer for PDF files
             setShowPdfViewer(true);
+            setShowViewerModal(false); // Ensure other modal is closed
           } else {
             // Use simple modal for other file types
             setShowViewerModal(true);
+            setShowPdfViewer(false); // Ensure PDF viewer is closed
             setZoomLevel(1);
             
             // Load CSV data if it's a CSV file
@@ -179,16 +190,26 @@ export default function DocumentsPage() {
         break;
       case 'download':
         if (document) {
-          // Simulate download
-          const blob = new Blob(['Sample file content'], { type: 'application/octet-stream' });
-          const url = URL.createObjectURL(blob);
-          const link = window.document.createElement('a');
-          link.href = url;
-          link.download = document.name;
-          window.document.body.appendChild(link);
-          link.click();
-          window.document.body.removeChild(link);
-          URL.revokeObjectURL(url);
+          // For uploaded files with blob URLs, download directly
+          if (document.url && document.url.startsWith('blob:')) {
+            const link = window.document.createElement('a');
+            link.href = document.url;
+            link.download = document.name;
+            window.document.body.appendChild(link);
+            link.click();
+            window.document.body.removeChild(link);
+          } else {
+            // Simulate download for demo files
+            const blob = new Blob(['Sample file content'], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const link = window.document.createElement('a');
+            link.href = url;
+            link.download = document.name;
+            window.document.body.appendChild(link);
+            link.click();
+            window.document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }
         }
         break;
       case 'edit':
@@ -199,6 +220,11 @@ export default function DocumentsPage() {
         break;
       case 'delete':
         if (document) {
+          // Clean up blob URL if it exists
+          if (document.url && document.url.startsWith('blob:')) {
+            URL.revokeObjectURL(document.url);
+          }
+          
           // Actually remove the document from the list
           setDocuments(prev => prev.filter(doc => doc.id !== documentId));
           
@@ -419,15 +445,17 @@ export default function DocumentsPage() {
       case 'pdf':
         // Using multiple fallback PDFs for better reliability
         const pdfUrls = [
+          'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
           'https://www.africau.edu/images/default/sample.pdf',
-          'https://www.orimi.com/pdf-test.pdf',
-          'https://scholar.harvard.edu/files/torman_personal/files/samplepdf.pdf'
+          'https://www.orimi.com/pdf-test.pdf'
         ];
         // Use filename hash to consistently return same PDF for same file
-        const index = filename.length % pdfUrls.length;
+        const index = Math.abs(filename.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % pdfUrls.length;
         return pdfUrls[index];
       case 'image':
-        return 'https://picsum.photos/800/600?random=' + Math.random();
+        // Use a more reliable image service
+        const imageId = Math.abs(filename.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 1000;
+        return `https://picsum.photos/800/600?random=${imageId}`;
       case 'csv':
         return '#'; // CSV data is handled separately
       default:
@@ -858,7 +886,21 @@ export default function DocumentsPage() {
           </div>
         )}
 
-        {/* Document Viewer Modal */}
+        {/* PDF Viewer Modal */}
+        {showPdfViewer && currentDocument && (
+          <LazyPdfViewer
+            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+            fileName={currentDocument.name}
+            onCloseAction={() => {
+              setShowPdfViewer(false);
+              setCurrentDocument(null);
+            }}
+            onExtractedDataAction={(data) => {
+              setExtractedPdfData(data);
+              console.log('Extracted PDF data:', data);
+            }}
+          />
+        )}
         {showViewerModal && currentDocument && (
           <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col z-50">
             {/* Header */}
@@ -918,7 +960,11 @@ export default function DocumentsPage() {
                 
                 {/* Close Button */}
                 <button
-                  onClick={() => setShowViewerModal(false)}
+                  onClick={() => {
+                    setShowViewerModal(false);
+                    setCurrentDocument(null);
+                    setZoomLevel(1);
+                  }}
                   className="p-2 text-gray-400 hover:text-white transition-colors"
                   title="Close viewer"
                 >
