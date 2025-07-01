@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
 
@@ -10,6 +10,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check for admin2 fallback and pre-fill credentials
+  useEffect(() => {
+    const isAdmin2Fallback = searchParams.get('admin2');
+    if (isAdmin2Fallback) {
+      setEmail('admin2@pulsecrm.local');
+      setPassword('admin456');
+    }
+  }, [searchParams]);
 
   // tRPC mutation hook
   const loginMutation = trpc.login.useMutation({
@@ -43,7 +53,8 @@ export default function LoginPage() {
     const isValidDemo = (
       (email === 'admin' && password === 'admin123') ||
       (email.includes('@') && password === 'admin123') ||
-      (email === 'ekosolarize@gmail.com' && password === 'admin123')
+      (email === 'ekosolarize@gmail.com' && password === 'admin123') ||
+      (email === 'admin2@pulsecrm.local' && password === 'admin456')
     );
     
     if (isValidDemo) {
@@ -87,7 +98,7 @@ export default function LoginPage() {
       
       router.push('/dashboard');
     } else {
-      setError('Invalid credentials. Use any email with password: admin123 for demo.');
+      setError('Invalid credentials. Use any email with password: admin123 for demo, or admin2@pulsecrm.local with password: admin456');
     }
   };
 
@@ -186,6 +197,20 @@ export default function LoginPage() {
               Create your workspace
             </Link>
           </p>
+          
+          {/* Admin Access Link */}
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <p className="text-gray-400 text-sm mb-2">Admin Access:</p>
+            <Link 
+              href="/login/admin2" 
+              className="inline-flex items-center text-orange-500 hover:text-orange-400 text-sm font-medium"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v-2H7v-2H4a1 1 0 01-1-1v-1m0 0V9a6 6 0 016-6h2a1 1 0 011 1v3m0 0v3a6 6 0 01-7.743 5.743L11 17H9v-2H7v-2H4a1 1 0 01-1-1v-1m0 0V9a6 6 0 016-6h2a1 1 0 011 1v3" />
+              </svg>
+              Direct Admin Login
+            </Link>
+          </div>
         </div>
       </div>
     </div>

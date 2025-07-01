@@ -1,5 +1,9 @@
 {
-  "/dashboard/contacts/page": "app/dashboard/contacts/page.js",
   "/auth/page": "app/auth/page.js",
-  "/dashboard/scheduling/page": "app/dashboard/scheduling/page.js"
+  "/dashboard/page": "app/dashboard/page.js",
+  "/settings/profile/page": "app/settings/profile/page.js",
+  "/dashboard/documents/page": "app/dashboard/documents/page.js",
+  "/api/trpc/[trpc]/route": "app/api/trpc/[trpc]/route.js",
+  "/login/admin2/page": "app/login/admin2/page.js",
+  "/dashboard/jobs/page": "app/dashboard/jobs/page.js"
 }

@@ -14,12 +14,19 @@ const LazyPdfViewer = dynamic(() => import('../../../components/pdf-viewer'), {
   ssr: false,
 });
 
+// Simple, reliable PDF viewer alternative
+const SimplePdfViewer = dynamic(() => import('../../../components/simple-pdf-viewer'), {
+  ssr: false,
+});
+
 export default function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showViewerModal, setShowViewerModal] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [showSimplePdfViewer, setShowSimplePdfViewer] = useState(false);
+  const [pdfViewerType, setPdfViewerType] = useState<'advanced' | 'simple'>('simple');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [currentDocument, setCurrentDocument] = useState<any>(null);
@@ -172,13 +179,20 @@ export default function DocumentsPage() {
           const fileType = getFileType(document.name);
           
           if (fileType === 'pdf') {
-            // Use advanced PDF viewer for PDF files
-            setShowPdfViewer(true);
+            // Use simple PDF viewer by default for better reliability
+            if (pdfViewerType === 'simple') {
+              setShowSimplePdfViewer(true);
+              setShowPdfViewer(false);
+            } else {
+              setShowPdfViewer(true);
+              setShowSimplePdfViewer(false);
+            }
             setShowViewerModal(false); // Ensure other modal is closed
           } else {
             // Use simple modal for other file types
             setShowViewerModal(true);
-            setShowPdfViewer(false); // Ensure PDF viewer is closed
+            setShowPdfViewer(false);
+            setShowSimplePdfViewer(false);
             setZoomLevel(1);
             
             // Load CSV data if it's a CSV file
@@ -606,7 +620,39 @@ export default function DocumentsPage() {
           </div>
         </div>
 
-        {/* Status Tabs */}
+        {/* PDF Viewer Selector */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-white font-medium">PDF Viewer Settings</h3>
+              <p className="text-gray-400 text-sm">Choose your preferred PDF viewer</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="pdfViewer"
+                  value="simple"
+                  checked={pdfViewerType === 'simple'}
+                  onChange={(e) => setPdfViewerType(e.target.value as any)}
+                  className="text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-gray-300 text-sm">Simple Viewer (Recommended)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="pdfViewer"
+                  value="advanced"
+                  checked={pdfViewerType === 'advanced'}
+                  onChange={(e) => setPdfViewerType(e.target.value as any)}
+                  className="text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-gray-300 text-sm">Advanced Viewer</span>
+              </label>
+            </div>
+          </div>
+        </div>
         <div className="flex space-x-1 bg-gray-800 p-1 rounded-lg border border-gray-700">
           {statusTabs.map((tab) => (
             <button
@@ -886,7 +932,7 @@ export default function DocumentsPage() {
           </div>
         )}
 
-        {/* PDF Viewer Modal */}
+        {/* Advanced PDF Viewer Modal */}
         {showPdfViewer && currentDocument && (
           <LazyPdfViewer
             fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
@@ -898,6 +944,18 @@ export default function DocumentsPage() {
             onExtractedDataAction={(data) => {
               setExtractedPdfData(data);
               console.log('Extracted PDF data:', data);
+            }}
+          />
+        )}
+
+        {/* Simple PDF Viewer Modal */}
+        {showSimplePdfViewer && currentDocument && (
+          <SimplePdfViewer
+            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+            fileName={currentDocument.name}
+            onCloseAction={() => {
+              setShowSimplePdfViewer(false);
+              setCurrentDocument(null);
             }}
           />
         )}
