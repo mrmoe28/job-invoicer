@@ -1,49 +1,59 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { trpc } from '@/lib/trpc';
 
 export default function Admin2AutoLoginPage() {
   const router = useRouter();
-
-  // tRPC mutation hook for login
-  const loginMutation = trpc.login.useMutation({
-    onSuccess: (result) => {
-      if (result.success) {
-        // Store user session
-        localStorage.setItem('pulse_user', JSON.stringify({
-          id: result.user.id,
-          email: result.user.email,
-          name: `${result.user.firstName} ${result.user.lastName}`,
-          role: result.user.role,
-          organizationId: result.user.organizationId,
-          organizationName: result.organization.name,
-          organizationSlug: result.organization.slug,
-          plan: result.organization.plan,
-        }));
-
-        // Set session flag to indicate successful authentication
-        localStorage.setItem('pulse_session_active', 'true');
-        
-        // Redirect to dashboard
-        router.push('/dashboard');
-      }
-    },
-    onError: (error) => {
-      console.error('Auto-login failed:', error);
-      // Fallback to regular login page with pre-filled credentials
-      router.push('/auth?admin2=true');
-    },
-  });
+  const [loginAttempted, setLoginAttempted] = useState(false);
+  const [loginStatus, setLoginStatus] = useState('Connecting...');
 
   useEffect(() => {
-    // Automatically login with admin2 credentials
-    loginMutation.mutate({
-      email: 'admin2@pulsecrm.local',
-      password: 'admin456'
-    });
-  }, []);
+    // Only attempt login once
+    if (!loginAttempted) {
+      console.log('Attempting auto-login for admin2');
+      setLoginAttempted(true);
+      setLoginStatus('Logging in...');
+      
+      // Simulate login process
+      setTimeout(() => {
+        try {
+          // Use the same hardcoded logic as the auth page
+          const userData = {
+            id: 'admin-2',
+            email: 'admin2@pulsecrm.local',
+            name: 'Sarah Administrator',
+            username: 'admin2',
+            role: 'Administrator',
+            organizationId: 'org-admin',
+            organizationName: 'Demo Construction Company',
+            organizationSlug: 'demo-construction',
+            plan: 'pro',
+            loginTime: new Date().toISOString(),
+          };
+
+          localStorage.setItem('pulse_user', JSON.stringify(userData));
+          localStorage.setItem('pulse_session_active', 'true');
+          
+          setLoginStatus('Login successful! Redirecting...');
+          
+          // Redirect to dashboard
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 1000);
+          
+        } catch (error) {
+          console.error('Auto-login failed:', error);
+          setLoginStatus('Login failed. Redirecting to manual login...');
+          
+          // Fallback to regular login page
+          setTimeout(() => {
+            router.push('/auth?admin2=true');
+          }, 2000);
+        }
+      }, 1500); // Simulate network delay
+    }
+  }, [loginAttempted, router]);
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
@@ -61,12 +71,30 @@ export default function Admin2AutoLoginPage() {
         {/* Auto-login message */}
         <div className="space-y-4">
           <h2 className="text-xl text-white font-semibold">Admin Access Portal</h2>
-          <p className="text-gray-300">Automatically logging you in...</p>
+          <p className="text-gray-300">{loginStatus}</p>
           
-          {/* Loading spinner */}
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-          </div>
+          {/* Loading spinner - show during initial loading */}
+          {loginStatus.includes('Connecting') || loginStatus.includes('Logging in') ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+            </div>
+          ) : loginStatus.includes('successful') ? (
+            <div className="flex items-center justify-center">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+          ) : loginStatus.includes('failed') ? (
+            <div className="flex items-center justify-center">
+              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+          ) : null}
           
           {/* Admin info */}
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mt-6">
