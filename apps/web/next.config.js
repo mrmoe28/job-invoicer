@@ -5,9 +5,6 @@
 
 const nextConfig = {
   transpilePackages: [
-    "@pulsecrm/api",
-    "@pulsecrm/db",
-    "@pulsecrm/ui",
     "pdfjs-dist",
   ],
   typescript: {

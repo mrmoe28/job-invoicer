@@ -5,9 +5,6 @@
 
 const nextConfig = {
   transpilePackages: [
-    "@pulsecrm/api",
-    "@pulsecrm/db",
-    "@pulsecrm/ui",
     "@react-pdf-viewer/core",
     "@react-pdf-viewer/default-layout",
     "pdfjs-dist",

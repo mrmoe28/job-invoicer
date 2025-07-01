@@ -1,21 +1,82 @@
-node_modules
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+.turbo/
+dist/
+build/
+out/
+
+# Environment files
 .env
 .env.local
+.env.development.local
+.env.test.local
 .env.production.local
-.next/cache
+
+# Cache directories
+.cache/
+.tmp/
+temp/
+
+# Logs
 *.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+.pid
+.seed
+.pid.lock
+
+# Coverage directory
+coverage/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
 .DS_Store
-dist
-build
-.turbo
+Thumbs.db
+ehthumbs.db
+
+# Documentation and development files
 *.md
-DEVELOPMENT_COMPLETE.md
-DOCKER_SETUP.md
-FEATURE_NOTIFICATIONS.md
-IMPROVEMENTS.md
-docker
-deployment
-backups
-uploads
-.vscode
+README.md
+CHANGELOG.md
+docs/
+.vscode/
 constructflow.code-workspace
+
+# Docker and deployment files
+docker/
+deployment/
+docker-compose*.yml
+Dockerfile*
+*.dockerfile
+nginx.conf
+
+# Build info files
+*.tsbuildinfo
+.vercel
+
+# Uploads and user data
+uploads/
+backups/
+
+# Development tools
+.husky/
+
+# Monorepo packages not needed for web deployment
+packages/api/
+packages/db/
+packages/ui/
+packages/typescript-config/
