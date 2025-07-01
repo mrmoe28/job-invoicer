@@ -29,6 +29,7 @@ export default function PdfViewer({ fileUrl, fileName, onCloseAction, onExtracte
   const [totalPages, setTotalPages] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [extractedText, setExtractedText] = useState<string>('');
   const [extractedData, setExtractedData] = useState<ExtractedData>({});
@@ -66,26 +67,38 @@ export default function PdfViewer({ fileUrl, fileName, onCloseAction, onExtracte
   const loadPdf = useCallback(async () => {
     try {
       setIsLoading(true);
+      setError('');
       const pdfjsLib = (window as any).pdfjsLib;
+      
+      if (!pdfjsLib) {
+        throw new Error('PDF.js library failed to load');
+      }
+      
       let src: any = fileUrl;
       // If fileUrl is a blob URL, fetch the blob and pass as data
       if (fileUrl.startsWith('blob:')) {
         const response = await fetch(fileUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+        }
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
         src = { data: arrayBuffer };
       }
+      
       const pdf = await pdfjsLib.getDocument({
         ...((typeof src === 'string') ? { url: src } : src),
         cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
         cMapPacked: true,
       }).promise;
+      
       pdfDocRef.current = pdf;
       setTotalPages(pdf.numPages);
       setCurrentPage(1);
       renderPage(1, pdf);
     } catch (error) {
       console.error('Error loading PDF:', error);
+      setError(`Failed to load PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -489,6 +502,25 @@ export default function PdfViewer({ fileUrl, fileName, onCloseAction, onExtracte
               <div className="text-center">
                 <div className="w-8 h-8 bg-orange-500 rounded-full animate-pulse mx-auto mb-4"></div>
                 <p className="text-gray-400">Loading PDF...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-medium text-white mb-2">Failed to Load PDF</h4>
+                <p className="text-gray-400 mb-4">{error}</p>
+                <button
+                  onClick={() => {
+                    setError('');
+                    loadPdf();
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Try Again
+                </button>
               </div>
             ) : (
               <canvas ref={canvasRef} className="border border-gray-600 shadow-2xl max-w-full max-h-full" />

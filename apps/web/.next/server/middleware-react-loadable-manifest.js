@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST='{"app/dashboard/documents/page.tsx -> ../../../components/pdf-viewer":{"id":4760,"files":["static/chunks/760.1a8ad0c9036e557f.js"]}}';
+self.__REACT_LOADABLE_MANIFEST="{\"app/dashboard/documents/page.tsx -> ../../../components/pdf-viewer\":{\"id\":\"app/dashboard/documents/page.tsx -> ../../../components/pdf-viewer\",\"files\":[\"static/chunks/_app-pages-browser_components_pdf-viewer_tsx.js\"]}}"

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
+import { trpc } from '../../../lib/trpc';
 import type { Job, JobStatus, JobPriority } from '../../../lib/types';
 
 export default function JobsPage() {
@@ -27,9 +28,27 @@ export default function JobsPage() {
     { id: 'image', label: 'Image', visible: false, order: 12 },
     { id: 'actions', label: 'Actions', visible: true, order: 13 }
   ]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [viewJob, setViewJob] = useState<Job | null>(null);
-  const [editJob, setEditJob] = useState<Job | null>(null);
+  const [viewJob, setViewJob] = useState<any>(null);
+  const [editJob, setEditJob] = useState<any>(null);
+
+  // tRPC queries and mutations
+  const utils = trpc.useUtils();
+  const { data: jobs = [], isLoading } = trpc.getJobs.useQuery({});
+  const { data: companies = [] } = trpc.getCompanies.useQuery();
+  
+  const createJobMutation = trpc.createJob.useMutation({
+    onSuccess: () => {
+      // Invalidate and refetch jobs list and dashboard stats
+      utils.getJobs.invalidate();
+      utils.getDashboardStats.invalidate();
+      setShowCreateModal(false);
+      setEditJob(null);
+    },
+    onError: (error) => {
+      console.error('Error creating job:', error);
+      alert('Failed to create job. Please try again.');
+    },
+  });
 
   // Job management handlers
   const handleJobSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,9 +105,31 @@ export default function JobsPage() {
   }, [columnSettings]);
 
 
-  const handleSaveJob = (job: Job) => {
-    setJobs(prev => [...prev, job]);
-    setShowCreateModal(false);
+  const handleSaveJob = (jobData: any) => {
+    if (!jobData.title?.trim()) {
+      alert('Please enter a job title');
+      return;
+    }
+    
+    if (!companies.length) {
+      alert('No companies available. Please create a company first.');
+      return;
+    }
+
+    // Use the first available company as default
+    const companyId = companies[0].id;
+    
+    createJobMutation.mutate({
+      title: jobData.title,
+      description: jobData.description || '',
+      companyId: companyId,
+      status: jobData.status || 'quoted',
+      priority: jobData.priority || 'medium',
+      estimatedStartDate: jobData.startDate?.toISOString(),
+      estimatedBudget: jobData.budget?.toString() || '0',
+      location: jobData.address || '',
+      notes: jobData.description || '',
+    });
   };
 
   const handleJobView = useCallback((jobId: string) => {
@@ -103,7 +144,10 @@ export default function JobsPage() {
   }, [jobs]);
 
   const handleJobDelete = useCallback((jobId: string) => {
-    setJobs(prev => prev.filter(j => j.id !== jobId));
+    if (confirm('Are you sure you want to delete this job?')) {
+      // TODO: Implement job deletion API
+      console.log('Delete job:', jobId);
+    }
   }, []);
 
   const handleSelectJob = useCallback((jobId: string, checked: boolean) => {
@@ -224,7 +268,22 @@ export default function JobsPage() {
 
           {/* Jobs Table */}
           <div className="overflow-x-auto">
-            {viewMode === 'list' && (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                <span className="ml-3 text-gray-400">Loading jobs...</span>
+              </div>
+            ) : jobs.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-400">No jobs found. Create your first job to get started!</p>
+                <button 
+                  onClick={() => setShowCreateModal(true)}
+                  className="mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Create First Job
+                </button>
+              </div>
+            ) : viewMode === 'list' && (
               <table className="w-full">
                 <thead className="bg-gray-700">
                   <tr>
@@ -256,11 +315,13 @@ export default function JobsPage() {
                         />
                       </td>
                       <td className="p-4 text-white font-medium">{job.title}</td>
-                      <td className="p-4 text-gray-300">{job.contactId}</td>
+                      <td className="p-4 text-gray-300">{job.companyName || 'N/A'}</td>
                       <td className="p-4">
                         <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm">{job.status}</span>
                       </td>
-                      <td className="p-4 text-gray-300">{job.startDate.toDateString()}</td>
+                      <td className="p-4 text-gray-300">
+                        {job.estimatedStartDate ? new Date(job.estimatedStartDate).toLocaleDateString() : 'Not set'}
+                      </td>
                       <td className="p-4">
                         <div className="flex space-x-2">
                           <button 
@@ -293,24 +354,6 @@ export default function JobsPage() {
                           </button>
                         </div>
                       </td>
-                      {getVisibleColumns().filter(col => !['notes','updates','tasks','image'].includes(col.id)).map((column) => (
-                        <td key={column.id} className="p-4 text-gray-300">
-                          {(() => {
-                            switch (column.id) {
-                              case 'title': return String(job.title ?? '');
-                              case 'contactId': return String(job.contactId ?? '');
-                              case 'status': return String(job.status ?? '');
-                              case 'startDate': return job.startDate ? job.startDate.toDateString() : '';
-                              case 'priority': return String(job.priority ?? '');
-                              case 'budget': return String(job.budget ?? '');
-                              case 'address': return String(job.address ?? '');
-                              case 'systemType': return String(job.systemType ?? '');
-                              case 'contactPhone': return String(job.contactPhone ?? '');
-                              default: return '';
-                            }
-                          })()}
-                        </td>
-                      ))}
                     </tr>
                   ))}
                 </tbody>

@@ -16,11 +16,19 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
   useEffect(() => {
     const userData = localStorage.getItem('pulse_user');
-    if (!userData) {
+    const sessionActive = localStorage.getItem('pulse_session_active');
+    
+    if (!userData || sessionActive !== 'true') {
       router.push('/auth');
       return;
     }
-    setUser(JSON.parse(userData));
+    
+    try {
+      setUser(JSON.parse(userData));
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      router.push('/auth');
+    }
   }, [router]);
 
   if (!user) {

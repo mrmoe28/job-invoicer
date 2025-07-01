@@ -39,10 +39,50 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     
-    loginMutation.mutate({
-      email,
-      password,
-    });
+    // Simple demo login - replace with actual authentication later
+    if (email === 'admin' && password === 'admin123') {
+      // Get existing user data to preserve settings and uploaded content
+      const existingUserData = localStorage.getItem('pulse_user');
+      let existingData = {};
+      
+      if (existingUserData) {
+        try {
+          existingData = JSON.parse(existingUserData);
+        } catch (error) {
+          console.error('Error parsing existing user data:', error);
+        }
+      }
+
+      // Store user session with preserved data
+      const userData = {
+        id: '1',
+        email: 'admin@pulsecrm.com',
+        name: 'Admin User',
+        username: 'admin',
+        role: 'Administrator',
+        organizationId: '1',
+        organizationName: 'Demo Organization',
+        organizationSlug: 'demo',
+        plan: 'premium',
+        loginTime: new Date().toISOString(),
+        // Preserve existing profile image and other settings
+        ...existingData,
+        // Override essential fields
+        id: '1',
+        email: 'admin@pulsecrm.com',
+        username: 'admin',
+        role: 'Administrator'
+      };
+
+      localStorage.setItem('pulse_user', JSON.stringify(userData));
+      
+      // Set session flag to indicate successful authentication
+      localStorage.setItem('pulse_session_active', 'true');
+      
+      router.push('/dashboard');
+    } else {
+      setError('Invalid credentials. Use admin/admin123 for demo.');
+    }
   };
 
   return (

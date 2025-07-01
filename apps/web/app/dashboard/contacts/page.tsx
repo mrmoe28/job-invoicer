@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
 
 interface Contact {
@@ -37,6 +37,15 @@ export default function ContactsPage() {
   const [addForm, setAddForm] = useState({
     name: '', email: '', phone: '', company: '', type: 'Client', status: 'Active'
   });
+
+  // CSV Upload states
+  const [showCSVModal, setShowCSVModal] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvPreview, setCsvPreview] = useState<any[]>([]);
+  const [csvMapping, setCsvMapping] = useState<{[key: string]: string}>({});
+  const [csvImportStep, setCsvImportStep] = useState(1); // 1: Upload, 2: Mapping, 3: Preview
+  const [isImporting, setIsImporting] = useState(false);
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
 
   const [columnSettings, setColumnSettings] = useState<ColumnSetting[]>([
     { id: 'name', label: 'Name', visible: true, order: 0 },
@@ -196,6 +205,137 @@ export default function ContactsPage() {
     setShowAddModal(false);
   };
 
+  // CSV Upload Functions
+  const handleCSVUpload = () => {
+    setShowCSVModal(true);
+    setCsvImportStep(1);
+    setCsvFile(null);
+    setCsvPreview([]);
+    setCsvMapping({});
+  };
+
+  const handleCSVFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+      parseCSVFile(file);
+    } else {
+      alert('Please select a valid CSV file');
+    }
+  };
+
+  const parseCSVFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csv = e.target?.result as string;
+      const lines = csv.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const data = lines.slice(1, 6).map(line => { // Preview first 5 rows
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+        const row: any = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        return row;
+      });
+      
+      setCsvPreview(data);
+      
+      // Auto-map common column names
+      const autoMapping: {[key: string]: string} = {};
+      headers.forEach(header => {
+        const lowerHeader = header.toLowerCase();
+        if (lowerHeader.includes('name') && !lowerHeader.includes('company')) {
+          autoMapping['name'] = header;
+        } else if (lowerHeader.includes('email')) {
+          autoMapping['email'] = header;
+        } else if (lowerHeader.includes('phone')) {
+          autoMapping['phone'] = header;
+        } else if (lowerHeader.includes('company') || lowerHeader.includes('organization')) {
+          autoMapping['company'] = header;
+        } else if (lowerHeader.includes('type') || lowerHeader.includes('category')) {
+          autoMapping['type'] = header;
+        } else if (lowerHeader.includes('status')) {
+          autoMapping['status'] = header;
+        }
+      });
+      
+      setCsvMapping(autoMapping);
+      setCsvImportStep(2);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleMappingChange = (field: string, csvColumn: string) => {
+    setCsvMapping(prev => ({ ...prev, [field]: csvColumn }));
+  };
+
+  const getCSVHeaders = () => {
+    if (csvPreview.length === 0) return [];
+    return Object.keys(csvPreview[0]);
+  };
+
+  const handleImportContacts = async () => {
+    if (!csvFile) return;
+    
+    setIsImporting(true);
+    
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const csv = e.target?.result as string;
+        const lines = csv.split('\n').filter(line => line.trim());
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const newContacts: Contact[] = [];
+        
+        lines.slice(1).forEach((line, index) => {
+          const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+          const row: any = {};
+          headers.forEach((header, headerIndex) => {
+            row[header] = values[headerIndex] || '';
+          });
+          
+          // Map CSV columns to contact fields
+          const contact: Contact = {
+            id: `csv-import-${Date.now()}-${index}`,
+            name: row[csvMapping.name] || '',
+            email: row[csvMapping.email] || '',
+            phone: row[csvMapping.phone] || '',
+            company: row[csvMapping.company] || '',
+            type: row[csvMapping.type] || 'Client',
+            status: row[csvMapping.status] || 'Active',
+            dateAdded: new Date().toISOString(),
+            lastContact: new Date().toISOString(),
+          };
+          
+          // Only add contacts with at least name and email
+          if (contact.name.trim() && contact.email.trim()) {
+            newContacts.push(contact);
+          }
+        });
+        
+        // Add new contacts to existing ones
+        setContacts(prev => [...prev, ...newContacts]);
+        
+        // Close modal and reset
+        setShowCSVModal(false);
+        setCsvImportStep(1);
+        setCsvFile(null);
+        setCsvPreview([]);
+        setCsvMapping({});
+        
+        alert(`Successfully imported ${newContacts.length} contacts!`);
+      };
+      reader.readAsText(csvFile);
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      alert('Error importing CSV file. Please check the format and try again.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showColumnSettings) {
@@ -214,15 +354,27 @@ export default function ContactsPage() {
     <DashboardLayout title="Contact Management">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <button 
-            onClick={handleAddContact}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            Add Contact
-          </button>
+          <div className="flex space-x-3">
+            <button 
+              onClick={handleAddContact}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Add Contact
+            </button>
+            
+            <button 
+              onClick={handleCSVUpload}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Import CSV
+            </button>
+          </div>
           
           <div className="flex items-center space-x-4">
             <div className="relative">
@@ -712,6 +864,203 @@ export default function ContactsPage() {
               <div className="flex justify-end mt-6">
                 <button onClick={() => setViewContact(null)} className="px-4 py-2 text-gray-300 hover:text-white transition-colors">Close</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* CSV Import Modal */}
+        {showCSVModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-white">Import Contacts from CSV</h3>
+                <button
+                  onClick={() => setShowCSVModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                  title="Close modal"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Step indicator */}
+              <div className="flex items-center mb-6">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${csvImportStep >= 1 ? 'bg-orange-500 text-white' : 'bg-gray-600 text-gray-400'}`}>
+                  1
+                </div>
+                <div className={`flex-1 h-1 mx-2 ${csvImportStep >= 2 ? 'bg-orange-500' : 'bg-gray-600'}`}></div>
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${csvImportStep >= 2 ? 'bg-orange-500 text-white' : 'bg-gray-600 text-gray-400'}`}>
+                  2
+                </div>
+                <div className={`flex-1 h-1 mx-2 ${csvImportStep >= 3 ? 'bg-orange-500' : 'bg-gray-600'}`}></div>
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${csvImportStep >= 3 ? 'bg-orange-500 text-white' : 'bg-gray-600 text-gray-400'}`}>
+                  3
+                </div>
+              </div>
+
+              {/* Step 1: File Upload */}
+              {csvImportStep === 1 && (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-white font-medium mb-4">Step 1: Upload CSV File</h4>
+                    <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+                      <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-gray-300 mb-4">Select a CSV file to upload</p>
+                      <input
+                        ref={csvFileInputRef}
+                        type="file"
+                        accept=".csv"
+                        onChange={handleCSVFileSelect}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => csvFileInputRef.current?.click()}
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                      >
+                        Choose CSV File
+                      </button>
+                    </div>
+                    <div className="mt-4 text-sm text-gray-400">
+                      <p className="mb-2">CSV Requirements:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>First row should contain column headers</li>
+                        <li>Required columns: Name, Email</li>
+                        <li>Optional columns: Phone, Company, Type, Status</li>
+                        <li>Supported formats: .csv files only</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Column Mapping */}
+              {csvImportStep === 2 && (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-white font-medium mb-4">Step 2: Map CSV Columns</h4>
+                    <p className="text-gray-300 mb-4">Match your CSV columns to contact fields:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        { field: 'name', label: 'Name *', required: true },
+                        { field: 'email', label: 'Email *', required: true },
+                        { field: 'phone', label: 'Phone', required: false },
+                        { field: 'company', label: 'Company', required: false },
+                        { field: 'type', label: 'Type', required: false },
+                        { field: 'status', label: 'Status', required: false }
+                      ].map(({ field, label, required }) => (
+                        <div key={field}>
+                          <label className="block text-gray-300 text-sm font-medium mb-2">{label}</label>
+                          <select
+                            value={csvMapping[field] || ''}
+                            onChange={(e) => handleMappingChange(field, e.target.value)}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="">-- Select CSV Column --</option>
+                            {getCSVHeaders().map(header => (
+                              <option key={header} value={header}>{header}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {csvPreview.length > 0 && (
+                    <div>
+                      <h5 className="text-white font-medium mb-2">Preview (First 5 rows):</h5>
+                      <div className="overflow-x-auto bg-gray-700 rounded-lg">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-600">
+                            <tr>
+                              {getCSVHeaders().map(header => (
+                                <th key={header} className="text-left p-2 text-gray-300">{header}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {csvPreview.map((row, index) => (
+                              <tr key={index} className="border-t border-gray-600">
+                                {getCSVHeaders().map(header => (
+                                  <td key={header} className="p-2 text-gray-300">{row[header]}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between">
+                    <button
+                      onClick={() => setCsvImportStep(1)}
+                      className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => setCsvImportStep(3)}
+                      disabled={!csvMapping.name || !csvMapping.email}
+                      className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Final Import */}
+              {csvImportStep === 3 && (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-white font-medium mb-4">Step 3: Import Contacts</h4>
+                    <div className="bg-gray-700 rounded-lg p-4 mb-4">
+                      <h5 className="text-white font-medium mb-2">Import Summary:</h5>
+                      <div className="space-y-1 text-gray-300">
+                        <p>CSV File: {csvFile?.name}</p>
+                        <p>Mapped Fields:</p>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          {Object.entries(csvMapping).map(([field, csvColumn]) => (
+                            <li key={field}>{field}: {csvColumn}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="bg-yellow-900 border border-yellow-700 rounded-lg p-4 mb-4">
+                      <p className="text-yellow-300 text-sm">
+                        ⚠️ This will add new contacts to your existing list. Duplicate contacts will not be automatically merged.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <button
+                      onClick={() => setCsvImportStep(2)}
+                      className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleImportContacts}
+                      disabled={isImporting}
+                      className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg transition-colors"
+                    >
+                      {isImporting ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Importing...
+                        </div>
+                      ) : (
+                        'Import Contacts'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

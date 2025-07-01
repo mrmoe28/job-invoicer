@@ -131,6 +131,11 @@ export default function ProfilePage() {
         localStorage.setItem('pulse_user', JSON.stringify(user));
       }
 
+      // Dispatch custom event to update navigation
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('profileImageUpdated'));
+      }
+
       setSuccessMessage('Profile updated successfully!');
       
       // Clear success message after 3 seconds

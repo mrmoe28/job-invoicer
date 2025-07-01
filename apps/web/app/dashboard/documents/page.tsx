@@ -417,8 +417,15 @@ export default function DocumentsPage() {
     const fileType = getFileType(filename);
     switch (fileType) {
       case 'pdf':
-        // Using a more reliable PDF sample that works with CORS
-        return 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+        // Using multiple fallback PDFs for better reliability
+        const pdfUrls = [
+          'https://www.africau.edu/images/default/sample.pdf',
+          'https://www.orimi.com/pdf-test.pdf',
+          'https://scholar.harvard.edu/files/torman_personal/files/samplepdf.pdf'
+        ];
+        // Use filename hash to consistently return same PDF for same file
+        const index = filename.length % pdfUrls.length;
+        return pdfUrls[index];
       case 'image':
         return 'https://picsum.photos/800/600?random=' + Math.random();
       case 'csv':

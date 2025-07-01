@@ -15,6 +15,20 @@ interface FeatureUpdate {
 // Current feature updates - add new ones here when features are added
 const FEATURE_UPDATES: FeatureUpdate[] = [
   {
+    id: 'update-2024-12-30-fixes',
+    version: '1.3.1',
+    title: 'Document Viewing & Profile Improvements',
+    description: 'We\'ve enhanced the document viewing experience and profile customization!',
+    features: [
+      'Fixed PDF document viewing with improved error handling',
+      'Profile images now appear in top navigation bar',
+      'Added multiple PDF fallback URLs for better reliability',
+      'Enhanced error messages with retry functionality'
+    ],
+    date: 'December 30, 2024',
+    type: 'improvement'
+  },
+  {
     id: 'update-2024-12-30-admin',
     version: '1.3.0',
     title: 'Custom Admin Login & Simplified Signup',

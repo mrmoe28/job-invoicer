@@ -68,6 +68,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
   const router = useRouter();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState<string>('');
   const settingsRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -77,8 +78,79 @@ export default function TopNavigation({ user }: TopNavigationProps) {
     { id: 3, text: 'Crew member added', read: false },
   ]);
 
+  // Load profile image from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem('pulse_user');
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        if (parsedUser.profileImage) {
+          setProfileImage(parsedUser.profileImage);
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+
+    // Listen for profile image updates
+    const handleStorageChange = () => {
+      const userData = localStorage.getItem('pulse_user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setProfileImage(parsedUser.profileImage || '');
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom profile update events
+    const handleProfileUpdate = () => {
+      handleStorageChange();
+    };
+    
+    window.addEventListener('profileImageUpdated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('profileImageUpdated', handleProfileUpdate);
+    };
+  }, []);
+
+  const renderAvatar = (size: 'small' | 'medium' = 'small') => {
+    const sizeClasses = size === 'small' ? 'w-8 h-8' : 'w-10 h-10';
+    const textSize = size === 'small' ? 'text-sm' : 'text-base';
+    
+    if (profileImage) {
+      return (
+        <img
+          src={profileImage}
+          alt="Profile"
+          className={`${sizeClasses} rounded-full object-cover border-2 border-orange-500`}
+        />
+      );
+    }
+    
+    return (
+      <div className={`${sizeClasses} bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center`}>
+        <span className={`text-white font-medium ${textSize}`}>
+          {(user.avatar ?? user.name ?? 'U').slice(0,1).toUpperCase()}
+        </span>
+      </div>
+    );
+  };
+
   const handleLogout = () => {
-    localStorage.removeItem('pulse_user');
+    // Only clear session flag, preserve user data and settings for next login
+    localStorage.removeItem('pulse_session_active');
+    
+    // Optionally: You could also clear user data completely with:
+    // localStorage.removeItem('pulse_user');
+    // But for better UX, we preserve profile settings, images, etc.
+    
     router.push('/auth');
   };
 
@@ -261,11 +333,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
                   <div className="text-white font-medium">{user.name ?? 'User'}</div>
                   <div className="text-gray-400 text-xs">@{user.username ?? 'username'}</div>
                 </div>
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium text-sm">
-                    {(user.avatar ?? 'U').slice(0,1).toUpperCase()}
-                  </span>
-                </div>
+                {renderAvatar('small')}
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -278,11 +346,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
                     {/* Profile Section */}
                     <div className="px-4 py-3 border-b border-gray-700">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                          <span className="text-white font-medium">
-                            {(user.avatar ?? 'U').slice(0,1).toUpperCase()}
-                          </span>
-                        </div>
+                        {renderAvatar('medium')}
                         <div>
                           <div className="text-white font-medium">{user.name ?? 'User'}</div>
                           <div className="text-gray-400 text-sm">@{user.username ?? 'username'}</div>
