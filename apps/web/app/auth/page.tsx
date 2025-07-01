@@ -39,8 +39,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     
-    // Simple demo login - replace with actual authentication later
-    if (email === 'admin' && password === 'admin123') {
+    // Simple demo login - accepts any email with admin123 password for demo purposes
+    const isValidDemo = (
+      (email === 'admin' && password === 'admin123') ||
+      (email.includes('@') && password === 'admin123') ||
+      (email === 'ekosolarize@gmail.com' && password === 'admin123')
+    );
+    
+    if (isValidDemo) {
       // Get existing user data to preserve settings and uploaded content
       const existingUserData = localStorage.getItem('pulse_user');
       let existingData = {};
@@ -56,9 +62,9 @@ export default function LoginPage() {
       // Store user session with preserved data
       const userData = {
         id: '1',
-        email: 'admin@pulsecrm.com',
-        name: 'Admin User',
-        username: 'admin',
+        email: email.includes('@') ? email : 'admin@pulsecrm.com',
+        name: email.includes('@') ? email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ') : 'Admin User',
+        username: email.includes('@') ? email.split('@')[0] : 'admin',
         role: 'Administrator',
         organizationId: '1',
         organizationName: 'Demo Organization',
@@ -67,10 +73,10 @@ export default function LoginPage() {
         loginTime: new Date().toISOString(),
         // Preserve existing profile image and other settings
         ...existingData,
-        // Override essential fields
+        // Override essential fields but keep the actual email
         id: '1',
-        email: 'admin@pulsecrm.com',
-        username: 'admin',
+        email: email.includes('@') ? email : 'admin@pulsecrm.com',
+        username: email.includes('@') ? email.split('@')[0] : 'admin',
         role: 'Administrator'
       };
 
@@ -81,7 +87,7 @@ export default function LoginPage() {
       
       router.push('/dashboard');
     } else {
-      setError('Invalid credentials. Use admin/admin123 for demo.');
+      setError('Invalid credentials. Use any email with password: admin123 for demo.');
     }
   };
 
