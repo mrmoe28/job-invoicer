@@ -98,7 +98,29 @@ export const appRouter = router({
       password: z.string().min(1, 'Password is required'),
     }))
     .mutation(async ({ input }) => {
-      // Find user by email
+      // Check for hardcoded admin user first
+      if (input.email === 'ekosolarize@gmail.com' && input.password === 'Chanon28$') {
+        return {
+          success: true,
+          user: {
+            id: 'admin-1',
+            email: 'ekosolarize@gmail.com',
+            firstName: 'Admin',
+            lastName: 'User',
+            role: 'owner',
+            organizationId: 'org-admin',
+          },
+          organization: {
+            id: 'org-admin',
+            name: 'EKO Solarize',
+            slug: 'eko-solarize',
+            plan: 'enterprise',
+            status: 'active',
+          },
+        };
+      }
+
+      // Find user by email in database
       const [user] = await db.select({
         id: users.id,
         email: users.email,

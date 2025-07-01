@@ -136,7 +136,6 @@ export default function HelpPage() {
                       <option>Technical Issue</option>
                       <option>Feature Request</option>
                       <option>Account Problem</option>
-                      <option>Billing Question</option>
                     </select>
                   </div>
                   <div>

@@ -24,12 +24,12 @@ export default function SignupPage() {
     password: '',
     confirmPassword: '',
     organizationName: '',
-    plan: 'free',
+    plan: 'pro', // Default to pro plan
     agreeToTerms: false,
   });
   
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1: Personal Info, 2: Organization Info, 3: Plan Selection
+  const [step, setStep] = useState(1); // 1: Personal Info, 2: Organization Info (removed plan selection)
   const router = useRouter();
 
   // tRPC mutation hook
@@ -89,21 +89,13 @@ export default function SignupPage() {
         setError(error);
         return;
       }
-      setStep(3);
+      // Submit form directly, no step 3
+      handleFormSubmit();
     }
   };
 
-  const handleBack = () => {
+  const handleFormSubmit = async () => {
     setError('');
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
     signupMutation.mutate({
       firstName: formData.firstName,
       lastName: formData.lastName,
@@ -112,6 +104,13 @@ export default function SignupPage() {
       organizationName: formData.organizationName,
       plan: formData.plan,
     });
+  };
+
+  const handleBack = () => {
+    setError('');
+    if (step > 1) {
+      setStep(step - 1);
+    }
   };
 
   const updateFormData = (field: keyof SignupForm, value: any) => {
@@ -137,7 +136,7 @@ export default function SignupPage() {
 
         {/* Progress Indicator */}
         <div className="flex items-center justify-center space-x-4 mb-8">
-          {[1, 2, 3].map((stepNumber) => (
+          {[1, 2].map((stepNumber) => (
             <div key={stepNumber} className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                 step >= stepNumber 
@@ -146,7 +145,7 @@ export default function SignupPage() {
               }`}>
                 {stepNumber}
               </div>
-              {stepNumber < 3 && (
+              {stepNumber < 2 && (
                 <div className={`w-8 h-1 ${
                   step > stepNumber ? 'bg-orange-500' : 'bg-gray-700'
                 }`} />
@@ -155,7 +154,7 @@ export default function SignupPage() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
           {/* Step 1: Personal Information */}
           {step === 1 && (
             <div className="space-y-4">
@@ -279,83 +278,6 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* Step 3: Plan Selection */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Choose Your Plan</h3>
-              
-              <div className="space-y-3">
-                {[
-                  {
-                    id: 'free',
-                    name: 'Free',
-                    price: '$0',
-                    period: '/month',
-                    features: ['Up to 5 team members', 'Up to 50 jobs', '1GB storage'],
-                    recommended: false,
-                  },
-                  {
-                    id: 'pro',
-                    name: 'Professional',
-                    price: '$29',
-                    period: '/month',
-                    features: ['Up to 50 team members', 'Up to 500 jobs', '100GB storage', 'Advanced reporting'],
-                    recommended: true,
-                  },
-                  {
-                    id: 'enterprise',
-                    name: 'Enterprise',
-                    price: '$99',
-                    period: '/month',
-                    features: ['Unlimited team members', 'Unlimited jobs', '1TB storage', 'Priority support'],
-                    recommended: false,
-                  },
-                ].map((plan) => (
-                  <div
-                    key={plan.id}
-                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      formData.plan === plan.id
-                        ? 'border-orange-500 bg-orange-500/10'
-                        : 'border-gray-600 bg-gray-800 hover:border-gray-500'
-                    }`}
-                    onClick={() => updateFormData('plan', plan.id)}
-                  >
-                    {plan.recommended && (
-                      <div className="absolute -top-2 left-4 bg-orange-500 text-white text-xs px-2 py-1 rounded">
-                        Recommended
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-white font-semibold">{plan.name}</h4>
-                        <p className="text-gray-400 text-sm">{plan.features.join(' • ')}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-white font-bold">
-                          {plan.price}<span className="text-gray-400 text-sm">{plan.period}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <input
-                      type="radio"
-                      name="plan"
-                      value={plan.id}
-                      checked={formData.plan === plan.id}
-                      onChange={() => updateFormData('plan', plan.id)}
-                      className="sr-only"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <p className="text-xs text-gray-400 text-center">
-                You can upgrade or downgrade your plan at any time
-              </p>
-            </div>
-          )}
-
           {error && (
             <div className="bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
               {error}
@@ -374,7 +296,7 @@ export default function SignupPage() {
               </button>
             )}
             
-            {step < 3 ? (
+            {step < 2 ? (
               <button
                 type="button"
                 onClick={handleNext}
@@ -384,7 +306,8 @@ export default function SignupPage() {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
+                onClick={handleNext}
                 disabled={signupMutation.isPending}
                 className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
               >
@@ -399,7 +322,7 @@ export default function SignupPage() {
               </button>
             )}
           </div>
-        </form>
+        </div>
 
         {/* Login Link */}
         <div className="text-center">
