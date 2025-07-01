@@ -38,14 +38,91 @@ export async function seedDatabase() {
       emailVerifiedAt: new Date(),
     }).returning();
 
-    console.log('✅ Demo organization and admin user created successfully');
+    // Create second admin user with email login
+    console.log('👤 Creating second admin user...');
+    const [secondAdminUser] = await db.insert(users).values({
+      organizationId: demoOrg.id,
+      email: 'admin2@pulsecrm.local',
+      passwordHash: await hashPassword('admin456'),
+      firstName: 'Sarah',
+      lastName: 'Administrator',
+      role: 'admin',
+      emailVerifiedAt: new Date(),
+    }).returning();
+
+    // Create sample companies
+    console.log('🏢 Creating sample companies...');
+    const [company1] = await db.insert(companies).values({
+      organizationId: demoOrg.id,
+      name: 'Downtown Development LLC',
+      industry: 'Real Estate Development',
+      website: 'https://downtowndev.com',
+      address: '1234 Main Street, Suite 500',
+      city: 'Atlanta',
+      state: 'GA',
+      zipCode: '30309',
+      phone: '(404) 555-0123',
+      email: 'info@downtowndev.com',
+    }).returning();
+
+    const [company2] = await db.insert(companies).values({
+      organizationId: demoOrg.id,
+      name: 'Suburban Homes Inc.',
+      industry: 'Residential Construction',
+      address: '567 Oak Avenue',
+      city: 'Marietta',
+      state: 'GA',
+      zipCode: '30064',
+      phone: '(770) 555-0456',
+      email: 'contact@suburbanhomes.com',
+    }).returning();
+
+    const [company3] = await db.insert(companies).values({
+      organizationId: demoOrg.id,
+      name: 'Green Build Solutions',
+      industry: 'Sustainable Construction',
+      website: 'https://greenbuildsolutions.com',
+      address: '890 Eco Lane',
+      city: 'Decatur',
+      state: 'GA',
+      zipCode: '30030',
+      phone: '(678) 555-0789',
+      email: 'hello@greenbuildsolutions.com',
+    }).returning();
+
+    // Create sample contacts
+    console.log('👥 Creating sample contacts...');
+    const [contact1] = await db.insert(contacts).values({
+      organizationId: demoOrg.id,
+      companyId: company1.id,
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      title: 'Project Manager',
+      email: 'sarah.johnson@downtowndev.com',
+      phone: '(404) 555-0124',
+      mobile: '(404) 555-9876',
+      isPrimary: true,
+    }).returning();
+
+    const [contact2] = await db.insert(contacts).values({
+      organizationId: demoOrg.id,
+      companyId: company2.id,
+      firstName: 'Robert',
+      lastName: 'Smith',
+      title: 'Operations Director',
+      email: 'robert.smith@suburbanhomes.com',
+      phone: '(770) 555-0457',
+      isPrimary: true,
+    }).returning();
+
+    console.log('✅ Demo organization, users, companies, and contacts created successfully');
     console.log('🎉 Database seeding completed!');
 
     return {
       organizations: { demoOrg },
-      users: { adminUser },
-      companies: {},
-      contacts: {},
+      users: { adminUser, secondAdminUser },
+      companies: { company1, company2, company3 },
+      contacts: { contact1, contact2 },
       jobs: {},
     };
 

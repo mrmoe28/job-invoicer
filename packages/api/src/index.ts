@@ -98,7 +98,7 @@ export const appRouter = router({
       password: z.string().min(1, 'Password is required'),
     }))
     .mutation(async ({ input }) => {
-      // Check for hardcoded admin user first
+      // Check for hardcoded admin users first
       if (input.email === 'ekosolarize@gmail.com' && input.password === 'Chanon28$') {
         return {
           success: true,
@@ -115,6 +115,27 @@ export const appRouter = router({
             name: 'EKO Solarize',
             slug: 'eko-solarize',
             plan: 'enterprise',
+            status: 'active',
+          },
+        };
+      }
+
+      if (input.email === 'admin2@pulsecrm.local' && input.password === 'admin456') {
+        return {
+          success: true,
+          user: {
+            id: 'admin-2',
+            email: 'admin2@pulsecrm.local',
+            firstName: 'Sarah',
+            lastName: 'Administrator',
+            role: 'admin',
+            organizationId: 'org-admin',
+          },
+          organization: {
+            id: 'org-admin',
+            name: 'Demo Construction Company',
+            slug: 'demo-construction',
+            plan: 'pro',
             status: 'active',
           },
         };
