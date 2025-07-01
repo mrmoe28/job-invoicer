@@ -15,3 +15,131 @@ html, body {
     @apply bg-gray-900 text-white;
   }
 }
+/* React-PDF Styling Overrides */
+.react-pdf__Page {
+  background: transparent !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid #374151 !important;
+}
+
+.react-pdf__Page__textContent {
+  color: #ffffff !important;
+}
+
+.react-pdf__Page__annotations {
+  color: #ffffff !important;
+}
+
+.react-pdf__Document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Loading states */
+.react-pdf__Page--loading {
+  background: #1f2937 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 600px;
+}
+
+/* Error states */
+.react-pdf__message {
+  color: #ef4444 !important;
+  background: #1f2937 !important;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #374151;
+}
+
+/* Ensure PDF pages are properly centered */
+.react-pdf__Page canvas {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Dark theme adjustments for PDF viewer controls */
+.pdf-viewer-controls {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.pdf-viewer-controls button {
+  background: #374151;
+  color: #ffffff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pdf-viewer-controls button:hover {
+  background: #4b5563;
+}
+
+.pdf-viewer-controls button:disabled {
+  background: #1f2937;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.pdf-viewer-controls input {
+  background: #1f2937;
+  color: #ffffff;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.pdf-viewer-controls input:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .react-pdf__Page {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  .pdf-viewer-controls {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* Animation for loading states */
+@keyframes pdfLoadingPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pdf-loading-indicator {
+  animation: pdfLoadingPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Zoom transition */
+.react-pdf__Page {
+  transition: transform 0.2s ease-in-out !important;
+}
+
+/* Text selection */
+.react-pdf__Page__textContent span {
+  color: transparent !important;
+}
+
+.react-pdf__Page__textContent span::selection {
+  background: rgba(249, 115, 22, 0.3) !important;
+}

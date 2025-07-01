@@ -12,8 +12,6 @@
   "dependencies": {
     "@pulsecrm/api": "workspace:*",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
-    "@react-pdf-viewer/core": "^3.12.0",
-    "@react-pdf-viewer/default-layout": "^3.12.0",
     "@tailwindcss/postcss": "^4.1.10",
     "@tanstack/react-query": "^4.36.1",
     "@trpc/client": "^10.45.2",
@@ -23,7 +21,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.515.0",
     "next": "^14.2.18",
-    "pdfjs-dist": "^5.3.31",
+    "pdfjs-dist": "^4.4.168",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^3.3.1",
     "zod": "^3.25.64"

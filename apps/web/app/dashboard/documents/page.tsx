@@ -9,12 +9,36 @@ import DashboardLayout from '../../../components/dashboard-layout';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 
-// Lazy-loaded PDF viewer (client only)
+// Enhanced PDF viewers with better reliability
+const EnhancedPdfViewer = dynamic(() => import('../../../components/enhanced-pdf-viewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+      <div className="text-center">
+        <div className="w-8 h-8 bg-orange-500 rounded-full animate-pulse mx-auto mb-4"></div>
+        <p className="text-gray-400">Loading PDF Viewer...</p>
+      </div>
+    </div>
+  )
+});
+
+const ImprovedSimplePdfViewer = dynamic(() => import('../../../components/improved-simple-pdf-viewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+      <div className="text-center">
+        <div className="w-8 h-8 bg-orange-500 rounded-full animate-pulse mx-auto mb-4"></div>
+        <p className="text-gray-400">Loading PDF Viewer...</p>
+      </div>
+    </div>
+  )
+});
+
+// Legacy PDF viewers (kept for fallback)
 const LazyPdfViewer = dynamic(() => import('../../../components/pdf-viewer'), {
   ssr: false,
 });
 
-// Simple, reliable PDF viewer alternative
 const SimplePdfViewer = dynamic(() => import('../../../components/simple-pdf-viewer'), {
   ssr: false,
 });
@@ -26,7 +50,9 @@ export default function DocumentsPage() {
   const [showViewerModal, setShowViewerModal] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [showSimplePdfViewer, setShowSimplePdfViewer] = useState(false);
-  const [pdfViewerType, setPdfViewerType] = useState<'advanced' | 'simple'>('simple');
+  const [showEnhancedPdfViewer, setShowEnhancedPdfViewer] = useState(false);
+  const [showImprovedSimplePdfViewer, setShowImprovedSimplePdfViewer] = useState(false);
+  const [pdfViewerType, setPdfViewerType] = useState<'enhanced' | 'improved-simple' | 'legacy-advanced' | 'legacy-simple'>('enhanced');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [currentDocument, setCurrentDocument] = useState<any>(null);
@@ -179,20 +205,37 @@ export default function DocumentsPage() {
           const fileType = getFileType(document.name);
           
           if (fileType === 'pdf') {
-            // Use simple PDF viewer by default for better reliability
-            if (pdfViewerType === 'simple') {
-              setShowSimplePdfViewer(true);
-              setShowPdfViewer(false);
-            } else {
-              setShowPdfViewer(true);
-              setShowSimplePdfViewer(false);
+            // Close all other viewers first
+            setShowViewerModal(false);
+            setShowPdfViewer(false);
+            setShowSimplePdfViewer(false);
+            setShowEnhancedPdfViewer(false);
+            setShowImprovedSimplePdfViewer(false);
+            
+            // Open the appropriate PDF viewer based on type
+            switch (pdfViewerType) {
+              case 'enhanced':
+                setShowEnhancedPdfViewer(true);
+                break;
+              case 'improved-simple':
+                setShowImprovedSimplePdfViewer(true);
+                break;
+              case 'legacy-advanced':
+                setShowPdfViewer(true);
+                break;
+              case 'legacy-simple':
+                setShowSimplePdfViewer(true);
+                break;
+              default:
+                setShowEnhancedPdfViewer(true); // Default to enhanced viewer
             }
-            setShowViewerModal(false); // Ensure other modal is closed
           } else {
             // Use simple modal for other file types
             setShowViewerModal(true);
             setShowPdfViewer(false);
             setShowSimplePdfViewer(false);
+            setShowEnhancedPdfViewer(false);
+            setShowImprovedSimplePdfViewer(false);
             setZoomLevel(1);
             
             // Load CSV data if it's a CSV file
@@ -453,19 +496,22 @@ export default function DocumentsPage() {
 
   const getFileUrl = (filename: string) => {
     // In a real app, this would return the actual file URL from your storage
-    // For demo purposes, using reliable placeholder URLs
+    // For demo purposes, using reliable demo approach
     const fileType = getFileType(filename);
     switch (fileType) {
       case 'pdf':
-        // Using multiple fallback PDFs for better reliability
-        const pdfUrls = [
-          'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          'https://www.africau.edu/images/default/sample.pdf',
-          'https://www.orimi.com/pdf-test.pdf'
+        // Use more reliable external PDFs for better compatibility
+        const reliablePdfUrls = [
+          // Using reliable, permanent PDF URLs
+          'https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf',
+          'https://www.clickdimensions.com/links/TestPDFfile.pdf',
+          'https://scholar.harvard.edu/files/torman_personal/files/samplepdf.pdf'
         ];
+        
         // Use filename hash to consistently return same PDF for same file
-        const index = Math.abs(filename.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % pdfUrls.length;
-        return pdfUrls[index];
+        const index = Math.abs(filename.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % reliablePdfUrls.length;
+        return reliablePdfUrls[index];
+
       case 'image':
         // Use a more reliable image service
         const imageId = Math.abs(filename.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 1000;
@@ -625,30 +671,52 @@ export default function DocumentsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-white font-medium">PDF Viewer Settings</h3>
-              <p className="text-gray-400 text-sm">Choose your preferred PDF viewer</p>
+              <p className="text-gray-400 text-sm">Choose your preferred PDF viewer for best compatibility</p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="grid grid-cols-2 gap-4">
               <label className="flex items-center space-x-2">
                 <input
                   type="radio"
                   name="pdfViewer"
-                  value="simple"
-                  checked={pdfViewerType === 'simple'}
+                  value="enhanced"
+                  checked={pdfViewerType === 'enhanced'}
                   onChange={(e) => setPdfViewerType(e.target.value as any)}
                   className="text-orange-500 focus:ring-orange-500"
                 />
-                <span className="text-gray-300 text-sm">Simple Viewer (Recommended)</span>
+                <span className="text-gray-300 text-sm">Enhanced (React-PDF)</span>
               </label>
               <label className="flex items-center space-x-2">
                 <input
                   type="radio"
                   name="pdfViewer"
-                  value="advanced"
-                  checked={pdfViewerType === 'advanced'}
+                  value="improved-simple"
+                  checked={pdfViewerType === 'improved-simple'}
                   onChange={(e) => setPdfViewerType(e.target.value as any)}
                   className="text-orange-500 focus:ring-orange-500"
                 />
-                <span className="text-gray-300 text-sm">Advanced Viewer</span>
+                <span className="text-gray-300 text-sm">Browser Native (Recommended)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="pdfViewer"
+                  value="legacy-advanced"
+                  checked={pdfViewerType === 'legacy-advanced'}
+                  onChange={(e) => setPdfViewerType(e.target.value as any)}
+                  className="text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-gray-300 text-sm">Legacy Advanced</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="pdfViewer"
+                  value="legacy-simple"
+                  checked={pdfViewerType === 'legacy-simple'}
+                  onChange={(e) => setPdfViewerType(e.target.value as any)}
+                  className="text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-gray-300 text-sm">Legacy Simple</span>
               </label>
             </div>
           </div>
@@ -1277,7 +1345,35 @@ export default function DocumentsPage() {
           </div>
         )}
 
-        {/* Advanced PDF Viewer */}
+        {/* Enhanced PDF Viewer (Primary) */}
+        {showEnhancedPdfViewer && currentDocument && (
+          <EnhancedPdfViewer
+            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+            fileName={currentDocument.name}
+            onCloseAction={() => {
+              setShowEnhancedPdfViewer(false);
+              setCurrentDocument(null);
+            }}
+            onExtractedDataAction={(data) => {
+              setExtractedPdfData(data);
+              console.log('Extracted PDF data:', data);
+            }}
+          />
+        )}
+
+        {/* Improved Simple PDF Viewer */}
+        {showImprovedSimplePdfViewer && currentDocument && (
+          <ImprovedSimplePdfViewer
+            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+            fileName={currentDocument.name}
+            onCloseAction={() => {
+              setShowImprovedSimplePdfViewer(false);
+              setCurrentDocument(null);
+            }}
+          />
+        )}
+
+        {/* Legacy Advanced PDF Viewer */}
         {showPdfViewer && currentDocument && (
           <LazyPdfViewer
             fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}

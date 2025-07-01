@@ -162,6 +162,87 @@ export const tasks = pgTable('tasks', {
   orgIdx: index('tasks_org_idx').on(table.organizationId),
 }));
 
+// Documents table - for file management linked to jobs/contacts
+export const documents = pgTable('documents', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  jobId: uuid('job_id').references(() => jobs.id),
+  contactId: uuid('contact_id').references(() => contacts.id),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  originalFileName: varchar('original_file_name', { length: 255 }).notNull(),
+  filePath: varchar('file_path', { length: 500 }).notNull(),
+  fileSize: integer('file_size').notNull(), // in bytes
+  mimeType: varchar('mime_type', { length: 100 }).notNull(),
+  fileType: varchar('file_type', { length: 50 }).notNull(), // pdf, image, document, etc.
+  category: varchar('category', { length: 100 }), // contract, invoice, photo, etc.
+  title: varchar('title', { length: 255 }),
+  description: text('description'),
+  uploadedByUserId: uuid('uploaded_by_user_id').references(() => users.id).notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('active'), // active, archived, deleted
+  tags: jsonb('tags'), // array of strings for tagging
+  metadata: jsonb('metadata'), // extracted data, dimensions, etc.
+  isPublic: boolean('is_public').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  fileNameIdx: index('documents_file_name_idx').on(table.fileName),
+  fileTypeIdx: index('documents_file_type_idx').on(table.fileType),
+  categoryIdx: index('documents_category_idx').on(table.category),
+  jobIdx: index('documents_job_idx').on(table.jobId),
+  contactIdx: index('documents_contact_idx').on(table.contactId),
+  uploadedByIdx: index('documents_uploaded_by_idx').on(table.uploadedByUserId),
+  orgIdx: index('documents_org_idx').on(table.organizationId),
+}));
+
+// Crew Members table - for managing construction crew
+export const crewMembers = pgTable('crew_members', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  userId: uuid('user_id').references(() => users.id), // link to user if they have account
+  firstName: varchar('first_name', { length: 100 }).notNull(),
+  lastName: varchar('last_name', { length: 100 }).notNull(),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  skills: jsonb('skills'), // array of skills/certifications
+  hourlyRate: decimal('hourly_rate', { precision: 8, scale: 2 }),
+  payrollId: varchar('payroll_id', { length: 100 }), // external payroll system ID
+  emergencyContact: jsonb('emergency_contact'), // name, phone, relationship
+  hireDate: date('hire_date'),
+  status: varchar('status', { length: 50 }).notNull().default('active'), // active, inactive, terminated
+  notes: text('notes'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  nameIdx: index('crew_members_name_idx').on(table.firstName, table.lastName),
+  emailIdx: index('crew_members_email_idx').on(table.email),
+  statusIdx: index('crew_members_status_idx').on(table.status),
+  userIdx: index('crew_members_user_idx').on(table.userId),
+  orgIdx: index('crew_members_org_idx').on(table.organizationId),
+}));
+
+// Job Assignments table - for linking crew members to jobs
+export const jobAssignments = pgTable('job_assignments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  jobId: uuid('job_id').references(() => jobs.id).notNull(),
+  crewMemberId: uuid('crew_member_id').references(() => crewMembers.id).notNull(),
+  role: varchar('role', { length: 100 }), // foreman, laborer, specialist, etc.
+  assignedDate: date('assigned_date').notNull(),
+  unassignedDate: date('unassigned_date'),
+  hourlyRate: decimal('hourly_rate', { precision: 8, scale: 2 }), // can override default rate
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  jobIdx: index('job_assignments_job_idx').on(table.jobId),
+  crewIdx: index('job_assignments_crew_idx').on(table.crewMemberId),
+  roleIdx: index('job_assignments_role_idx').on(table.role),
+  orgIdx: index('job_assignments_org_idx').on(table.organizationId),
+  // Unique constraint: one crew member can't have multiple active assignments to same job
+  uniqueActiveAssignment: unique().on(table.jobId, table.crewMemberId, table.isActive),
+}));
+
 // Define relationships
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   users: many(users),
@@ -169,6 +250,9 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   contacts: many(contacts),
   jobs: many(jobs),
   tasks: many(tasks),
+  documents: many(documents),
+  crewMembers: many(crewMembers),
+  jobAssignments: many(jobAssignments),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -237,5 +321,51 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
   assignedUser: one(users, {
     fields: [tasks.assignedUserId],
     references: [users.id],
+  }),
+}));
+
+export const documentsRelations = relations(documents, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [documents.organizationId],
+    references: [organizations.id],
+  }),
+  job: one(jobs, {
+    fields: [documents.jobId],
+    references: [jobs.id],
+  }),
+  contact: one(contacts, {
+    fields: [documents.contactId],
+    references: [contacts.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [documents.uploadedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const crewMembersRelations = relations(crewMembers, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [crewMembers.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [crewMembers.userId],
+    references: [users.id],
+  }),
+  jobAssignments: many(jobAssignments),
+}));
+
+export const jobAssignmentsRelations = relations(jobAssignments, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [jobAssignments.organizationId],
+    references: [organizations.id],
+  }),
+  job: one(jobs, {
+    fields: [jobAssignments.jobId],
+    references: [jobs.id],
+  }),
+  crewMember: one(crewMembers, {
+    fields: [jobAssignments.crewMemberId],
+    references: [crewMembers.id],
   }),
 }));
