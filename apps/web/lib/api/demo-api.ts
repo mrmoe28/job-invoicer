@@ -46,7 +46,8 @@ let demoData = {
     }
   ],
 
-  // Companies  companies: [
+  // Companies
+  companies: [
     {
       id: 'company-1',
       organizationId: DEMO_ORG_ID,

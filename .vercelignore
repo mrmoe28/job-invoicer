@@ -2,14 +2,13 @@
 node_modules/
 .pnpm-store/
 
-# Build outputs
-.next/
+# Build outputs (except the ones needed)
 .turbo/
 dist/
 build/
 out/
 
-# Environment files
+# Environment files (keep .env.example files)
 .env
 .env.local
 .env.development.local
@@ -53,7 +52,6 @@ ehthumbs.db
 README.md
 CHANGELOG.md
 docs/
-.vscode/
 constructflow.code-workspace
 
 # Docker and deployment files
@@ -75,8 +73,7 @@ backups/
 # Development tools
 .husky/
 
-# Monorepo packages not needed for web deployment
-packages/api/
-packages/db/
-packages/ui/
-packages/typescript-config/
+# Specific files not needed for deployment
+bun.lock
+docker.sh
+init-repo.sh
