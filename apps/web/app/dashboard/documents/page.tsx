@@ -34,6 +34,19 @@ const ImprovedSimplePdfViewer = dynamic(() => import('../../../components/improv
   )
 });
 
+// Production PDF viewer for better deployment compatibility
+const ProductionPdfViewer = dynamic(() => import('../../../components/production-pdf-viewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+      <div className="text-center">
+        <div className="w-8 h-8 bg-orange-500 rounded-full animate-pulse mx-auto mb-4"></div>
+        <p className="text-gray-400">Loading PDF Viewer...</p>
+      </div>
+    </div>
+  )
+});
+
 // Legacy PDF viewers (kept for fallback)
 const LazyPdfViewer = dynamic(() => import('../../../components/pdf-viewer'), {
   ssr: false,
@@ -52,7 +65,8 @@ export default function DocumentsPage() {
   const [showSimplePdfViewer, setShowSimplePdfViewer] = useState(false);
   const [showEnhancedPdfViewer, setShowEnhancedPdfViewer] = useState(false);
   const [showImprovedSimplePdfViewer, setShowImprovedSimplePdfViewer] = useState(false);
-  const [pdfViewerType, setPdfViewerType] = useState<'enhanced' | 'improved-simple' | 'legacy-advanced' | 'legacy-simple'>('enhanced');
+  const [showProductionPdfViewer, setShowProductionPdfViewer] = useState(false);
+  const [pdfViewerType, setPdfViewerType] = useState<'production' | 'enhanced' | 'improved-simple' | 'legacy-advanced' | 'legacy-simple'>('production');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [currentDocument, setCurrentDocument] = useState<any>(null);
@@ -211,9 +225,13 @@ export default function DocumentsPage() {
             setShowSimplePdfViewer(false);
             setShowEnhancedPdfViewer(false);
             setShowImprovedSimplePdfViewer(false);
+            setShowProductionPdfViewer(false);
             
             // Open the appropriate PDF viewer based on type
             switch (pdfViewerType) {
+              case 'production':
+                setShowProductionPdfViewer(true);
+                break;
               case 'enhanced':
                 setShowEnhancedPdfViewer(true);
                 break;
@@ -227,7 +245,7 @@ export default function DocumentsPage() {
                 setShowSimplePdfViewer(true);
                 break;
               default:
-                setShowEnhancedPdfViewer(true); // Default to enhanced viewer
+                setShowProductionPdfViewer(true); // Default to production viewer
             }
           } else {
             // Use simple modal for other file types
@@ -236,6 +254,7 @@ export default function DocumentsPage() {
             setShowSimplePdfViewer(false);
             setShowEnhancedPdfViewer(false);
             setShowImprovedSimplePdfViewer(false);
+            setShowProductionPdfViewer(false);
             setZoomLevel(1);
             
             // Load CSV data if it's a CSV file
@@ -247,8 +266,18 @@ export default function DocumentsPage() {
         break;
       case 'download':
         if (document) {
-          // For uploaded files with blob URLs, download directly
-          if (document.url && document.url.startsWith('blob:')) {
+          // For files uploaded via API, use the API download endpoint
+          if (document.url && document.url.startsWith('/api/files/')) {
+            // Add download parameter to force download
+            const downloadUrl = `${document.url}?download=true`;
+            const link = window.document.createElement('a');
+            link.href = downloadUrl;
+            link.download = document.name;
+            window.document.body.appendChild(link);
+            link.click();
+            window.document.body.removeChild(link);
+          } else if (document.url && document.url.startsWith('blob:')) {
+            // For legacy blob URLs
             const link = window.document.createElement('a');
             link.href = document.url;
             link.download = document.name;
@@ -256,8 +285,8 @@ export default function DocumentsPage() {
             link.click();
             window.document.body.removeChild(link);
           } else {
-            // Simulate download for demo files
-            const blob = new Blob(['Sample file content'], { type: 'application/octet-stream' });
+            // For demo files, generate sample content and download
+            const blob = new Blob(['Sample file content for demo'], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             const link = window.document.createElement('a');
             link.href = url;
@@ -433,32 +462,84 @@ export default function DocumentsPage() {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  const handleUploadSubmit = useCallback(() => {
+  const handleUploadSubmit = useCallback(async () => {
     if (uploadedFiles.length === 0) {
       return;
     }
 
     console.log('Uploading files:', uploadedFiles);
     
-    // Actually add the uploaded files to the documents list
-    const newDocuments = uploadedFiles.map((file, index) => ({
-      id: `doc${Date.now()}_${index}`,
-      name: file.name,
-      type: 'Other', // Default type, user can change later
-      status: 'draft',
-      size: formatFileSize(file.size),
-      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-      related: 'N/A',
-      // Use a blob URL so we can preview the exact uploaded file immediately
-      url: URL.createObjectURL(file),
-    }));
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      uploadedFiles.forEach(file => {
+        formData.append('files', file);
+      });
 
-    // Add new documents to the existing list
-    setDocuments(prev => [...prev, ...newDocuments]);
-    
-    setShowUploadModal(false);
-    setUploadedFiles([]);
+      // Upload files to the API
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.files) {
+        // Create document entries for uploaded files
+        const newDocuments = result.files.map((fileData: any) => ({
+          id: fileData.id,
+          name: fileData.originalName,
+          type: getDocumentType(fileData.originalName),
+          status: 'draft',
+          size: formatFileSize(fileData.size),
+          date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+          related: 'N/A',
+          // Use API endpoint for file serving
+          url: fileData.url,
+          fileName: fileData.fileName, // Store the server filename for API calls
+        }));
+
+        // Add new documents to the existing list
+        setDocuments(prev => [...prev, ...newDocuments]);
+        
+        setShowUploadModal(false);
+        setUploadedFiles([]);
+        
+        console.log('Files uploaded successfully:', result);
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      // Show error to user - you might want to add a state for this
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [uploadedFiles]);
+
+  const getDocumentType = (filename: string): string => {
+    const extension = filename.toLowerCase().split('.').pop();
+    
+    const typeMap: { [key: string]: string } = {
+      'pdf': 'Contract',
+      'doc': 'Document', 
+      'docx': 'Document',
+      'xls': 'Spreadsheet',
+      'xlsx': 'Spreadsheet', 
+      'csv': 'Spreadsheet',
+      'jpg': 'Photo',
+      'jpeg': 'Photo',
+      'png': 'Photo',
+      'gif': 'Photo',
+      'webp': 'Photo'
+    };
+    
+    return typeMap[extension || ''] || 'Other';
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -496,30 +577,25 @@ export default function DocumentsPage() {
 
   const getFileUrl = (filename: string) => {
     // In a real app, this would return the actual file URL from your storage
-    // For demo purposes, using reliable demo approach
+    // For demo purposes, use the API file serving endpoint which has better compatibility
     const fileType = getFileType(filename);
     switch (fileType) {
       case 'pdf':
-        // Use more reliable external PDFs for better compatibility
-        const reliablePdfUrls = [
-          // Using reliable, permanent PDF URLs
-          'https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf',
-          'https://www.clickdimensions.com/links/TestPDFfile.pdf',
-          'https://scholar.harvard.edu/files/torman_personal/files/samplepdf.pdf'
-        ];
-        
-        // Use filename hash to consistently return same PDF for same file
-        const index = Math.abs(filename.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % reliablePdfUrls.length;
-        return reliablePdfUrls[index];
+        // Use the API endpoint which will serve demo PDFs with proper CORS headers
+        // The API will handle fallback to reliable external PDFs
+        return `/api/files/${encodeURIComponent(filename)}`;
 
       case 'image':
-        // Use a more reliable image service
-        const imageId = Math.abs(filename.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 1000;
-        return `https://picsum.photos/800/600?random=${imageId}`;
+        // Use the API endpoint for images too
+        return `/api/files/${encodeURIComponent(filename)}`;
+        
       case 'csv':
-        return '#'; // CSV data is handled separately
+        // Use the API endpoint for CSV files
+        return `/api/files/${encodeURIComponent(filename)}`;
+        
       default:
-        return '#';
+        // For other file types, use the API endpoint
+        return `/api/files/${encodeURIComponent(filename)}`;
     }
   };
 
@@ -678,6 +754,17 @@ export default function DocumentsPage() {
                 <input
                   type="radio"
                   name="pdfViewer"
+                  value="production"
+                  checked={pdfViewerType === 'production'}
+                  onChange={(e) => setPdfViewerType(e.target.value as any)}
+                  className="text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-gray-300 text-sm">Production (Recommended)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="pdfViewer"
                   value="enhanced"
                   checked={pdfViewerType === 'enhanced'}
                   onChange={(e) => setPdfViewerType(e.target.value as any)}
@@ -694,7 +781,7 @@ export default function DocumentsPage() {
                   onChange={(e) => setPdfViewerType(e.target.value as any)}
                   className="text-orange-500 focus:ring-orange-500"
                 />
-                <span className="text-gray-300 text-sm">Browser Native (Recommended)</span>
+                <span className="text-gray-300 text-sm">Browser Native</span>
               </label>
               <label className="flex items-center space-x-2">
                 <input
@@ -1343,6 +1430,18 @@ export default function DocumentsPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Production PDF Viewer (Primary - Recommended) */}
+        {showProductionPdfViewer && currentDocument && (
+          <ProductionPdfViewer
+            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+            fileName={currentDocument.name}
+            onCloseAction={() => {
+              setShowProductionPdfViewer(false);
+              setCurrentDocument(null);
+            }}
+          />
         )}
 
         {/* Enhanced PDF Viewer (Primary) */}
