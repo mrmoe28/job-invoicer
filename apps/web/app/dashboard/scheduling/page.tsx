@@ -128,6 +128,13 @@ function SchedulingContent() {
     );
   };
 
+  // Function to get schedules for a specific date
+  const getSchedulesForDate = (day: number) => {
+    if (!day) return [];
+    const dateString = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0];
+    return schedules.filter((schedule: Schedule) => schedule.date === dateString);
+  };
+
   // Add Schedule Modal state
   const [scheduleForm, setScheduleForm] = useState({
     date: '',
@@ -267,24 +274,55 @@ function SchedulingContent() {
             </div>
 
             <div className="grid grid-cols-7 gap-1">
-              {days.map((day, index) => (
-                <button
-                  key={index}
-                  onClick={day ? () => handleDateClick(day) : undefined}
-                  disabled={day === null}
-                  className={`aspect-square flex items-center justify-center text-sm rounded-lg transition-colors ${
-                    day === null
-                      ? 'cursor-default'
-                      : isSelected(day)
-                      ? 'bg-blue-600 text-white font-semibold'
-                      : isToday(day)
-                      ? 'bg-orange-500 text-white font-semibold'
-                      : 'text-gray-300 hover:bg-gray-700 cursor-pointer'
-                  }`}
-                >
-                  {day}
-                </button>
-              ))}
+              {days.map((day, index) => {
+                const daySchedules = getSchedulesForDate(day);
+                return (
+                  <button
+                    key={index}
+                    onClick={day ? () => handleDateClick(day) : undefined}
+                    disabled={day === null}
+                    className={`aspect-square flex flex-col items-center justify-start p-1 text-sm rounded-lg transition-colors relative ${
+                      day === null
+                        ? 'cursor-default'
+                        : isSelected(day)
+                        ? 'bg-blue-600 text-white font-semibold'
+                        : isToday(day)
+                        ? 'bg-orange-500 text-white font-semibold'
+                        : 'text-gray-300 hover:bg-gray-700 cursor-pointer'
+                    }`}
+                  >
+                    {day && (
+                      <>
+                        <span className="text-xs font-medium mb-1">{day}</span>
+                        {daySchedules.length > 0 && (
+                          <div className="flex flex-col gap-0.5 w-full">
+                            {daySchedules.slice(0, 2).map((schedule, scheduleIndex) => (
+                              <div
+                                key={scheduleIndex}
+                                className={`text-[8px] px-1 py-0.5 rounded truncate w-full ${
+                                  isSelected(day) || isToday(day)
+                                    ? 'bg-white bg-opacity-20 text-white'
+                                    : 'bg-orange-500 text-white'
+                                }`}
+                                title={`${schedule.employee}: ${schedule.job} (${schedule.startTime}-${schedule.endTime})`}
+                              >
+                                {schedule.employee.split(' ')[0]}: {schedule.job.substring(0, 8)}
+                              </div>
+                            ))}
+                            {daySchedules.length > 2 && (
+                              <div className={`text-[7px] text-center ${
+                                isSelected(day) || isToday(day) ? 'text-white' : 'text-gray-400'
+                              }`}>
+                                +{daySchedules.length - 2} more
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Add remaining days to fill the grid */}
@@ -309,12 +347,15 @@ function SchedulingContent() {
                 Schedules for {getFormattedDate(selectedDate)}
               </h3>
               <p className="text-gray-400 text-sm">
-                {selectedDate ? '0 schedules found' : 'Select a date to view schedules'}
+                {selectedDate 
+                  ? `${getSchedulesForDate(selectedDate.getDate()).length} schedule${getSchedulesForDate(selectedDate.getDate()).length !== 1 ? 's' : ''} found`
+                  : 'Select a date to view schedules'
+                }
               </p>
             </div>
 
             {selectedDate ? (
-              schedules.filter((s: Schedule) => s.date === selectedDate.toISOString().split('T')[0]).length === 0 ? (
+              getSchedulesForDate(selectedDate.getDate()).length === 0 ? (
                 <div className="text-center py-16">
                   <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,7 +379,7 @@ function SchedulingContent() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {schedules.filter((s: Schedule) => s.date === selectedDate.toISOString().split('T')[0]).map((s, i: number) => (
+                  {getSchedulesForDate(selectedDate.getDate()).map((s, i: number) => (
                     <div key={i} className="bg-gray-700 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className="text-white font-medium">{s.job}</div>
