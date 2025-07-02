@@ -1,25 +1,31 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend with fallback for build time
+const resend = new Resend(process.env.RESEND_API_KEY || 'dummy-key-for-build');
 
 export interface EmailVerificationData {
-    email: string;
-    firstName: string;
-    verificationToken: string;
-    verificationUrl: string;
+  email: string;
+  firstName: string;
+  verificationToken: string;
+  verificationUrl: string;
 }
 
 export async function sendVerificationEmail({
-    email,
-    firstName,
-    verificationUrl
+  email,
+  firstName,
+  verificationUrl
 }: Omit<EmailVerificationData, 'verificationToken'>) {
-    try {
-        const { data, error } = await resend.emails.send({
-            from: process.env.FROM_EMAIL || 'ConstructFlow <onboarding@constructflow.com>',
-            to: [email],
-            subject: 'Verify your ConstructFlow account',
-            html: `
+  try {
+    // Check if we have a valid API key at runtime
+    if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'dummy-key-for-build') {
+      console.log(`Development mode: Would send verification email to ${email} (${firstName}) with URL: ${verificationUrl}`);
+      return { success: true, messageId: 'dev-mode' };
+    }
+    const { data, error } = await resend.emails.send({
+      from: process.env.FROM_EMAIL || 'ConstructFlow <onboarding@constructflow.com>',
+      to: [email],
+      subject: 'Verify your ConstructFlow account',
+      html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -70,7 +76,7 @@ export async function sendVerificationEmail({
           </body>
         </html>
       `,
-            text: `
+      text: `
         Welcome to ConstructFlow!
         
         Hi ${firstName}!
@@ -84,35 +90,40 @@ export async function sendVerificationEmail({
         Best regards,
         The ConstructFlow Team
       `
-        });
+    });
 
-        if (error) {
-            console.error('Email sending error:', error);
-            throw new Error(`Failed to send verification email: ${error.message}`);
-        }
-
-        return { success: true, messageId: data?.id };
-    } catch (error) {
-        console.error('Email service error:', error);
-        throw new Error('Failed to send verification email');
+    if (error) {
+      console.error('Email sending error:', error);
+      throw new Error(`Failed to send verification email: ${error.message}`);
     }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error('Email service error:', error);
+    throw new Error('Failed to send verification email');
+  }
 }
 
 export async function sendPasswordResetEmail({
-    email,
-    firstName,
-    resetUrl
+  email,
+  firstName,
+  resetUrl
 }: {
-    email: string;
-    firstName: string;
-    resetUrl: string;
+  email: string;
+  firstName: string;
+  resetUrl: string;
 }) {
-    try {
-        const { data, error } = await resend.emails.send({
-            from: process.env.FROM_EMAIL || 'ConstructFlow <noreply@constructflow.com>',
-            to: [email],
-            subject: 'Reset your ConstructFlow password',
-            html: `
+  try {
+    // Check if we have a valid API key at runtime
+    if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'dummy-key-for-build') {
+      console.log(`Development mode: Would send password reset email to ${email} (${firstName}) with URL: ${resetUrl}`);
+      return { success: true, messageId: 'dev-mode' };
+    }
+    const { data, error } = await resend.emails.send({
+      from: process.env.FROM_EMAIL || 'ConstructFlow <noreply@constructflow.com>',
+      to: [email],
+      subject: 'Reset your ConstructFlow password',
+      html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -163,7 +174,7 @@ export async function sendPasswordResetEmail({
           </body>
         </html>
       `,
-            text: `
+      text: `
         Password Reset
         
         Hi ${firstName}!
@@ -177,16 +188,16 @@ export async function sendPasswordResetEmail({
         Best regards,
         The ConstructFlow Team
       `
-        });
+    });
 
-        if (error) {
-            console.error('Email sending error:', error);
-            throw new Error(`Failed to send password reset email: ${error.message}`);
-        }
-
-        return { success: true, messageId: data?.id };
-    } catch (error) {
-        console.error('Email service error:', error);
-        throw new Error('Failed to send password reset email');
+    if (error) {
+      console.error('Email sending error:', error);
+      throw new Error(`Failed to send password reset email: ${error.message}`);
     }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error('Email service error:', error);
+    throw new Error('Failed to send password reset email');
+  }
 } 
