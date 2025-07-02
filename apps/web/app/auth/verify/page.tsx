@@ -1,30 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import Link from 'next/link';
 
-interface User {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    isActive: boolean;
-    emailVerifiedAt: Date | null;
-}
 
-export default function VerifyEmailPage() {
+
+function VerifyEmailContent() {
     const searchParams = useSearchParams();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('');
-    const [user, setUser] = useState<User | null>(null);
+
 
     const verifyMutation = trpc.verifyEmail.useMutation({
         onSuccess: (data) => {
             setStatus('success');
             setMessage(data.message);
-            setUser(data.user as User);
+            // For now, we don't have user data in the response
+            // setUser(data.user as User);
         },
         onError: (error) => {
             setStatus('error');
@@ -70,18 +64,11 @@ export default function VerifyEmailPage() {
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Email Verified!</h1>
                     <p className="text-gray-600 mb-6">{message}</p>
 
-                    {user && (
-                        <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-                            <h3 className="font-semibold text-gray-900 mb-2">Account Details:</h3>
-                            <p className="text-sm text-gray-600">Name: {user.firstName} {user.lastName}</p>
-                            <p className="text-sm text-gray-600">Email: {user.email}</p>
-                            <p className="text-sm text-gray-600">Status: {user.isActive ? 'Active' : 'Inactive'}</p>
-                        </div>
-                    )}
+
 
                     <div className="space-y-3">
                         <Link
-                            href="/login"
+                            href="/auth"
                             className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors inline-block"
                         >
                             Continue to Login
@@ -119,7 +106,7 @@ export default function VerifyEmailPage() {
                         Sign Up Again
                     </Link>
                     <Link
-                        href="/login"
+                        href="/auth"
                         className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors inline-block"
                     >
                         Try to Login
@@ -133,5 +120,21 @@ export default function VerifyEmailPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function VerifyEmailPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+                <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
+                    <p className="text-gray-600">Please wait...</p>
+                </div>
+            </div>
+        }>
+            <VerifyEmailContent />
+        </Suspense>
     );
 } 
