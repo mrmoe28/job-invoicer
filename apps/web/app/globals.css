@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import PDF viewer styles */
+@import './pdf-styles.css';
+
 /* Ensure dark theme by default */
 html, body {
   background-color: #111827; /* gray-900 */

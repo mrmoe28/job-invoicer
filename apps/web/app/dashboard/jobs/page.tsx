@@ -320,7 +320,7 @@ export default function JobsPage() {
                         <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm">{job.status}</span>
                       </td>
                       <td className="p-4 text-gray-300">
-                        {job.estimatedStartDate ? new Date(job.estimatedStartDate).toLocaleDateString() : 'Not set'}
+                        {job.dueDate ? new Date(job.dueDate).toLocaleDateString() : 'Not set'}
                       </td>
                       <td className="p-4">
                         <div className="flex space-x-2">
@@ -365,10 +365,10 @@ export default function JobsPage() {
                   <div key={job.id} className="bg-gray-700 rounded-xl p-5 shadow flex flex-col justify-between">
                     <div>
                       <h4 className="text-lg font-bold text-white mb-2">{job.title}</h4>
-                      <div className="text-gray-300 text-sm mb-1">Contact: {job.contactId}</div>
-                      <div className="text-gray-300 text-sm mb-1">Start: {job.startDate.toDateString()}</div>
+                      <div className="text-gray-300 text-sm mb-1">Assigned To: {job.assignedTo}</div>
+                      <div className="text-gray-300 text-sm mb-1">Due: {new Date(job.dueDate).toDateString()}</div>
                       <div className="text-gray-300 text-sm mb-1">Priority: {job.priority}</div>
-                      <div className="text-gray-300 text-sm mb-1">Budget: {job.budget}</div>
+                      <div className="text-gray-300 text-sm mb-1">Status: {job.status}</div>
                     </div>
                     <div className="flex items-center justify-between mt-4">
                       <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">{job.status}</span>
@@ -401,10 +401,10 @@ export default function JobsPage() {
                         <div key={job.id} className="bg-gray-800 rounded-lg p-4 mb-4 shadow flex flex-col justify-between">
                           <div>
                             <div className="text-white font-semibold mb-1">{job.title}</div>
-                            <div className="text-gray-300 text-xs mb-1">Contact: {job.contactId}</div>
-                            <div className="text-gray-300 text-xs mb-1">Start: {job.startDate.toDateString()}</div>
+                            <div className="text-gray-300 text-xs mb-1">Assigned To: {job.assignedTo}</div>
+                            <div className="text-gray-300 text-xs mb-1">Due: {new Date(job.dueDate).toDateString()}</div>
                             <div className="text-gray-300 text-xs mb-1">Priority: {job.priority}</div>
-                            <div className="text-gray-300 text-xs mb-1">Budget: {job.budget}</div>
+                            <div className="text-gray-300 text-xs mb-1">Status: {job.status}</div>
                           </div>
                           <div className="flex items-center justify-between mt-2">
                             <div className="flex space-x-2">
@@ -592,10 +592,10 @@ export default function JobsPage() {
                     const startDate = startDateStr ? new Date(startDateStr) : new Date();
                     const budget = budgetStr ? parseFloat(budgetStr.replace(/[^\d.]/g, '')) : 0;
                     // Validate status and priority
-                    const validStatuses: JobStatus[] = ['Draft', 'Quoted', 'Approved', 'Scheduled', 'In Progress', 'On Hold', 'Completed', 'Cancelled', 'Invoiced'];
-                    const validPriorities: JobPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
-                    const status = validStatuses.includes(statusValue as JobStatus) ? statusValue as JobStatus : 'Draft';
-                    const priority = validPriorities.includes(priorityValue as JobPriority) ? priorityValue as JobPriority : 'Medium';
+                    const validStatuses: JobStatus[] = ['pending', 'in_progress', 'completed', 'cancelled', 'on_hold'];
+                    const validPriorities: JobPriority[] = ['low', 'medium', 'high', 'urgent'];
+                    const status = validStatuses.includes(statusValue as JobStatus) ? statusValue as JobStatus : 'pending';
+                    const priority = validPriorities.includes(priorityValue as JobPriority) ? priorityValue as JobPriority : 'medium';
                     if (editJob) {
                       setJobs(prev => prev.map(j => j.id === editJob.id ? {
                         ...j, title, contactId, status, startDate, priority, budget, description

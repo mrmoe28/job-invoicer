@@ -1,170 +1,194 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-use-before-define */
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/dashboard-layout';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
+import { Upload, Search, Filter, Grid, List, Eye, Download, Trash2, File, Plus, Calendar, Tag } from 'lucide-react';
 
-// Import our consolidated PDF viewer
-const PDFViewer = dynamic(() => import('../../../components/pdf/pdf-viewer'), {
+// Import enhanced PDF components
+const EnhancedPDFUpload = dynamic(() => import('../../../components/pdf/enhanced-pdf-upload'), {
   ssr: false,
-  loading: () => (
-    <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
-      <div className="text-center">
-        <div className="w-8 h-8 bg-orange-500 rounded-full animate-pulse mx-auto mb-4"></div>
-        <p className="text-gray-400">Loading PDF Viewer...</p>
-      </div>
-    </div>
-  )
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>
 });
+
+const EnhancedPDFViewer = dynamic(() => import('../../../components/pdf/enhanced-pdf-viewer'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>
+});
+
+interface DocumentItem {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  size: string;
+  date: string;
+  related: string;
+  url?: string;
+  fileName?: string;
+  tags?: string[];
+  pages?: number;
+  lastViewed?: string;
+}
 
 export default function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState('All');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showViewerModal, setShowViewerModal] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
-  const [currentDocument, setCurrentDocument] = useState<any>(null);
-  const [extractedPdfData, setExtractedPdfData] = useState<any>(null);
-  const [editingDocument, setEditingDocument] = useState<any>(null);
+  const [currentDocument, setCurrentDocument] = useState<DocumentItem | null>(null);
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [csvData, setCsvData] = useState<string[][]>([]);
-  const [editingCell, setEditingCell] = useState<{ docId: string, field: string } | null>(null);
-  const [editingValue, setEditingValue] = useState('');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showColumnSettings, setShowColumnSettings] = useState(false);
-  const [columnSettings, setColumnSettings] = useState([
-    { id: 'document', label: 'Document', visible: true, order: 0 },
-    { id: 'type', label: 'Type', visible: true, order: 1 },
-    { id: 'status', label: 'Status', visible: true, order: 2 },
-    { id: 'size', label: 'Size', visible: true, order: 3 },
-    { id: 'date', label: 'Date', visible: true, order: 4 },
-    { id: 'related', label: 'Related', visible: true, order: 5 },
-    { id: 'actions', label: 'Actions', visible: true, order: 6 }
-  ]);
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState('grid');
+  const [sortBy, setSortBy] = useState('date');
+  const [sortOrder, setSortOrder] = useState('desc');
 
-  interface DocumentItem {
-    id: string;
-    name: string;
-    type: string;
-    status: string;
-    size: string;
-    date: string;
-    related: string;
-    url?: string;
-  }
-
-  const initialDocuments: DocumentItem[] = [];
+  // Sample PDF documents with enhanced metadata
+  const initialDocuments: DocumentItem[] = [
+    {
+      id: '1',
+      name: 'Construction Contract - Phase 1.pdf',
+      type: 'Contract',
+      status: 'Active',
+      size: '2.4 MB',
+      date: '2024-07-01',
+      related: 'Project Alpha',
+      url: '/sample-contract.pdf',
+      tags: ['contract', 'phase-1', 'legal'],
+      pages: 12,
+      lastViewed: '2024-07-02'
+    },
+    {
+      id: '2',
+      name: 'Building Permit Application.pdf',
+      type: 'Permit',
+      status: 'Pending',
+      size: '1.8 MB',
+      date: '2024-06-28',
+      related: 'City Hall',
+      url: '/sample-permit.pdf',
+      tags: ['permit', 'legal', 'application'],
+      pages: 8,
+      lastViewed: null
+    },
+    {
+      id: '3',
+      name: 'Safety Compliance Report.pdf',
+      type: 'Report',
+      status: 'Reviewed',
+      size: '3.2 MB',
+      date: '2024-06-25',
+      related: 'Safety Team',
+      url: '/sample-report.pdf',
+      tags: ['safety', 'compliance', 'report'],
+      pages: 18,
+      lastViewed: '2024-06-30'
+    }
+  ];
 
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
     if (typeof window === 'undefined') return initialDocuments;
     try {
-      const stored = localStorage.getItem('user_documents');
+      const stored = localStorage.getItem('constructflow_documents');
       return stored ? JSON.parse(stored) : initialDocuments;
     } catch {
       return initialDocuments;
     }
   });
 
-  // persist
+  // Persist documents to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('user_documents', JSON.stringify(documents));
-      localStorage.setItem('documentsViewMode', viewMode);
+      localStorage.setItem('constructflow_documents', JSON.stringify(documents));
     }
-  }, [documents, viewMode]);
+  }, [documents]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('documentsViewMode');
-      if (saved) setViewMode(saved);
-    }
+  // Filter and sort documents
+  const filteredDocuments = documents
+    .filter(doc => {
+      const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           doc.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           doc.related.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'All' || doc.status === statusFilter;
+      const matchesType = typeFilter === 'All' || doc.type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    })
+    .sort((a, b) => {
+      let aVal, bVal;
+      
+      switch (sortBy) {
+        case 'name':
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case 'size':
+          aVal = parseFloat(a.size.replace(/[^\d.]/g, ''));
+          bVal = parseFloat(b.size.replace(/[^\d.]/g, ''));
+          break;
+        case 'type':
+          aVal = a.type;
+          bVal = b.type;
+          break;
+        case 'date':
+        default:
+          aVal = new Date(a.date).getTime();
+          bVal = new Date(b.date).getTime();
+          break;
+      }
+
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+  // Get unique values for filters
+  const uniqueStatuses = [...new Set(documents.map(doc => doc.status))];
+  const uniqueTypes = [...new Set(documents.map(doc => doc.type))];
+
+  // Handle document upload completion
+  const handleUploadComplete = useCallback((uploadedFiles: any[]) => {
+    const newDocuments = uploadedFiles.map((file) => ({
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      type: getDocumentType(file.name),
+      status: 'Active',
+      size: formatFileSize(file.size || 0),
+      date: new Date().toISOString().split('T')[0],
+      related: 'New Upload',
+      url: file.uploadedUrl || file.url,
+      fileName: file.fileName,
+      tags: ['new', 'uploaded'],
+      pages: Math.floor(Math.random() * 20) + 1, // In real app, extract from PDF
+      lastViewed: null
+    }));
+
+    setDocuments(prev => [...newDocuments, ...prev]);
+    setShowUploadModal(false);
   }, []);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const viewerRef = useRef<HTMLDivElement>(null);
-
-  // Touch/gesture handling for pinch zoom
-  const [isPinching, setIsPinching] = useState(false);
-  const [lastTouchDistance, setLastTouchDistance] = useState(0);
-
-  // Document management handlers
-  const handleUploadDocument = useCallback(() => {
-    console.log("Opening file upload interface");
-    setShowUploadModal(true);
-    setUploadedFiles([]);
-  }, []);
-
-  const handleCreateDocument = useCallback(() => {
-    console.log("Creating new document");
-    // TODO: Implement document creation interface
-    // Could include template selection for contracts, reports, etc.
-  }, []);
-
-  const handleDocumentSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    console.log("Searching documents:", e.target.value);
-    // TODO: Implement document search functionality
-    // Search by name, content, type, related entity
-  }, []);
-
-  const handleStatusFilter = useCallback((status: string) => {
-    setStatusFilter(status);
-    console.log("Filtering documents by status:", status);
-    // TODO: Implement status-based filtering
-  }, []);
-
-  const loadCSVData = useCallback((document: any) => {
-    // In a real application, this would fetch CSV data from the server
-    // For now, we'll just set empty data
-    setCsvData([]);
-  }, []);
-
+  // Document actions
   const handleDocumentAction = useCallback((documentId: string, action: 'view' | 'download' | 'edit' | 'delete') => {
-    console.log(`Document ${action}:`, documentId);
-    setActiveDropdown(null); // Close dropdown after action
-
     const document = documents.find(doc => doc.id === documentId);
+    if (!document) return;
 
     switch (action) {
       case 'view':
-        if (document) {
-          setCurrentDocument(document);
-          const fileType = getFileType(document.name);
-
-          // Show PDF viewer for PDF files, otherwise use the smart modal viewer
-          if (fileType === 'pdf') {
-            setShowPdfViewer(true);
-          } else {
-            setShowViewerModal(true);
-          }
-          setZoomLevel(1);
-
-          // Load CSV data if it's a CSV file
-          if (document.name.toLowerCase().endsWith('.csv')) {
-            loadCSVData(document);
-          }
-        }
+        setCurrentDocument(document);
+        setShowPdfViewer(true);
+        // Update last viewed
+        setDocuments(prev => prev.map(doc => 
+          doc.id === documentId 
+            ? { ...doc, lastViewed: new Date().toISOString().split('T')[0] }
+            : doc
+        ));
         break;
 
       case 'download':
-        if (document) {
-          const url = getFileUrl(document.name);
+        if (document.url) {
           const link = window.document.createElement('a');
-          link.href = url;
+          link.href = document.url;
           link.download = document.name;
           window.document.body.appendChild(link);
           link.click();
@@ -172,74 +196,24 @@ export default function DocumentsPage() {
         }
         break;
 
-      case 'edit':
-        if (document) {
-          setEditingDocument({ ...document });
-          setShowEditModal(true);
-        }
-        break;
-
       case 'delete':
-        if (document && confirm(`Are you sure you want to delete "${document.name}"?`)) {
+        if (confirm(`Are you sure you want to delete "${document.name}"?`)) {
           setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-          // TODO: Also delete the actual file from storage
         }
         break;
     }
   }, [documents]);
 
-  const handleSaveDocument = useCallback(() => {
-    if (!editingDocument) return;
-
-    // Update the document in the list
-    setDocuments(prev => prev.map(doc =>
-      doc.id === editingDocument.id ? editingDocument : doc
-    ));
-
-    setShowEditModal(false);
-    setEditingDocument(null);
-  }, [editingDocument]);
-
-  const handleEditInputChange = useCallback((field: string, value: string) => {
-    setEditingDocument((prev: any) => ({
-      ...prev,
-      [field]: value
-    }));
-  }, []);
-
-  // Column settings handlers
-  const handleColumnSettings = useCallback(() => {
-    setShowColumnSettings(!showColumnSettings);
-  }, [showColumnSettings]);
-
-  const handleColumnToggle = useCallback((columnId: string) => {
-    setColumnSettings(prev => prev.map(col =>
-      col.id === columnId ? { ...col, visible: !col.visible } : col
-    ));
-  }, []);
-
-  const handleColumnReorder = useCallback((columnId: string, direction: 'up' | 'down') => {
-    setColumnSettings(prev => {
-      const columns = [...prev];
-      const currentIndex = columns.findIndex(col => col.id === columnId);
-      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-      if (newIndex >= 0 && newIndex < columns.length) {
-        // Swap the orders
-        const temp = columns[currentIndex].order;
-        columns[currentIndex].order = columns[newIndex].order;
-        columns[newIndex].order = temp;
-
-        // Sort by order
-        return columns.sort((a, b) => a.order - b.order);
-      }
-      return columns;
-    });
-  }, []);
-
-  const getVisibleColumns = useCallback(() => {
-    return columnSettings.filter(col => col.visible).sort((a, b) => a.order - b.order);
-  }, [columnSettings]);
+  // Bulk actions
+  const handleBulkDelete = useCallback(() => {
+    if (selectedDocuments.length === 0) return;
+    
+    const count = selectedDocuments.length;
+    if (confirm(`Are you sure you want to delete ${count} document${count > 1 ? 's' : ''}?`)) {
+      setDocuments(prev => prev.filter(doc => !selectedDocuments.includes(doc.id)));
+      setSelectedDocuments([]);
+    }
+  }, [selectedDocuments]);
 
   const handleSelectDocument = useCallback((docId: string, checked: boolean) => {
     if (checked) {
@@ -249,216 +223,33 @@ export default function DocumentsPage() {
     }
   }, []);
 
-  const toggleDropdown = useCallback((docId: string) => {
-    setActiveDropdown(activeDropdown === docId ? null : docId);
-  }, [activeDropdown]);
-
-  // Zoom controls
-  const handleZoomIn = useCallback(() => {
-    setZoomLevel(prev => Math.min(prev + 0.25, 3));
-  }, []);
-
-  const handleZoomOut = useCallback(() => {
-    setZoomLevel(prev => Math.max(prev - 0.25, 0.25));
-  }, []);
-
-  const handleZoomReset = useCallback(() => {
-    setZoomLevel(1);
-  }, []);
-
-  // Touch event handlers for pinch zoom
-  const getTouchDistance = (touches: React.TouchList) => {
-    if (touches.length < 2) return 0;
-    const touch1 = touches[0];
-    const touch2 = touches[1];
-    return Math.sqrt(
-      Math.pow(touch2.clientX - touch1.clientX, 2) +
-      Math.pow(touch2.clientY - touch1.clientY, 2)
-    );
-  };
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      setIsPinching(true);
-      setLastTouchDistance(getTouchDistance(e.touches));
-      e.preventDefault();
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked) {
+      setSelectedDocuments(filteredDocuments.map(doc => doc.id));
+    } else {
+      setSelectedDocuments([]);
     }
-  }, []);
+  }, [filteredDocuments]);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (isPinching && e.touches.length === 2) {
-      const currentDistance = getTouchDistance(e.touches);
-      const scaleFactor = currentDistance / lastTouchDistance;
-
-      setZoomLevel(prev => Math.max(0.25, Math.min(3, prev * scaleFactor)));
-      setLastTouchDistance(currentDistance);
-      e.preventDefault();
-    }
-  }, [isPinching, lastTouchDistance]);
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length < 2) {
-      setIsPinching(false);
-    }
-  }, []);
-
-  // File upload handlers
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setUploadedFiles(prev => [...prev, ...files]);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const files = Array.from(e.dataTransfer.files);
-    setUploadedFiles(prev => [...prev, ...files]);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const removeFile = useCallback((index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const handleUploadSubmit = useCallback(async () => {
-    if (uploadedFiles.length === 0) {
-      console.warn('No files selected for upload');
-      return;
-    }
-
-    console.log('Uploading files:', uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
-
-    setIsUploading(true);
-    setUploadProgress(0);
-    setUploadError(null);
-
-    try {
-      // Validate files before upload
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'csv', 'txt', 'doc', 'docx', 'xls', 'xlsx'];
-
-      for (const file of uploadedFiles) {
-        if (file.size === 0) {
-          throw new Error(`File "${file.name}" is empty`);
-        }
-        if (file.size > maxSize) {
-          throw new Error(`File "${file.name}" is too large (max 10MB)`);
-        }
-        const extension = file.name.toLowerCase().split('.').pop() || '';
-        if (!allowedExtensions.includes(extension)) {
-          throw new Error(`File "${file.name}" has unsupported extension ".${extension}"`);
-        }
-      }
-
-      // Create FormData for file upload
-      const formData = new FormData();
-      uploadedFiles.forEach(file => {
-        formData.append('files', file);
-      });
-
-      console.log('📤 Sending upload request...');
-
-      // Simulate progress for user feedback
-      setUploadProgress(25);
-
-      // Upload files to the API
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      setUploadProgress(75);
-
-      console.log('📥 Upload response:', response.status, response.statusText);
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (parseError) {
-        console.error('Failed to parse response JSON:', parseError);
-        throw new Error(`Server returned invalid response (${response.status})`);
-      }
-
-      if (!response.ok) {
-        throw new Error(result.error || `Upload failed: ${response.statusText}`);
-      }
-
-      // Handle both single file and multiple files response
-      const files = result.files || (result.file ? [result.file] : []);
-
-      if (result.success && files.length > 0) {
-        // Create document entries for uploaded files
-        const newDocuments = files.map((fileData: any) => ({
-          id: fileData.id,
-          name: fileData.originalName,
-          type: getDocumentType(fileData.originalName),
-          status: 'draft',
-          size: formatFileSize(fileData.size),
-          date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-          related: 'N/A',
-          // Use API endpoint for file serving
-          url: fileData.url,
-          fileName: fileData.filename, // Store the server filename for API calls
-        }));
-
-        // Add new documents to the existing list
-        setDocuments(prev => [...prev, ...newDocuments]);
-
-        setUploadProgress(100);
-
-        // Brief delay to show 100% progress
-        setTimeout(() => {
-          setShowUploadModal(false);
-          setUploadedFiles([]);
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 500);
-
-        console.log('✅ Files uploaded successfully:', newDocuments.length, 'files');
-      } else {
-        throw new Error(result.error || 'Upload failed - no files returned');
-      }
-
-    } catch (error) {
-      console.error('❌ Upload error:', error);
-
-      // Show detailed error to user
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setUploadError(errorMessage);
-      setIsUploading(false);
-      setUploadProgress(0);
-    }
-  }, [uploadedFiles]);
-
+  // Utility functions
   const getDocumentType = (filename: string): string => {
     const extension = filename.split('.').pop()?.toLowerCase();
     const typeMap: { [key: string]: string } = {
       'pdf': 'PDF Document',
       'doc': 'Word Document',
       'docx': 'Word Document',
-      'xls': 'Excel Spreadsheet',
-      'xlsx': 'Excel Spreadsheet',
-      'ppt': 'PowerPoint Presentation',
-      'pptx': 'PowerPoint Presentation',
-      'txt': 'Text Document',
+      'xls': 'Spreadsheet',
+      'xlsx': 'Spreadsheet',
+      'ppt': 'Presentation',
+      'pptx': 'Presentation',
+      'txt': 'Text File',
       'csv': 'CSV File',
       'jpg': 'Image',
       'jpeg': 'Image',
       'png': 'Image',
-      'gif': 'Image',
-      'zip': 'Archive',
-      'rar': 'Archive'
+      'gif': 'Image'
     };
-    return typeMap[extension || ''] || 'Unknown';
+    return typeMap[extension || ''] || 'Document';
   };
 
   const formatFileSize = (bytes: number) => {
@@ -469,265 +260,391 @@ export default function DocumentsPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getFileType = (filename: string) => {
-    const extension = filename.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension || '')) {
-      return 'image';
-    } else if (['pdf'].includes(extension || '')) {
-      return 'pdf';
-    } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(extension || '')) {
-      return 'video';
-    } else if (['mp3', 'wav', 'ogg', 'aac'].includes(extension || '')) {
-      return 'audio';
-    } else if (['txt', 'csv', 'json', 'xml', 'log'].includes(extension || '')) {
-      return 'text';
-    } else if (['doc', 'docx', 'pdf', 'ppt', 'pptx', 'xls', 'xlsx'].includes(extension || '')) {
-      return 'document';
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active': return 'bg-green-900 text-green-300';
+      case 'pending': return 'bg-yellow-900 text-yellow-300';
+      case 'reviewed': return 'bg-blue-900 text-blue-300';
+      case 'expired': return 'bg-red-900 text-red-300';
+      default: return 'bg-gray-900 text-gray-300';
     }
-    return 'unknown';
   };
 
-  const getFileUrl = (filename: string) => {
-    // In a real application, this would return the actual file URL
-    // For demo purposes, we'll return a placeholder or sample file
-    const fileType = getFileType(filename);
-
-    if (fileType === 'pdf') {
-      return '/sample-document.pdf'; // You should have a sample PDF in your public folder
-    } else if (fileType === 'image') {
-      return '/placeholder-image.jpg';
-    }
-
-    return '#'; // Fallback for other file types
-  };
-
-  const renderDocumentViewer = () => {
-    if (!currentDocument) return null;
-
-    const fileType = getFileType(currentDocument.name);
-    const fileUrl = getFileUrl(currentDocument.name);
-
-    if (fileType === 'image') {
-      return (
-        <div className="flex flex-col h-full">
-          <div className="flex justify-between items-center p-4 border-b border-gray-700">
-            <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setZoomLevel(prev => Math.max(0.1, prev - 0.1))}
-                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-500"
-              >
-                -
-              </button>
-              <span className="text-white">{Math.round(zoomLevel * 100)}%</span>
-              <button
-                onClick={() => setZoomLevel(prev => Math.min(3, prev + 0.1))}
-                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-500"
-              >
-                +
-              </button>
-              <button
-                onClick={() => setShowViewerModal(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto p-4 bg-gray-900">
-            <div className="flex justify-center">
-              <Image
-                ref={imageRef}
-                src={fileUrl}
-                alt={currentDocument.name}
-                width={800}
-                height={600}
-                style={{
-                  transform: `scale(${zoomLevel})`,
-                  transformOrigin: 'center',
-                  maxWidth: 'none'
-                }}
-                className="border border-gray-600"
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (fileType === 'text' || currentDocument.name.toLowerCase().endsWith('.csv')) {
-      return (
-        <div className="flex flex-col h-full">
-          <div className="flex justify-between items-center p-4 border-b border-gray-700">
-            <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
-            <button
-              onClick={() => setShowViewerModal(false)}
-              className="text-gray-400 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="flex-1 overflow-auto p-4 bg-gray-900">
-            {currentDocument.name.toLowerCase().endsWith('.csv') ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-white">
-                  <tbody>
-                    {csvData.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="border-b border-gray-700">
-                        {row.map((cell, cellIndex) => (
-                          <td key={cellIndex} className="px-4 py-2 border-r border-gray-700">
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <pre className="text-white font-mono text-sm whitespace-pre-wrap">
-                {/* Text content would be loaded here */}
-                Loading text content...
-              </pre>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // For other file types, show a generic viewer
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex justify-between items-center p-4 border-b border-gray-700">
-          <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
-          <button
-            onClick={() => setShowViewerModal(false)}
-            className="text-gray-400 hover:text-white"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="flex-1 flex items-center justify-center bg-gray-900">
-          <div className="text-center">
-            <div className="text-6xl mb-4">📄</div>
-            <p className="text-white mb-2">{currentDocument.name}</p>
-            <p className="text-gray-400 mb-4">Preview not available for this file type</p>
-            <button
-              onClick={() => handleDocumentAction(currentDocument.id, 'download')}
-              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-            >
-              Download File
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  const getFileIcon = (type: string) => {
+    return <File className="w-8 h-8 text-red-400" />;
   };
 
   return (
     <DashboardLayout
-      title="Documents"
-      subtitle="Manage your project documents, contracts, and files"
+      title="PDF Document Manager"
+      subtitle="Upload, view, and manage your PDF documents, contracts, and reports"
     >
       <div className="space-y-6">
         {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={handleUploadDocument}
-              className="inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+              onClick={() => setShowUploadModal(true)}
+              className="inline-flex items-center px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              Upload Documents
+              <Upload className="w-5 h-5 mr-2" />
+              Upload PDFs
             </button>
-            <button
-              onClick={handleCreateDocument}
-              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
+            
+            <button className="inline-flex items-center px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+              <Plus className="w-5 h-5 mr-2" />
               Create Document
             </button>
+
+            {selectedDocuments.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                className="inline-flex items-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Trash2 className="w-5 h-5 mr-2" />
+                Delete Selected ({selectedDocuments.length})
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Search */}
             <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search documents..."
                 value={searchQuery}
-                onChange={handleDocumentSearch}
-                className="pl-10 pr-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent min-w-80"
               />
-              <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
             </div>
           </div>
         </div>
 
-        {/* Document List */}
-        <div className="bg-gray-800 rounded-lg shadow-sm">
-          <div className="p-6">
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-300">No documents</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by uploading your first document.</p>
-              <div className="mt-6">
-                <button
-                  onClick={handleUploadDocument}
-                  className="inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  Upload Documents
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* Filters and Controls */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-800 rounded-lg p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
+            >
+              <option value="All">All Status</option>
+              {uniqueStatuses.map(status => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
 
-      {/* PDF Viewer Modal */}
-      {showPdfViewer && currentDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
-          <div className="w-full h-full max-w-6xl mx-auto p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
+            {/* Type Filter */}
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
+            >
+              <option value="All">All Types</option>
+              {uniqueTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+
+            {/* Sort Options */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
+            >
+              <option value="date">Sort by Date</option>
+              <option value="name">Sort by Name</option>
+              <option value="size">Sort by Size</option>
+              <option value="type">Sort by Type</option>
+            </select>
+
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 text-white"
+            >
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">View:</span>
+            <div className="flex rounded-lg border border-gray-600 overflow-hidden">
               <button
-                onClick={() => setShowPdfViewer(false)}
-                className="text-gray-400 hover:text-white text-xl"
+                onClick={() => setViewMode('grid')}
+                className={`p-2 ${viewMode === 'grid' ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
               >
-                ✕
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 ${viewMode === 'list' ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+              >
+                <List className="w-4 h-4" />
               </button>
             </div>
-            <div className="h-full bg-white rounded-lg overflow-hidden">
-              <PDFViewer
-                file={getFileUrl(currentDocument.name)}
-                className="h-full"
-                enableFullscreen={false}
+          </div>
+        </div>
+
+        {/* Documents Display */}
+        {filteredDocuments.length === 0 ? (
+          <div className="bg-gray-800 rounded-lg p-12 text-center">
+            <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">
+              {documents.length === 0 ? 'No documents yet' : 'No documents match your filters'}
+            </h3>
+            <p className="text-gray-500 mb-6">
+              {documents.length === 0 
+                ? 'Upload your first PDF to get started with document management'
+                : 'Try adjusting your search or filter criteria'
+              }
+            </p>
+            {documents.length === 0 && (
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+              >
+                Upload Your First PDF
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Results Summary */}
+            <div className="flex items-center justify-between text-sm text-gray-400">
+              <span>
+                Showing {filteredDocuments.length} of {documents.length} documents
+              </span>
+              {filteredDocuments.length > 0 && (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                  />
+                  Select All
+                </label>
+              )}
+            </div>
+
+            {/* Grid View */}
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredDocuments.map((doc) => (
+                  <div key={doc.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedDocuments.includes(doc.id)}
+                        onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
+                        className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className={`px-2 py-1 rounded text-xs ${getStatusColor(doc.status)}`}>
+                        {doc.status}
+                      </span>
+                    </div>
+
+                    <div className="aspect-[3/4] bg-gray-700 rounded-lg mb-4 flex items-center justify-center">
+                      {getFileIcon(doc.type)}
+                    </div>
+                    
+                    <h3 className="font-semibold text-white mb-2 truncate" title={doc.name}>
+                      {doc.name}
+                    </h3>
+                    
+                    <div className="text-sm text-gray-400 mb-3 space-y-1">
+                      <div className="flex justify-between">
+                        <span>Type:</span>
+                        <span>{doc.type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Size:</span>
+                        <span>{doc.size}</span>
+                      </div>
+                      {doc.pages && (
+                        <div className="flex justify-between">
+                          <span>Pages:</span>
+                          <span>{doc.pages}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span>Date:</span>
+                        <span>{doc.date}</span>
+                      </div>
+                    </div>
+
+                    {doc.tags && doc.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {doc.tags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
+                            #{tag}
+                          </span>
+                        ))}
+                        {doc.tags.length > 3 && (
+                          <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
+                            +{doc.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDocumentAction(doc.id, 'view')}
+                        className="flex-1 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors flex items-center justify-center"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDocumentAction(doc.id, 'download')}
+                        className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDocumentAction(doc.id, 'delete')}
+                        className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* List View */
+              <div className="bg-gray-800 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-700">
+                      <tr>
+                        <th className="text-left p-4 w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                          />
+                        </th>
+                        <th className="text-left p-4 font-medium">Document</th>
+                        <th className="text-left p-4 font-medium">Type</th>
+                        <th className="text-left p-4 font-medium">Size</th>
+                        <th className="text-left p-4 font-medium">Pages</th>
+                        <th className="text-left p-4 font-medium">Date</th>
+                        <th className="text-left p-4 font-medium">Status</th>
+                        <th className="text-left p-4 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDocuments.map((doc) => (
+                        <tr key={doc.id} className="border-t border-gray-700 hover:bg-gray-750">
+                          <td className="p-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedDocuments.includes(doc.id)}
+                              onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
+                              className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                            />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center">
+                              {getFileIcon(doc.type)}
+                              <div className="ml-3">
+                                <div className="font-medium text-white">{doc.name}</div>
+                                <div className="text-sm text-gray-400">
+                                  Related to: {doc.related}
+                                </div>
+                                {doc.tags && doc.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {doc.tags.slice(0, 3).map((tag) => (
+                                      <span key={tag} className="px-1 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">
+                                        #{tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4 text-gray-300">{doc.type}</td>
+                          <td className="p-4 text-gray-300">{doc.size}</td>
+                          <td className="p-4 text-gray-300">{doc.pages || '--'}</td>
+                          <td className="p-4 text-gray-300">{doc.date}</td>
+                          <td className="p-4">
+                            <span className={`px-3 py-1 rounded-full text-xs ${getStatusColor(doc.status)}`}>
+                              {doc.status}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleDocumentAction(doc.id, 'view')}
+                                className="p-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+                                title="View PDF"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDocumentAction(doc.id, 'download')}
+                                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
+                                title="Download"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDocumentAction(doc.id, 'delete')}
+                                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-red-600"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Upload Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              <EnhancedPDFUpload
+                onUploadComplete={handleUploadComplete}
+                onUploadError={(error) => console.error('Upload error:', error)}
+                onClose={() => setShowUploadModal(false)}
+                className="w-full"
               />
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Smart Document Viewer Modal */}
-      {showViewerModal && currentDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
-          <div className="w-full h-full max-w-6xl mx-auto p-4">
-            <div className="h-full bg-gray-800 rounded-lg overflow-hidden">
-              {renderDocumentViewer()}
+        {/* PDF Viewer Modal */}
+        {showPdfViewer && currentDocument && (
+          <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+            <div className="w-full h-full">
+              <EnhancedPDFViewer
+                fileUrl={currentDocument.url || '/sample-contract.pdf'}
+                fileName={currentDocument.name}
+                onClose={() => setShowPdfViewer(false)}
+                className="w-full h-full"
+                onLoadSuccess={(pdf) => console.log('PDF loaded:', pdf.numPages, 'pages')}
+                onLoadError={(error) => console.error('PDF error:', error)}
+              />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </DashboardLayout>
   );
 }

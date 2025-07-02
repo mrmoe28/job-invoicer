@@ -80,6 +80,9 @@ import {
     Globe,
     Link,
     Unlink,
+    ZoomIn,
+    ZoomOut,
+    Maximize,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -197,6 +200,11 @@ export const Icons = {
     Globe,
     Link,
     Unlink,
+
+    // PDF Controls
+    ZoomIn,
+    ZoomOut,
+    Maximize,
 } as const;
 
 // Icon component with consistent styling
