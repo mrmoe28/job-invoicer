@@ -35,6 +35,7 @@ interface DocumentItem {
 }
 
 export default function DocumentsPage() {
+  const [isClient, setIsClient] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -45,6 +46,11 @@ export default function DocumentsPage() {
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
+
+  // Ensure client-side rendering for hydration consistency
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Sample PDF documents with enhanced metadata and security levels
   const initialDocuments: DocumentItem[] = [
@@ -183,8 +189,8 @@ export default function DocumentsPage() {
     });
 
   // Get unique values for filters
-  const uniqueStatuses = [...new Set(documents.map(doc => doc.status))];
-  const uniqueTypes = [...new Set(documents.map(doc => doc.type))];
+  const uniqueStatuses = Array.from(new Set(documents.map(doc => doc.status)));
+  const uniqueTypes = Array.from(new Set(documents.map(doc => doc.type)));
 
   // Handle document upload completion with security assignment
   const handleUploadComplete = useCallback((uploadedFiles: any[]) => {
@@ -204,7 +210,7 @@ export default function DocumentsPage() {
         fileName: file.fileName,
         tags: ['new', 'uploaded'],
         pages: Math.floor(Math.random() * 20) + 1, // In real app, extract from PDF
-        lastViewed: null,
+        lastViewed: undefined,
         securityLevel: securityConfig.accessLevel,
         accessCount: 0
       };
@@ -418,48 +424,57 @@ export default function DocumentsPage() {
         {/* Filters and Controls */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-800 rounded-lg p-4">
           <div className="flex flex-wrap items-center gap-3">
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
-            >
-              <option value="All">All Status</option>
-              {uniqueStatuses.map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
+            {isClient && (
+              <>
+                {/* Status Filter */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
+                  aria-label="Filter by status"
+                >
+                  <option value="All">All Status</option>
+                  {uniqueStatuses.map(status => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
 
-            {/* Type Filter */}
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
-            >
-              <option value="All">All Types</option>
-              {uniqueTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
+                {/* Type Filter */}
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
+                  aria-label="Filter by document type"
+                >
+                  <option value="All">All Types</option>
+                  {uniqueTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
 
-            {/* Sort Options */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
-            >
-              <option value="date">Sort by Date</option>
-              <option value="name">Sort by Name</option>
-              <option value="size">Sort by Size</option>
-              <option value="type">Sort by Type</option>
-            </select>
+                {/* Sort Options */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 text-white"
+                  aria-label="Sort documents by"
+                >
+                  <option value="date">Sort by Date</option>
+                  <option value="name">Sort by Name</option>
+                  <option value="size">Sort by Size</option>
+                  <option value="type">Sort by Type</option>
+                </select>
 
-            <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 text-white"
-            >
-              {sortOrder === 'asc' ? '↑' : '↓'}
-            </button>
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 text-white"
+                  aria-label={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                  title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </button>
+              </>
+            )}
           </div>
 
           {/* View Mode Toggle */}

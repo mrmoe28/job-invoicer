@@ -407,14 +407,21 @@ export default function EnhancedPDFUpload({
                 <div key={file.id} className="bg-gray-700 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-3">
-                      <File className="w-8 h-8 text-red-400 flex-shrink-0" />
+                      {/* File Preview Thumbnail */}
+                      <div className="w-12 h-16 bg-gray-600 rounded-lg flex items-center justify-center border border-gray-500 flex-shrink-0">
+                        <File className="w-6 h-6 text-red-400" />
+                      </div>
+
+                      {/* File Details */}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-white truncate" title={file.file.name}>
                           {file.file.name}
                         </p>
-                        <p className="text-sm text-gray-400">
-                          {formatFileSize(file.file.size)}
-                        </p>
+                        <div className="flex items-center gap-3 text-sm text-gray-400">
+                          <span>{formatFileSize(file.file.size)}</span>
+                          <span>PDF Document</span>
+                          <span>Modified: {new Date(file.file.lastModified).toLocaleDateString()}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -470,8 +477,18 @@ export default function EnhancedPDFUpload({
 
                   {/* Success Message */}
                   {file.status === 'success' && (
-                    <div className="mt-2 text-sm text-green-400">
-                      ✓ Upload completed successfully
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm text-green-400">
+                        ✓ Upload completed successfully
+                      </span>
+                      {file.uploadedUrl && (
+                        <button
+                          onClick={() => window.open(file.uploadedUrl, '_blank')}
+                          className="text-sm text-orange-400 hover:text-orange-300 underline"
+                        >
+                          View Document
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
