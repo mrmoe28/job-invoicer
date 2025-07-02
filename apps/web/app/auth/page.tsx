@@ -13,13 +13,13 @@ function LoginForm() {
 
   // tRPC mutation hook
   const loginMutation = trpc.login.useMutation({
-    onSuccess: (result) => {
-      if (result.success) {
-        // Store user session
+    onSuccess: (result: any) => {
+      if (result?.success && result?.user) {
+        // Store user session with proper null checks
         localStorage.setItem('pulse_user', JSON.stringify({
-          id: result.user.id,
-          email: result.user.email,
-          name: `${result.user.firstName} ${result.user.lastName}`,
+          id: result.user.id || 'temp-id',
+          email: result.user.email || '',
+          name: `${result.user.firstName || ''} ${result.user.lastName || ''}`.trim() || 'User',
           role: 'User', // Default role since not returned by API yet
           organizationId: result.user.organization?.id || '1',
           organizationName: result.user.organization?.name || 'Your Organization',
@@ -31,9 +31,11 @@ function LoginForm() {
         localStorage.setItem('pulse_session_active', 'true');
 
         router.push('/dashboard');
+      } else {
+        setError('Login failed. Please check your credentials and try again.');
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       setError(error.message || 'Invalid email or password. Please try again.');
     },
   });
@@ -139,7 +141,7 @@ function LoginForm() {
         {/* Signup Link */}
         <div className="text-center">
           <p className="text-gray-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/auth/signup" className="text-orange-500 hover:text-orange-400 font-semibold">
               Create your workspace
             </Link>

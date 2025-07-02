@@ -13,8 +13,8 @@ export default function HomePage() {
     if (userData) {
       try {
         const user = JSON.parse(userData);
-        // Check if user has valid credentials
-        if (user.username && user.name) {
+        // Check if user has valid credentials with proper property names
+        if (user && user.id && user.email) {
           router.replace('/dashboard');
           return;
         } else {
