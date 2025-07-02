@@ -151,7 +151,21 @@ export default function EnhancedPDFUpload({
                     setIsUploading(false);
                     const successfulFiles = updated.filter(f => f.status === 'success');
                     if (successfulFiles.length > 0) {
-                      onUploadComplete?.(successfulFiles);
+                      // Map to include the file data needed by the documents page
+                      const filesWithData = successfulFiles.map(f => ({
+                        name: f.file.name,
+                        size: f.file.size,
+                        type: f.file.type,
+                        uploadedUrl: f.uploadedUrl,
+                        url: f.uploadedUrl,
+                        fileName: f.file.name
+                      }));
+                      onUploadComplete?.(filesWithData);
+
+                      // Auto-close modal after successful upload
+                      setTimeout(() => {
+                        onClose?.();
+                      }, 1500);
                     }
                   }
                 }, 100);
@@ -196,7 +210,24 @@ export default function EnhancedPDFUpload({
               setIsUploading(false);
               const successfulFiles = updated.filter(f => f.status === 'success');
               if (successfulFiles.length > 0) {
-                onUploadComplete?.(successfulFiles);
+                // Map to include the file data needed by the documents page
+                const filesWithData = successfulFiles.map(f => ({
+                  name: f.file.name,
+                  size: f.file.size,
+                  type: f.file.type,
+                  uploadedUrl: f.uploadedUrl,
+                  url: f.uploadedUrl,
+                  fileName: f.file.name
+                }));
+                onUploadComplete?.(filesWithData);
+
+                // Auto-close modal after successful upload (only if all files succeeded)
+                const hasErrors = updated.some(f => f.status === 'error');
+                if (!hasErrors) {
+                  setTimeout(() => {
+                    onClose?.();
+                  }, 1500);
+                }
               }
             }
           }, 100);
