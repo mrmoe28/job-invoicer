@@ -105,7 +105,8 @@ export const appRouter = t.router({
                 return {
                     success: true,
                     message: 'User registered successfully. Please check your email for verification.',
-                    userId: user.id
+                    userId: user.id,
+                    requiresVerification: true
                 };
             } catch (error) {
                 console.error('Registration error:', error);
