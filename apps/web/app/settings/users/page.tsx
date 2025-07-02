@@ -1,18 +1,23 @@
 import DashboardLayout from '../../../components/dashboard-layout';
 
-const mockUsers = [
-  { id: 1, name: 'Admin User', email: 'admin@constructflow.com', role: 'Administrator', status: 'Active', lastLogin: '2 hours ago' },
-  { id: 2, name: 'John Doe', email: 'john.doe@constructflow.com', role: 'Project Manager', status: 'Active', lastLogin: '1 day ago' },
-  { id: 3, name: 'Sarah Wilson', email: 'sarah.wilson@constructflow.com', role: 'Crew Leader', status: 'Active', lastLogin: '3 hours ago' },
-  { id: 4, name: 'Mike Johnson', email: 'mike.johnson@constructflow.com', role: 'Worker', status: 'Inactive', lastLogin: '1 week ago' },
-];
+// TODO: Replace with actual user data from API
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  lastLogin: string;
+}
 
-const userRoles = [
-  { name: 'Administrator', description: 'Full system access and configuration', users: 1 },
-  { name: 'Project Manager', description: 'Manage jobs, crews, and schedules', users: 3 },
-  { name: 'Crew Leader', description: 'Lead crews and update job progress', users: 5 },
-  { name: 'Worker', description: 'View assigned tasks and update status', users: 12 },
-];
+interface UserRole {
+  name: string;
+  description: string;
+  users: number;
+}
+
+const mockUsers: User[] = [];
+const userRoles: UserRole[] = [];
 
 export default function UserManagementPage() {
   return (
@@ -124,7 +129,7 @@ export default function UserManagementPage() {
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
                           <span className="text-white font-medium text-sm">
-                            {user.name.split(' ').map(n => n[0]).join('')}
+                            {user.name.split(' ').map((n: string) => n[0]).join('')}
                           </span>
                         </div>
                         <div className="ml-4">
@@ -139,11 +144,10 @@ export default function UserManagementPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.status === 'Active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.status === 'Active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {user.status}
                       </span>
                     </td>
