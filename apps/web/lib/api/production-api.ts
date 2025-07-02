@@ -91,7 +91,21 @@ export const appRouter = t.router({
 
                 // Send verification email
                 try {
-                    const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3010'}/verify-email?token=${verificationToken}`;
+                    // Determine base URL for different environments
+                    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+                    if (!baseUrl) {
+                        // For Vercel deployments
+                        if (process.env.VERCEL_URL) {
+                            baseUrl = `https://${process.env.VERCEL_URL}`;
+                        }
+                        // For local development
+                        else {
+                            baseUrl = 'http://localhost:3010';
+                        }
+                    }
+
+                    const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
                     await sendVerificationEmail({
                         email: user.email,
                         firstName: user.firstName,
