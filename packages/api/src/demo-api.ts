@@ -330,12 +330,14 @@ function updateById<T extends { id: string; organizationId: string; updatedAt?: 
 
 function createItem<T extends { id?: string; organizationId?: string; createdAt?: Date; updatedAt?: Date }>(
   data: T[], 
-  item: T
+  item: T,
+  forceOrgId?: boolean
 ): T {
   const newItem = {
     ...item,
     id: item.id || generateId(),
-    organizationId: DEMO_ORG_ID,
+    // Only set DEMO_ORG_ID if forceOrgId is true or organizationId is not provided
+    organizationId: forceOrgId ? DEMO_ORG_ID : (item.organizationId || DEMO_ORG_ID),
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -384,7 +386,7 @@ export const appRouter = router({
       organizationName: z.string().min(1),
     }))
     .mutation(({ input }) => {
-      // Create new organization
+      // Create new organization (don't force DEMO_ORG_ID)
       const newOrg = createItem(demoData.organizations, {
         name: input.organizationName,
         slug: input.organizationName.toLowerCase().replace(/\s+/g, '-'),
@@ -393,9 +395,9 @@ export const appRouter = router({
         maxUsers: 50,
         maxJobs: 1000,
         maxStorageGb: 10,
-      } as any);
+      } as any, false); // Don't force DEMO_ORG_ID
 
-      // Create new user
+      // Create new user with the new organization ID
       const newUser = createItem(demoData.users, {
         organizationId: newOrg.id,
         email: input.email,
@@ -404,7 +406,7 @@ export const appRouter = router({
         lastName: input.lastName,
         role: 'owner',
         isActive: true,
-      } as any);
+      } as any, false); // Don't force DEMO_ORG_ID
 
       return {
         success: true,
@@ -508,7 +510,7 @@ export const appRouter = router({
         ...input,
         country: 'US',
         isActive: true,
-      } as any);
+      } as any, true);
       return company;
     }),
 
@@ -568,7 +570,7 @@ export const appRouter = router({
       const contact = createItem(demoData.contacts, {
         ...input,
         isActive: true,
-      } as any);
+      } as any, true);
       return contact;
     }),
 
@@ -637,7 +639,7 @@ export const appRouter = router({
         jobNumber,
         assignedUserId: 'user-1',
         isActive: true,
-      } as any);
+      } as any, true);
       return job;
     }),
 
@@ -703,7 +705,7 @@ export const appRouter = router({
         status: 'pending',
         orderIndex: demoData.tasks.length,
         isActive: true,
-      } as any);
+      } as any, true);
       return task;
     }),
 
@@ -781,7 +783,7 @@ export const appRouter = router({
         uploadedByUserId: 'user-1',
         status: 'active',
         isPublic: false,
-      } as any);
+      } as any, true);
       return document;
     }),
 
@@ -834,7 +836,7 @@ export const appRouter = router({
       const crewMember = createItem(demoData.crewMembers, {
         ...input,
         isActive: true,
-      } as any);
+      } as any, true);
       return crewMember;
     }),
 
