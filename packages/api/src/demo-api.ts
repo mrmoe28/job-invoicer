@@ -351,6 +351,115 @@ export const appRouter = router({
       return `Hello ${input.name}! CRUD operations are now functional with demo data.`;
     }),
 
+  // Authentication endpoints
+  login: publicProcedure
+    .input(z.object({
+      email: z.string().email(),
+      password: z.string(),
+    }))
+    .mutation(({ input }) => {
+      // For demo purposes, accept any email/password combination
+      // In production, this would verify against actual user data
+      const user = demoData.users.find(u => u.email === input.email) || demoData.users[0];
+      const organization = demoData.organizations.find(o => o.id === user.organizationId);
+      
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          email: input.email, // Use the input email to allow any email
+          firstName: user.firstName,
+          lastName: user.lastName,
+          organization: organization,
+        },
+      };
+    }),
+
+  register: publicProcedure
+    .input(z.object({
+      firstName: z.string().min(1),
+      lastName: z.string().min(1),
+      email: z.string().email(),
+      password: z.string().min(6),
+      organizationName: z.string().min(1),
+    }))
+    .mutation(({ input }) => {
+      // Create new organization
+      const newOrg = createItem(demoData.organizations, {
+        name: input.organizationName,
+        slug: input.organizationName.toLowerCase().replace(/\s+/g, '-'),
+        plan: 'pro',
+        status: 'active',
+        maxUsers: 50,
+        maxJobs: 1000,
+        maxStorageGb: 10,
+      } as any);
+
+      // Create new user
+      const newUser = createItem(demoData.users, {
+        organizationId: newOrg.id,
+        email: input.email,
+        passwordHash: 'hashed-' + input.password, // In production, properly hash this
+        firstName: input.firstName,
+        lastName: input.lastName,
+        role: 'owner',
+        isActive: true,
+      } as any);
+
+      return {
+        success: true,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          organization: newOrg,
+        },
+      };
+    }),
+
+  forgotPassword: publicProcedure
+    .input(z.object({
+      email: z.string().email(),
+    }))
+    .mutation(({ input }) => {
+      // For demo purposes, always return success
+      // In production, this would:
+      // 1. Check if user exists
+      // 2. Generate a secure reset token
+      // 3. Send email with reset link
+      // 4. Store token with expiration
+      
+      console.log(`Password reset requested for: ${input.email}`);
+      
+      return {
+        success: true,
+        message: 'Password reset instructions sent to your email.',
+      };
+    }),
+
+  resetPassword: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      password: z.string().min(6),
+    }))
+    .mutation(({ input }) => {
+      // For demo purposes, always return success for any token
+      // In production, this would:
+      // 1. Validate the reset token
+      // 2. Check if token is not expired
+      // 3. Hash the new password
+      // 4. Update user's password
+      // 5. Invalidate the reset token
+      
+      console.log(`Password reset completed for token: ${input.token}`);
+      
+      return {
+        success: true,
+        message: 'Password has been reset successfully.',
+      };
+    }),
+
   // Dashboard Stats
   getDashboardStats: publicProcedure.query(() => {
     const totalCompanies = findByOrgId(demoData.companies).length;

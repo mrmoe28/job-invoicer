@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
 
@@ -11,7 +12,6 @@ interface SignupForm {
   password: string;
   confirmPassword: string;
   organizationName: string;
-  plan: 'free' | 'pro' | 'enterprise';
   agreeToTerms: boolean;
 }
 
@@ -23,23 +23,34 @@ export default function SignupPage() {
     password: '',
     confirmPassword: '',
     organizationName: '',
-    plan: 'pro', // Default to pro plan
     agreeToTerms: false,
   });
 
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1: Personal Info, 2: Organization Info (removed plan selection)
+  const [step, setStep] = useState(1); // 1: Personal Info, 2: Organization Info
+  const router = useRouter();
 
   // tRPC mutation hook
-  const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
-  const [registrationResult, setRegistrationResult] = useState<any>(null);
-
   const signupMutation = trpc.register.useMutation({
     onSuccess: (result) => {
       if (result.success) {
-        // Store result and show success message
-        setRegistrationResult(result);
-        setShowEmailVerificationMessage(true);
+        // Store user session immediately - no email verification needed
+        localStorage.setItem('pulse_user', JSON.stringify({
+          id: result.user.id,
+          email: result.user.email,
+          name: `${result.user.firstName} ${result.user.lastName}`,
+          role: 'Admin', // First user is admin
+          organizationId: result.user.organization?.id || '1',
+          organizationName: result.user.organization?.name || formData.organizationName,
+          organizationSlug: result.user.organization?.slug || 'org',
+          plan: 'pro', // Default plan
+        }));
+
+        // Set session flag to indicate successful authentication
+        localStorage.setItem('pulse_session_active', 'true');
+
+        // Redirect to dashboard immediately
+        router.push('/dashboard');
       }
     },
     onError: (error) => {
@@ -79,7 +90,7 @@ export default function SignupPage() {
         setError(error);
         return;
       }
-      // Submit form directly, no step 3
+      // Submit form directly
       handleFormSubmit();
     }
   };
@@ -105,64 +116,6 @@ export default function SignupPage() {
   const updateFormData = (field: keyof SignupForm, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
-  // Show email verification message if signup was successful
-  if (showEmailVerificationMessage) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {registrationResult?.requiresVerification ? 'Check Your Email!' : 'Account Created!'}
-          </h1>
-          <p className="text-gray-600 mb-6">
-            {registrationResult?.requiresVerification ? (
-              <>
-                We&apos;ve sent a verification link to <strong>{formData.email}</strong>.
-                Please check your email and click the verification link to activate your account.
-              </>
-            ) : (
-              <>
-                Your account has been created successfully for <strong>{formData.email}</strong>.
-                You can now log in and start using your account.
-              </>
-            )}
-          </p>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-blue-800">
-              <strong>Next steps:</strong>
-            </p>
-            <ol className="text-sm text-blue-700 mt-2 list-decimal list-inside space-y-1">
-              <li>Check your email inbox (and spam folder)</li>
-              <li>Click the verification link</li>
-              <li>Return here to log in</li>
-            </ol>
-          </div>
-
-          <div className="space-y-3">
-            <Link
-              href="/login"
-              className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors inline-block"
-            >
-              Go to Login
-            </Link>
-            <button
-              onClick={() => setShowEmailVerificationMessage(false)}
-              className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-            >
-              Back to Signup
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
@@ -307,7 +260,7 @@ export default function SignupPage() {
                   type="checkbox"
                   checked={formData.agreeToTerms}
                   onChange={(e) => updateFormData('agreeToTerms', e.target.checked)}
-                  className="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-600 bg-gray-800 rounded"
+                  className="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-600 bg-gray-800 rounded mt-1"
                 />
                 <label htmlFor="terms" className="ml-2 text-sm text-gray-300">
                   I agree to the{' '}
