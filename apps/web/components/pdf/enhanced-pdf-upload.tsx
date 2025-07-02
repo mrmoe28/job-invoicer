@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
-import { Upload, X, File, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { AlertCircle, CheckCircle, File, Loader, Upload, X } from 'lucide-react';
+import React, { useCallback, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
 
-interface UploadedFile extends File {
+interface UploadedFile {
   id: string;
+  file: File;
   progress: number;
   status: 'uploading' | 'success' | 'error';
   error?: string;
@@ -19,11 +20,11 @@ interface EnhancedPDFUploadProps {
   className?: string;
 }
 
-export default function EnhancedPDFUpload({ 
-  onUploadComplete, 
-  onUploadError, 
+export default function EnhancedPDFUpload({
+  onUploadComplete,
+  onUploadError,
   onClose,
-  className 
+  className
 }: EnhancedPDFUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -58,7 +59,7 @@ export default function EnhancedPDFUpload({
   const handleFileSelect = useCallback((files: FileList | File[]) => {
     const fileArray = Array.from(files);
     const pdfFiles = fileArray.filter(file => file.type === 'application/pdf');
-    
+
     if (pdfFiles.length === 0) {
       onUploadError?.('Please select only PDF files');
       return;
@@ -71,12 +72,12 @@ export default function EnhancedPDFUpload({
     const newFiles: UploadedFile[] = pdfFiles.map(file => {
       const error = validatePDFFile(file);
       return {
-        ...file,
         id: generateFileId(),
+        file: file,
         progress: 0,
         status: error ? 'error' : 'uploading',
         error: error || undefined
-      } as UploadedFile;
+      };
     });
 
     setUploadedFiles(prev => [...prev, ...newFiles]);
@@ -96,7 +97,7 @@ export default function EnhancedPDFUpload({
     try {
       // Create FormData
       const formData = new FormData();
-      formData.append('files', file);
+      formData.append('files', file.file);
 
       // Track upload progress
       const xhr = new XMLHttpRequest();
@@ -105,7 +106,7 @@ export default function EnhancedPDFUpload({
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
           const progress = Math.round((e.loaded / e.total) * 100);
-          setUploadedFiles(prev => prev.map(f => 
+          setUploadedFiles(prev => prev.map(f =>
             f.id === file.id ? { ...f, progress } : f
           ));
         }
@@ -118,14 +119,14 @@ export default function EnhancedPDFUpload({
             const response = JSON.parse(xhr.responseText);
             if (response.success && response.files && response.files.length > 0) {
               const uploadedFile = response.files[0];
-              setUploadedFiles(prev => prev.map(f => 
-                f.id === file.id 
-                  ? { 
-                      ...f, 
-                      progress: 100, 
-                      status: 'success',
-                      uploadedUrl: uploadedFile.url 
-                    } 
+              setUploadedFiles(prev => prev.map(f =>
+                f.id === file.id
+                  ? {
+                    ...f,
+                    progress: 100,
+                    status: 'success',
+                    uploadedUrl: uploadedFile.url
+                  }
                   : f
               ));
             } else {
@@ -141,8 +142,8 @@ export default function EnhancedPDFUpload({
 
       // Handle errors
       xhr.addEventListener('error', () => {
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === file.id 
+        setUploadedFiles(prev => prev.map(f =>
+          f.id === file.id
             ? { ...f, status: 'error', error: 'Network error occurred' }
             : f
         ));
@@ -154,13 +155,13 @@ export default function EnhancedPDFUpload({
 
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === file.id 
-          ? { 
-              ...f, 
-              status: 'error', 
-              error: error instanceof Error ? error.message : 'Upload failed' 
-            }
+      setUploadedFiles(prev => prev.map(f =>
+        f.id === file.id
+          ? {
+            ...f,
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Upload failed'
+          }
           : f
       ));
     }
@@ -209,8 +210,8 @@ export default function EnhancedPDFUpload({
 
   // Retry upload
   const retryUpload = useCallback((file: UploadedFile) => {
-    setUploadedFiles(prev => prev.map(f => 
-      f.id === file.id 
+    setUploadedFiles(prev => prev.map(f =>
+      f.id === file.id
         ? { ...f, status: 'uploading', progress: 0, error: undefined }
         : f
     ));
@@ -218,13 +219,15 @@ export default function EnhancedPDFUpload({
   }, []);
 
   // Format file size
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+  const formatFileSize = (bytes: number | undefined) => {
+    if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+
 
   return (
     <div className={cn("bg-gray-800 rounded-lg", className)}>
@@ -238,6 +241,8 @@ export default function EnhancedPDFUpload({
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
+            title="Close upload dialog"
+            aria-label="Close upload dialog"
           >
             <X className="w-6 h-6" />
           </button>
@@ -249,8 +254,8 @@ export default function EnhancedPDFUpload({
         <div
           className={cn(
             "border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200",
-            isDragOver 
-              ? "border-orange-500 bg-orange-500/10" 
+            isDragOver
+              ? "border-orange-500 bg-orange-500/10"
               : "border-gray-600 hover:border-gray-500",
             isUploading && "pointer-events-none opacity-50"
           )}
@@ -277,6 +282,8 @@ export default function EnhancedPDFUpload({
             accept=".pdf,application/pdf"
             onChange={handleInputChange}
             className="hidden"
+            title="Select PDF files"
+            aria-label="Select PDF files to upload"
           />
           <p className="text-xs text-gray-500 mt-4">
             Maximum file size: 50MB per PDF • Supported format: PDF
@@ -313,11 +320,11 @@ export default function EnhancedPDFUpload({
                     <div className="flex items-center space-x-3">
                       <File className="w-8 h-8 text-red-400 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-white truncate" title={file.name}>
-                          {file.name}
+                        <p className="font-medium text-white truncate" title={file.file.name}>
+                          {file.file.name}
                         </p>
                         <p className="text-sm text-gray-400">
-                          {formatFileSize(file.size)}
+                          {formatFileSize(file.file.size)}
                         </p>
                       </div>
                     </div>
@@ -343,10 +350,12 @@ export default function EnhancedPDFUpload({
                           Retry
                         </button>
                       )}
-                      
+
                       <button
                         onClick={() => removeFile(file.id)}
                         className="text-gray-400 hover:text-red-400 transition-colors"
+                        title={`Remove ${file.file.name}`}
+                        aria-label={`Remove ${file.file.name}`}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -356,7 +365,7 @@ export default function EnhancedPDFUpload({
                   {/* Progress Bar */}
                   {file.status === 'uploading' && (
                     <div className="w-full bg-gray-600 rounded-full h-2">
-                      <div 
+                      <div
                         className="bg-orange-500 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${file.progress}%` }}
                       />

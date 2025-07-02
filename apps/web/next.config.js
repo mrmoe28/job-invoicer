@@ -5,7 +5,7 @@
 
 const nextConfig = {
   // Transpile packages
-  transpilePackages: ['pdfjs-dist', 'react-pdf'],
+  transpilePackages: [],
 
   // TypeScript and ESLint configuration
   typescript: {
@@ -33,12 +33,6 @@ const nextConfig = {
     // Ignore the optional `canvas` package
     config.plugins = config.plugins || [];
     config.plugins.push(new webpack.IgnorePlugin({ resourceRegExp: /^canvas$/ }));
-
-    // PDF.js configuration
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'pdfjs-dist/build/pdf.worker.js': 'pdfjs-dist/build/pdf.worker.min.js',
-    };
 
     // Optimize bundle size
     if (!isServer) {
