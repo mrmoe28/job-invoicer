@@ -12,7 +12,7 @@ const EnhancedPDFUpload = dynamic(() => import('../../../components/pdf/enhanced
   loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>
 });
 
-const SecurePDFViewer = dynamic(() => import('../../../components/pdf/secure-pdf-viewer'), {
+const UniversalDocumentViewer = dynamic(() => import('../../../components/pdf/universal-document-viewer'), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>
 });
@@ -773,23 +773,16 @@ export default function DocumentsPage() {
         {showPdfViewer && currentDocument && (
           <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
             <div className="w-full h-full">
-              <SecurePDFViewer
+              <UniversalDocumentViewer
                 fileUrl={currentDocument.url || '/api/files/sample-contract.pdf'}
                 fileName={currentDocument.name}
                 documentId={currentDocument.id}
                 onClose={() => setShowPdfViewer(false)}
                 className="w-full h-full"
-                security={getSecurityPresetForDocument(currentDocument.type, currentDocument.name)}
-                onLoadSuccess={(pdf) => console.log('PDF loaded:', pdf.numPages, 'pages')}
-                onLoadError={(error) => console.error('PDF error:', error)}
-                onSecurityViolation={(violation) => {
-                  console.warn('Security violation:', violation);
-                  // In production, you might want to log this to an audit system
-                }}
-                onViewingComplete={(session) => {
-                  console.log('Viewing session completed:', session);
-                  // In production, save viewing analytics
-                }}
+                showControls={true}
+                height="100vh"
+                onLoadSuccess={(document: any) => console.log('Document loaded:', document)}
+                onLoadError={(error: Error) => console.error('Document error:', error)}
               />
             </div>
           </div>
