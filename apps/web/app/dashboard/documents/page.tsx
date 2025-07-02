@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import DashboardLayout from '../../../components/layout/dashboard-layout';
+import { Download, Eye, File, Grid, List, Lock, Plus, Search, Shield, Trash2, Upload } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { Upload, Search, Filter, Grid, List, Eye, Download, Trash2, File, Plus, Calendar, Tag, Shield, Lock } from 'lucide-react';
-import { getSecurityPresetForDocument, SECURITY_PRESETS } from '../../../lib/security-presets';
+import { useCallback, useEffect, useState } from 'react';
+import DashboardLayout from '../../../components/layout/dashboard-layout';
+import { getSecurityPresetForDocument } from '../../../lib/security-presets';
 
 // Import enhanced PDF components
 const EnhancedPDFUpload = dynamic(() => import('../../../components/pdf/enhanced-pdf-upload'), {
@@ -56,7 +56,7 @@ export default function DocumentsPage() {
       size: '2.4 MB',
       date: '2024-07-01',
       related: 'Project Alpha',
-      url: '/sample-contract.pdf',
+      url: '/api/files/sample-contract.pdf',
       tags: ['contract', 'phase-1', 'legal'],
       pages: 12,
       lastViewed: '2024-07-02',
@@ -71,7 +71,7 @@ export default function DocumentsPage() {
       size: '1.8 MB',
       date: '2024-06-28',
       related: 'City Hall',
-      url: '/sample-contract.pdf',
+      url: '/api/files/sample-contract.pdf',
       tags: ['permit', 'legal', 'application'],
       pages: 8,
       lastViewed: null,
@@ -86,7 +86,7 @@ export default function DocumentsPage() {
       size: '3.2 MB',
       date: '2024-06-25',
       related: 'Safety Team',
-      url: '/sample-contract.pdf',
+      url: '/api/files/sample-contract.pdf',
       tags: ['safety', 'compliance', 'confidential'],
       pages: 18,
       lastViewed: '2024-06-30',
@@ -101,7 +101,7 @@ export default function DocumentsPage() {
       size: '1.2 MB',
       date: '2024-06-20',
       related: 'HR Department',
-      url: '/sample-contract.pdf',
+      url: '/api/files/sample-contract.pdf',
       tags: ['policy', 'internal', 'hr'],
       pages: 6,
       lastViewed: '2024-07-01',
@@ -116,7 +116,7 @@ export default function DocumentsPage() {
       size: '4.1 MB',
       date: '2024-06-15',
       related: 'Public Works',
-      url: '/sample-contract.pdf',
+      url: '/api/files/sample-contract.pdf',
       tags: ['public', 'specifications', 'project'],
       pages: 24,
       lastViewed: '2024-06-28',
@@ -146,15 +146,15 @@ export default function DocumentsPage() {
   const filteredDocuments = documents
     .filter(doc => {
       const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           doc.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                           doc.related.toLowerCase().includes(searchQuery.toLowerCase());
+        doc.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        doc.related.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'All' || doc.status === statusFilter;
       const matchesType = typeFilter === 'All' || doc.type === typeFilter;
       return matchesSearch && matchesStatus && matchesType;
     })
     .sort((a, b) => {
       let aVal, bVal;
-      
+
       switch (sortBy) {
         case 'name':
           aVal = a.name.toLowerCase();
@@ -191,7 +191,7 @@ export default function DocumentsPage() {
     const newDocuments = uploadedFiles.map((file) => {
       const docType = getDocumentType(file.name);
       const securityConfig = getSecurityPresetForDocument(docType, file.name);
-      
+
       return {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         name: file.name,
@@ -224,13 +224,13 @@ export default function DocumentsPage() {
         setCurrentDocument(document);
         setShowPdfViewer(true);
         // Update last viewed and access count
-        setDocuments(prev => prev.map(doc => 
-          doc.id === documentId 
-            ? { 
-                ...doc, 
-                lastViewed: new Date().toISOString().split('T')[0],
-                accessCount: (doc.accessCount || 0) + 1
-              }
+        setDocuments(prev => prev.map(doc =>
+          doc.id === documentId
+            ? {
+              ...doc,
+              lastViewed: new Date().toISOString().split('T')[0],
+              accessCount: (doc.accessCount || 0) + 1
+            }
             : doc
         ));
         break;
@@ -264,7 +264,7 @@ export default function DocumentsPage() {
   // Bulk actions
   const handleBulkDelete = useCallback(() => {
     if (selectedDocuments.length === 0) return;
-    
+
     const count = selectedDocuments.length;
     if (confirm(`Are you sure you want to delete ${count} document${count > 1 ? 's' : ''}?`)) {
       setDocuments(prev => prev.filter(doc => !selectedDocuments.includes(doc.id)));
@@ -335,23 +335,23 @@ export default function DocumentsPage() {
   const getSecurityBadge = (securityLevel?: string) => {
     switch (securityLevel) {
       case 'confidential':
-        return { 
-          icon: <Lock className="w-3 h-3" />, 
+        return {
+          icon: <Lock className="w-3 h-3" />,
           color: 'bg-red-900 text-red-300 border border-red-700',
-          label: 'Confidential' 
+          label: 'Confidential'
         };
       case 'restricted':
-        return { 
-          icon: <Shield className="w-3 h-3" />, 
+        return {
+          icon: <Shield className="w-3 h-3" />,
           color: 'bg-yellow-900 text-yellow-300 border border-yellow-700',
-          label: 'Restricted' 
+          label: 'Restricted'
         };
       case 'public':
       default:
-        return { 
-          icon: <Eye className="w-3 h-3" />, 
+        return {
+          icon: <Eye className="w-3 h-3" />,
           color: 'bg-green-900 text-green-300 border border-green-700',
-          label: 'Public' 
+          label: 'Public'
         };
     }
   };
@@ -383,7 +383,7 @@ export default function DocumentsPage() {
               <Upload className="w-5 h-5 mr-2" />
               Upload PDFs
             </button>
-            
+
             <button className="inline-flex items-center px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
               <Plus className="w-5 h-5 mr-2" />
               Create Document
@@ -490,7 +490,7 @@ export default function DocumentsPage() {
               {documents.length === 0 ? 'No documents yet' : 'No documents match your filters'}
             </h3>
             <p className="text-gray-500 mb-6">
-              {documents.length === 0 
+              {documents.length === 0
                 ? 'Upload your first PDF to get started with document management'
                 : 'Try adjusting your search or filter criteria'
               }
@@ -530,7 +530,7 @@ export default function DocumentsPage() {
                 {filteredDocuments.map((doc) => {
                   const securityBadge = getSecurityBadge(doc.securityLevel);
                   const securityIcon = getSecurityIcon(doc.securityLevel);
-                  
+
                   return (
                     <div key={doc.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors">
                       <div className="flex items-start justify-between mb-3">
@@ -568,11 +568,11 @@ export default function DocumentsPage() {
                           </div>
                         )}
                       </div>
-                      
+
                       <h3 className="font-semibold text-white mb-2 truncate" title={doc.name}>
                         {doc.name}
                       </h3>
-                      
+
                       <div className="text-sm text-gray-400 mb-3 space-y-1">
                         <div className="flex justify-between">
                           <span>Type:</span>
@@ -614,7 +614,7 @@ export default function DocumentsPage() {
                           )}
                         </div>
                       )}
-                      
+
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleDocumentAction(doc.id, 'view')}
@@ -759,7 +759,7 @@ export default function DocumentsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
             <div className="w-full h-full">
               <SecurePDFViewer
-                fileUrl={currentDocument.url || '/sample-contract.pdf'}
+                fileUrl={currentDocument.url || '/api/files/sample-contract.pdf'}
                 fileName={currentDocument.name}
                 documentId={currentDocument.id}
                 onClose={() => setShowPdfViewer(false)}
