@@ -194,29 +194,46 @@ export default function DocumentsPage() {
 
   // Handle document upload completion with security assignment
   const handleUploadComplete = useCallback((uploadedFiles: any[]) => {
-    const newDocuments = uploadedFiles.map((file) => {
-      const docType = getDocumentType(file.name);
-      const securityConfig = getSecurityPresetForDocument(docType, file.name);
+    console.log('Upload completed, files:', uploadedFiles);
 
-      return {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name: file.name,
+    const newDocuments: DocumentItem[] = uploadedFiles.map((uploadResult) => {
+      // Handle both single file and multiple files response format
+      const file = uploadResult.file || uploadResult;
+
+      if (!file) {
+        console.error('Invalid file data:', uploadResult);
+        return null;
+      }
+
+      const docType = getDocumentType(file.originalName || file.name);
+      const securityConfig = getSecurityPresetForDocument(docType, file.originalName || file.name);
+
+      const newDoc: DocumentItem = {
+        id: file.id || (Date.now().toString() + Math.random().toString(36).substr(2, 9)),
+        name: file.originalName || file.name, // Use original name for display
         type: docType,
         status: 'Active',
         size: formatFileSize(file.size || 0),
         date: new Date().toISOString().split('T')[0],
         related: 'New Upload',
-        url: file.uploadedUrl || file.url,
-        fileName: file.fileName,
+        url: file.url, // This should be the API endpoint URL
+        fileName: file.filename, // This is the actual stored filename
         tags: ['new', 'uploaded'],
         pages: Math.floor(Math.random() * 20) + 1, // In real app, extract from PDF
         lastViewed: undefined,
         securityLevel: securityConfig.accessLevel,
         accessCount: 0
       };
-    });
 
-    setDocuments(prev => [...newDocuments, ...prev]);
+      console.log('Created document:', newDoc);
+      return newDoc;
+    }).filter((doc): doc is DocumentItem => doc !== null); // Type-safe filter
+
+    if (newDocuments.length > 0) {
+      setDocuments(prev => [...newDocuments, ...prev]);
+      console.log(`Added ${newDocuments.length} new documents`);
+    }
+
     setShowUploadModal(false);
   }, []);
 
