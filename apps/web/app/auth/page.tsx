@@ -13,7 +13,7 @@ function LoginForm() {
 
   // tRPC mutation hook
   const loginMutation = trpc.login.useMutation({
-    onSuccess: (result: any) => {
+    onSuccess: (result: { success?: boolean; user?: { id: string; email: string; firstName?: string; lastName?: string; organization?: { id: string; name: string; slug: string; plan: string } } }) => {
       if (result?.success && result?.user) {
         // Store user session with proper null checks
         localStorage.setItem('pulse_user', JSON.stringify({
@@ -35,7 +35,7 @@ function LoginForm() {
         setError('Login failed. Please check your credentials and try again.');
       }
     },
-    onError: (error: any) => {
+    onError: (error: { message?: string }) => {
       setError(error.message || 'Invalid email or password. Please try again.');
     },
   });

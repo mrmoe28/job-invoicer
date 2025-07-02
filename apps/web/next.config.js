@@ -7,9 +7,6 @@ const nextConfig = {
   // Transpile packages
   transpilePackages: ['pdfjs-dist'],
 
-  // Build optimizations
-  swcMinify: true,
-
   // TypeScript and ESLint configuration
   typescript: {
     ignoreBuildErrors: false, // Enable for production builds

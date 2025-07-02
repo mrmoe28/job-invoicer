@@ -7,11 +7,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
 import dynamic from 'next/dynamic';
-import SmartPDFViewer from '../../../components/smart-pdf-viewer';
 import Image from 'next/image';
 
-// Enhanced PDF viewers with better reliability
-const EnhancedPdfViewer = dynamic(() => import('../../../components/enhanced-pdf-viewer'), {
+// Import our consolidated PDF viewer
+const PDFViewer = dynamic(() => import('../../../components/pdf/pdf-viewer'), {
   ssr: false,
   loading: () => (
     <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
@@ -21,40 +20,6 @@ const EnhancedPdfViewer = dynamic(() => import('../../../components/enhanced-pdf
       </div>
     </div>
   )
-});
-
-const ImprovedSimplePdfViewer = dynamic(() => import('../../../components/improved-simple-pdf-viewer'), {
-  ssr: false,
-  loading: () => (
-    <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
-      <div className="text-center">
-        <div className="w-8 h-8 bg-orange-500 rounded-full animate-pulse mx-auto mb-4"></div>
-        <p className="text-gray-400">Loading PDF Viewer...</p>
-      </div>
-    </div>
-  )
-});
-
-// Production PDF viewer for better deployment compatibility
-const ProductionPdfViewer = dynamic(() => import('../../../components/production-pdf-viewer'), {
-  ssr: false,
-  loading: () => (
-    <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
-      <div className="text-center">
-        <div className="w-8 h-8 bg-orange-500 rounded-full animate-pulse mx-auto mb-4"></div>
-        <p className="text-gray-400">Loading PDF Viewer...</p>
-      </div>
-    </div>
-  )
-});
-
-// Legacy PDF viewers (kept for fallback)
-const LazyPdfViewer = dynamic(() => import('../../../components/pdf-viewer'), {
-  ssr: false,
-});
-
-const SimplePdfViewer = dynamic(() => import('../../../components/simple-pdf-viewer'), {
-  ssr: false,
 });
 
 export default function DocumentsPage() {
@@ -63,13 +28,6 @@ export default function DocumentsPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showViewerModal, setShowViewerModal] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
-  const [showSimplePdfViewer, setShowSimplePdfViewer] = useState(false);
-  const [showEnhancedPdfViewer, setShowEnhancedPdfViewer] = useState(false);
-  const [showImprovedSimplePdfViewer, setShowImprovedSimplePdfViewer] = useState(false);
-  const [showProductionPdfViewer, setShowProductionPdfViewer] = useState(false);
-
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [currentDocument, setCurrentDocument] = useState<any>(null);
   const [extractedPdfData, setExtractedPdfData] = useState<any>(null);
   const [editingDocument, setEditingDocument] = useState<any>(null);
@@ -84,6 +42,8 @@ export default function DocumentsPage() {
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [editingCell, setEditingCell] = useState<{ docId: string, field: string } | null>(null);
   const [editingValue, setEditingValue] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [columnSettings, setColumnSettings] = useState([
     { id: 'document', label: 'Document', visible: true, order: 0 },
     { id: 'type', label: 'Type', visible: true, order: 1 },
@@ -185,13 +145,12 @@ export default function DocumentsPage() {
           setCurrentDocument(document);
           const fileType = getFileType(document.name);
 
-          // Use the smart modal viewer for all file types
-          setShowViewerModal(true);
-          setShowPdfViewer(false);
-          setShowSimplePdfViewer(false);
-          setShowEnhancedPdfViewer(false);
-          setShowImprovedSimplePdfViewer(false);
-          setShowProductionPdfViewer(false);
+          // Show PDF viewer for PDF files, otherwise use the smart modal viewer
+          if (fileType === 'pdf') {
+            setShowPdfViewer(true);
+          } else {
+            setShowViewerModal(true);
+          }
           setZoomLevel(1);
 
           // Load CSV data if it's a CSV file
@@ -200,62 +159,34 @@ export default function DocumentsPage() {
           }
         }
         break;
+
       case 'download':
         if (document) {
-          // For files uploaded via API, use the API download endpoint
-          if (document.url && document.url.startsWith('/api/files/')) {
-            // Add download parameter to force download
-            const downloadUrl = `${document.url}?download=true`;
-            const link = window.document.createElement('a');
-            link.href = downloadUrl;
-            link.download = document.name;
-            window.document.body.appendChild(link);
-            link.click();
-            window.document.body.removeChild(link);
-          } else if (document.url && document.url.startsWith('blob:')) {
-            // For legacy blob URLs
-            const link = window.document.createElement('a');
-            link.href = document.url;
-            link.download = document.name;
-            window.document.body.appendChild(link);
-            link.click();
-            window.document.body.removeChild(link);
-          } else {
-            // For demo files, generate sample content and download
-            const blob = new Blob(['Sample file content for demo'], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const link = window.document.createElement('a');
-            link.href = url;
-            link.download = document.name;
-            window.document.body.appendChild(link);
-            link.click();
-            window.document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }
+          const url = getFileUrl(document.name);
+          const link = window.document.createElement('a');
+          link.href = url;
+          link.download = document.name;
+          window.document.body.appendChild(link);
+          link.click();
+          window.document.body.removeChild(link);
         }
         break;
+
       case 'edit':
         if (document) {
           setEditingDocument({ ...document });
           setShowEditModal(true);
         }
         break;
+
       case 'delete':
-        if (document) {
-          // Clean up blob URL if it exists
-          if (document.url && document.url.startsWith('blob:')) {
-            URL.revokeObjectURL(document.url);
-          }
-
-          // Actually remove the document from the list
+        if (document && confirm(`Are you sure you want to delete "${document.name}"?`)) {
           setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-
-          // Remove from selected documents if it was selected
-          setSelectedDocuments(prev => prev.filter(id => id !== documentId));
+          // TODO: Also delete the actual file from storage
         }
         break;
     }
-  }, [documents, loadCSVData]);
+  }, [documents]);
 
   const handleSaveDocument = useCallback(() => {
     if (!editingDocument) return;
@@ -509,23 +440,25 @@ export default function DocumentsPage() {
   }, [uploadedFiles]);
 
   const getDocumentType = (filename: string): string => {
-    const extension = filename.toLowerCase().split('.').pop();
-
+    const extension = filename.split('.').pop()?.toLowerCase();
     const typeMap: { [key: string]: string } = {
-      'pdf': 'Contract',
-      'doc': 'Document',
-      'docx': 'Document',
-      'xls': 'Spreadsheet',
-      'xlsx': 'Spreadsheet',
-      'csv': 'Spreadsheet',
-      'jpg': 'Photo',
-      'jpeg': 'Photo',
-      'png': 'Photo',
-      'gif': 'Photo',
-      'webp': 'Photo'
+      'pdf': 'PDF Document',
+      'doc': 'Word Document',
+      'docx': 'Word Document',
+      'xls': 'Excel Spreadsheet',
+      'xlsx': 'Excel Spreadsheet',
+      'ppt': 'PowerPoint Presentation',
+      'pptx': 'PowerPoint Presentation',
+      'txt': 'Text Document',
+      'csv': 'CSV File',
+      'jpg': 'Image',
+      'jpeg': 'Image',
+      'png': 'Image',
+      'gif': 'Image',
+      'zip': 'Archive',
+      'rar': 'Archive'
     };
-
-    return typeMap[extension || ''] || 'Other';
+    return typeMap[extension || ''] || 'Unknown';
   };
 
   const formatFileSize = (bytes: number) => {
@@ -536,964 +469,265 @@ export default function DocumentsPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleCellEdit = useCallback((docId: string, field: string, currentValue: string) => {
-    setEditingCell({ docId, field });
-    setEditingValue(currentValue);
-  }, []);
-
-  const handleCellSave = useCallback((docId: string, field: string) => {
-    setDocuments(prev => prev.map(doc =>
-      doc.id === docId ? { ...doc, [field]: editingValue } : doc
-    ));
-    setEditingCell(null);
-    setEditingValue('');
-  }, [editingValue]);
-
-  const handleCellCancel = useCallback(() => {
-    setEditingCell(null);
-    setEditingValue('');
-  }, []);
-
   const getFileType = (filename: string) => {
-    const extension = filename.toLowerCase().split('.').pop();
-    if (['pdf'].includes(extension || '')) return 'pdf';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image';
-    if (['csv'].includes(extension || '')) return 'csv';
-    return 'other';
+    const extension = filename.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension || '')) {
+      return 'image';
+    } else if (['pdf'].includes(extension || '')) {
+      return 'pdf';
+    } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(extension || '')) {
+      return 'video';
+    } else if (['mp3', 'wav', 'ogg', 'aac'].includes(extension || '')) {
+      return 'audio';
+    } else if (['txt', 'csv', 'json', 'xml', 'log'].includes(extension || '')) {
+      return 'text';
+    } else if (['doc', 'docx', 'pdf', 'ppt', 'pptx', 'xls', 'xlsx'].includes(extension || '')) {
+      return 'document';
+    }
+    return 'unknown';
   };
 
   const getFileUrl = (filename: string) => {
-    // In a real app, this would return the actual file URL from your storage
-    // For demo purposes, use the API file serving endpoint which has better compatibility
+    // In a real application, this would return the actual file URL
+    // For demo purposes, we'll return a placeholder or sample file
     const fileType = getFileType(filename);
-    switch (fileType) {
-      case 'pdf':
-        // Use the API endpoint which will serve demo PDFs with proper CORS headers
-        // The API will handle fallback to reliable external PDFs
-        return `/api/files/${encodeURIComponent(filename)}`;
 
-      case 'image':
-        // Use the API endpoint for images too
-        return `/api/files/${encodeURIComponent(filename)}`;
-
-      case 'csv':
-        // Use the API endpoint for CSV files
-        return `/api/files/${encodeURIComponent(filename)}`;
-
-      default:
-        // For other file types, use the API endpoint
-        return `/api/files/${encodeURIComponent(filename)}`;
+    if (fileType === 'pdf') {
+      return '/sample-document.pdf'; // You should have a sample PDF in your public folder
+    } else if (fileType === 'image') {
+      return '/placeholder-image.jpg';
     }
-  };
 
-  const statusTabs = ['All', 'Drafts', 'Pending', 'Approved', 'Signed', 'Expired', 'Archived'];
+    return '#'; // Fallback for other file types
+  };
 
   const renderDocumentViewer = () => {
     if (!currentDocument) return null;
 
     const fileType = getFileType(currentDocument.name);
-    const fileUrl = currentDocument.url ?? getFileUrl(currentDocument.name);
+    const fileUrl = getFileUrl(currentDocument.name);
 
-    switch (fileType) {
-      case 'pdf':
-        return (
-          <SmartPDFViewer
-            src={fileUrl}
-            className="w-full h-full"
-            onLoadStart={() => console.log('PDF loading started:', currentDocument.name)}
-            onLoadComplete={() => console.log('PDF loaded successfully:', currentDocument.name)}
-            onLoadError={(error) => console.error('PDF load error:', error)}
-          />
-        );
-
-      case 'image':
-        return (
-          <div
-            className="w-full h-full flex items-center justify-center overflow-auto"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            ref={viewerRef}
-          >
-            <div
-              style={{
-                transform: `scale(${zoomLevel})`,
-                transformOrigin: 'center',
-                transition: isPinching ? 'none' : 'transform 0.2s ease',
-              }}
-            >
+    if (fileType === 'image') {
+      return (
+        <div className="flex flex-col h-full">
+          <div className="flex justify-between items-center p-4 border-b border-gray-700">
+            <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setZoomLevel(prev => Math.max(0.1, prev - 0.1))}
+                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-500"
+              >
+                -
+              </button>
+              <span className="text-white">{Math.round(zoomLevel * 100)}%</span>
+              <button
+                onClick={() => setZoomLevel(prev => Math.min(3, prev + 0.1))}
+                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-500"
+              >
+                +
+              </button>
+              <button
+                onClick={() => setShowViewerModal(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto p-4 bg-gray-900">
+            <div className="flex justify-center">
               <Image
-                ref={imageRef as any}
+                ref={imageRef}
                 src={fileUrl}
                 alt={currentDocument.name}
                 width={800}
                 height={600}
-                unoptimized
-                className="max-w-none"
+                style={{
+                  transform: `scale(${zoomLevel})`,
+                  transformOrigin: 'center',
+                  maxWidth: 'none'
+                }}
+                className="border border-gray-600"
               />
             </div>
           </div>
-        );
-
-      case 'csv':
-        return (
-          <div className="w-full h-full overflow-auto">
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-white mb-4">CSV Data Preview</h3>
-              {csvData.length > 0 && (
-                <div className="bg-gray-700 rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-600">
-                      <tr>
-                        {csvData[0]?.map((header, index) => (
-                          <th key={index} className="text-left p-3 text-white font-medium border-r border-gray-500 last:border-r-0">
-                            {header}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {csvData.slice(1).map((row, rowIndex) => (
-                        <tr key={rowIndex} className="border-t border-gray-600 hover:bg-gray-600">
-                          {row.map((cell, cellIndex) => (
-                            <td key={cellIndex} className="p-3 text-gray-300 border-r border-gray-600 last:border-r-0">
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <p className="text-white font-medium mb-2">Preview not available</p>
-              <p className="text-gray-400">This file type is not supported for preview</p>
-            </div>
-          </div>
-        );
+        </div>
+      );
     }
-  };
 
-  return (
-    <DashboardLayout title="Documents & Contracts">
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex space-x-4">
+    if (fileType === 'text' || currentDocument.name.toLowerCase().endsWith('.csv')) {
+      return (
+        <div className="flex flex-col h-full">
+          <div className="flex justify-between items-center p-4 border-b border-gray-700">
+            <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
             <button
-              onClick={handleUploadDocument}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              onClick={() => setShowViewerModal(false)}
+              className="text-gray-400 hover:text-white"
             >
-              <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              Upload Document
-            </button>
-            <button
-              onClick={handleCreateDocument}
-              className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg font-medium border border-gray-600 transition-colors"
-            >
-              <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Create New
+              ✕
             </button>
           </div>
-
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search documents..."
-              value={searchQuery}
-              onChange={handleDocumentSearch}
-              className="w-64 pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            />
-            <svg className="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Smart PDF Viewer Info */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-white font-medium">Smart PDF Viewer</h3>
-              <p className="text-gray-400 text-sm">Automatically selects the best PDF viewer based on your browser and device capabilities</p>
-            </div>
-            <div className="flex items-center space-x-2 text-green-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm">Auto-Detection Enabled</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex space-x-1 bg-gray-800 p-1 rounded-lg border border-gray-700">
-          {statusTabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => handleStatusFilter(tab)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${statusFilter === tab
-                ? 'bg-gray-700 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
-        {/* View Mode Buttons */}
-        <div className="flex items-center space-x-2 mb-4">
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-orange-500 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}`}
-            title="List view"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-orange-500 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}`}
-            title="Grid view"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Responsive Table Layout */}
-        {viewMode === 'list' && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-visible min-h-[400px] pb-32 w-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-gray-400">
-                  {documents.length} document{documents.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="relative">
-                <button
-                  onClick={handleColumnSettings}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                  </svg>
-                  <span>Columns</span>
-                </button>
-                {showColumnSettings && (
-                  <div className="absolute top-12 right-0 sm:left-1/2 sm:-translate-x-1/2 w-64 max-h-[70vh] overflow-y-auto bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-50">
-                    <div className="p-4">
-                      <h4 className="text-sm font-medium text-white mb-3">Column Settings</h4>
-                      <div className="space-y-2">
-                        {columnSettings.map((column) => (
-                          <div key={column.id} className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                checked={column.visible}
-                                onChange={() => handleColumnToggle(column.id)}
-                                className="rounded bg-gray-600 border-gray-500"
-                              />
-                              <span className="text-sm text-gray-300">{column.label}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <button
-                                onClick={() => handleColumnReorder(column.id, 'up')}
-                                disabled={column.order === 0}
-                                className="p-1 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={`Move ${column.label} up`}
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleColumnReorder(column.id, 'down')}
-                                disabled={column.order === columnSettings.length - 1}
-                                className="p-1 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={`Move ${column.label} down`}
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="overflow-x-auto overflow-visible w-full">
-              <table className="w-full min-w-max overflow-visible">
-                <thead className="bg-gray-700">
-                  <tr>
-                    <th className="text-left p-4 text-gray-300 font-medium">
-                      <input type="checkbox" className="rounded bg-gray-600 border-gray-500" aria-label="Select all documents" />
-                    </th>
-                    {getVisibleColumns().map((column) => (
-                      <th key={column.id} className={`text-left p-4 text-gray-300 font-medium ${column.id === 'actions' ? 'text-center' : ''}`}>
-                        {column.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.map((doc) => {
-                    const renderColumnContent = (columnId: string) => {
-                      switch (columnId) {
-                        case 'document':
-                          return (
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center">
-                                <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                              </div>
-                              <div>
-                                <div className="text-white font-medium">{doc.name}</div>
-                                <div className="text-gray-400 text-sm">Uploaded file: {doc.name}</div>
-                              </div>
-                            </div>
-                          );
-                        case 'type':
-                          return <span className="text-gray-300">{doc.type}</span>;
-                        case 'status':
-                          return (
-                            <span className="bg-orange-500 text-white px-2 py-1 rounded text-sm">
-                              {doc.status}
-                            </span>
-                          );
-                        case 'size':
-                          return <span className="text-gray-300">{doc.size}</span>;
-                        case 'date':
-                          return (
-                            <div className="flex items-center space-x-2">
-                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              <span className="text-gray-300">{doc.date}</span>
-                            </div>
-                          );
-                        case 'related':
-                          return <span className="text-gray-300">{doc.related}</span>;
-                        case 'actions':
-                          return (
-                            <div className="relative overflow-visible">
-                              <button
-                                onClick={() => toggleDropdown(doc.id)}
-                                className="text-gray-400 hover:text-white transition-colors p-1 rounded"
-                                title="Document actions"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                </svg>
-                              </button>
-                              {activeDropdown === doc.id && (
-                                <div
-                                  className={`absolute right-0 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-50 ${documents.length === 1 || documents.indexOf(doc) === 0
-                                    ? 'top-8'
-                                    : documents.indexOf(doc) >= documents.length - 2
-                                      ? 'bottom-8'
-                                      : 'top-8'
-                                    }`}
-                                >
-                                  <div className="py-1">
-                                    <button
-                                      onClick={() => handleDocumentAction(doc.id, 'view')}
-                                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
-                                    >
-                                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 0 1 6 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                      </svg>
-                                      View Document
-                                    </button>
-                                    <button
-                                      onClick={() => handleDocumentAction(doc.id, 'download')}
-                                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
-                                    >
-                                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                      </svg>
-                                      Download
-                                    </button>
-                                    <button
-                                      onClick={() => handleDocumentAction(doc.id, 'edit')}
-                                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
-                                    >
-                                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                      </svg>
-                                      Edit Document
-                                    </button>
-                                    <div className="border-t border-gray-600 my-1"></div>
-                                    <button
-                                      onClick={() => handleDocumentAction(doc.id, 'delete')}
-                                      className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-600 hover:text-white"
-                                    >
-                                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                      Delete Document
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        default:
-                          return null;
-                      }
-                    };
-                    return (
-                      <tr key={doc.id} className="border-t border-gray-700 hover:bg-gray-700 overflow-visible">
-                        <td className="p-4">
-                          <input
-                            type="checkbox"
-                            onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
-                            className="rounded bg-gray-600 border-gray-500"
-                            aria-label={`Select document ${doc.name}`}
-                          />
-                        </td>
-                        {getVisibleColumns().map((column) => (
-                          <td key={column.id} className={`p-4 ${column.id === 'actions' ? 'text-center overflow-visible relative' : ''}`}>
-                            {renderColumnContent(column.id)}
+          <div className="flex-1 overflow-auto p-4 bg-gray-900">
+            {currentDocument.name.toLowerCase().endsWith('.csv') ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-white">
+                  <tbody>
+                    {csvData.map((row, rowIndex) => (
+                      <tr key={rowIndex} className="border-b border-gray-700">
+                        {row.map((cell, cellIndex) => (
+                          <td key={cellIndex} className="px-4 py-2 border-r border-gray-700">
+                            {cell}
                           </td>
                         ))}
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <pre className="text-white font-mono text-sm whitespace-pre-wrap">
+                {/* Text content would be loaded here */}
+                Loading text content...
+              </pre>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // For other file types, show a generic viewer
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex justify-between items-center p-4 border-b border-gray-700">
+          <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
+          <button
+            onClick={() => setShowViewerModal(false)}
+            className="text-gray-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center bg-gray-900">
+          <div className="text-center">
+            <div className="text-6xl mb-4">📄</div>
+            <p className="text-white mb-2">{currentDocument.name}</p>
+            <p className="text-gray-400 mb-4">Preview not available for this file type</p>
+            <button
+              onClick={() => handleDocumentAction(currentDocument.id, 'download')}
+              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+            >
+              Download File
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <DashboardLayout
+      title="Documents"
+      subtitle="Manage your project documents, contracts, and files"
+    >
+      <div className="space-y-6">
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleUploadDocument}
+              className="inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload Documents
+            </button>
+            <button
+              onClick={handleCreateDocument}
+              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Document
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search documents..."
+                value={searchQuery}
+                onChange={handleDocumentSearch}
+                className="pl-10 pr-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+              <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Grid View */}
-        {viewMode === 'grid' && (
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {documents.map((doc) => (
-              <div key={doc.id} className="bg-gray-700 rounded-xl p-5 shadow flex flex-col justify-between">
-                <div>
-                  <h4 className="text-lg font-bold text-white mb-2">{doc.name}</h4>
-                  <div className="text-gray-300 text-sm mb-1">Type: {doc.type}</div>
-                  <div className="text-gray-300 text-sm mb-1">Status: {doc.status}</div>
-                  <div className="text-gray-300 text-sm mb-1">Size: {doc.size}</div>
-                  <div className="text-gray-300 text-sm mb-1">Date: {doc.date}</div>
-                  <div className="text-gray-300 text-sm mb-1">Related: {doc.related}</div>
-                </div>
-                <div className="flex items-center justify-end mt-4 space-x-2">
-                  <button onClick={() => handleDocumentAction(doc.id, 'view')} className="text-blue-400 hover:text-blue-300" title="View document">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                  </button>
-                  <button onClick={() => handleDocumentAction(doc.id, 'edit')} className="text-gray-400 hover:text-gray-300" title="Edit document">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                  </button>
-                  <button onClick={() => handleDocumentAction(doc.id, 'delete')} className="text-red-400 hover:text-red-300" title="Delete document">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Advanced PDF Viewer Modal */}
-        {showPdfViewer && currentDocument && (
-          <LazyPdfViewer
-            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-            fileName={currentDocument.name}
-            onCloseAction={() => {
-              setShowPdfViewer(false);
-              setCurrentDocument(null);
-            }}
-            onExtractedDataAction={(data) => {
-              setExtractedPdfData(data);
-              console.log('Extracted PDF data:', data);
-            }}
-          />
-        )}
-
-        {/* Simple PDF Viewer Modal */}
-        {showSimplePdfViewer && currentDocument && (
-          <SimplePdfViewer
-            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-            fileName={currentDocument.name}
-            onCloseAction={() => {
-              setShowSimplePdfViewer(false);
-              setCurrentDocument(null);
-            }}
-          />
-        )}
-        {showViewerModal && currentDocument && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col z-50">
-            {/* Header */}
-            <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
-                <span className="text-sm text-gray-400">{currentDocument.size}</span>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                {/* Zoom Controls (for images and PDFs) */}
-                {['image', 'pdf'].includes(getFileType(currentDocument.name)) && (
-                  <>
-                    <button
-                      onClick={handleZoomOut}
-                      className="p-2 text-gray-400 hover:text-white transition-colors"
-                      title="Zoom out"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h6" />
-                      </svg>
-                    </button>
-                    <span className="text-sm text-gray-400 min-w-[3rem] text-center">
-                      {Math.round(zoomLevel * 100)}%
-                    </span>
-                    <button
-                      onClick={handleZoomIn}
-                      className="p-2 text-gray-400 hover:text-white transition-colors"
-                      title="Zoom in"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h6m-3-3v6" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={handleZoomReset}
-                      className="px-3 py-1 text-sm text-gray-400 hover:text-white border border-gray-600 rounded transition-colors"
-                    >
-                      Reset
-                    </button>
-                    <div className="w-px h-6 bg-gray-600 mx-2"></div>
-                  </>
-                )}
-
-                {/* Download Button */}
+        {/* Document List */}
+        <div className="bg-gray-800 rounded-lg shadow-sm">
+          <div className="p-6">
+            <div className="text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-300">No documents</h3>
+              <p className="mt-1 text-sm text-gray-500">Get started by uploading your first document.</p>
+              <div className="mt-6">
                 <button
-                  onClick={() => handleDocumentAction(currentDocument.id, 'download')}
-                  className="p-2 text-gray-400 hover:text-white transition-colors"
-                  title="Download"
+                  onClick={handleUploadDocument}
+                  className="inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
-                </button>
-
-                {/* Close Button */}
-                <button
-                  onClick={() => {
-                    setShowViewerModal(false);
-                    setCurrentDocument(null);
-                    setZoomLevel(1);
-                  }}
-                  className="p-2 text-gray-400 hover:text-white transition-colors"
-                  title="Close viewer"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  Upload Documents
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Viewer Content */}
-            <div className="flex-1 bg-gray-900 overflow-hidden">
+      {/* PDF Viewer Modal */}
+      {showPdfViewer && currentDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+          <div className="w-full h-full max-w-6xl mx-auto p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
+              <button
+                onClick={() => setShowPdfViewer(false)}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="h-full bg-white rounded-lg overflow-hidden">
+              <PDFViewer
+                file={getFileUrl(currentDocument.name)}
+                className="h-full"
+                enableFullscreen={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Smart Document Viewer Modal */}
+      {showViewerModal && currentDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+          <div className="w-full h-full max-w-6xl mx-auto p-4">
+            <div className="h-full bg-gray-800 rounded-lg overflow-hidden">
               {renderDocumentViewer()}
             </div>
-
-            {/* Footer with file info */}
-            <div className="bg-gray-800 border-t border-gray-700 p-2 text-center">
-              <p className="text-sm text-gray-400">
-                {getFileType(currentDocument.name).toUpperCase()} • {currentDocument.size} •
-                {getFileType(currentDocument.name) === 'image' && ' Pinch to zoom or use controls above'}
-                {getFileType(currentDocument.name) === 'pdf' && ' Use zoom controls above to resize'}
-                {getFileType(currentDocument.name) === 'csv' && ' Tabular data view'}
-              </p>
-            </div>
           </div>
-        )}
-
-        {/* Upload Modal */}
-        {showUploadModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-white">Upload Documents</h3>
-                <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                  title="Close modal"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Drag & Drop Area */}
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragOver
-                  ? 'border-orange-500 bg-orange-500 bg-opacity-10'
-                  : 'border-gray-600 hover:border-gray-500'
-                  }`}
-              >
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium mb-2">
-                      {isDragOver ? 'Drop files here' : 'Drag and drop files here'}
-                    </p>
-                    <p className="text-gray-400 text-sm mb-4">
-                      PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, PNG, GIF (Max 10MB each)
-                    </p>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-                    >
-                      Choose Files
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hidden File Input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.gif"
-                onChange={handleFileSelect}
-                className="hidden"
-                aria-label="Choose files to upload"
-              />
-
-              {/* Selected Files List */}
-              {uploadedFiles.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-white font-medium mb-4">Selected Files ({uploadedFiles.length})</h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-700 p-3 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center">
-                            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <div className="text-white font-medium">{file.name}</div>
-                            <div className="text-gray-400 text-sm">{formatFileSize(file.size)}</div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => removeFile(index)}
-                          className="text-red-400 hover:text-red-300 transition-colors"
-                          title="Remove file"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Document Type Selection */}
-              {uploadedFiles.length > 0 && (
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Document Type</label>
-                  <select
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
-                    aria-label="Select document type"
-                  >
-                    <option value="Installation Plan">Installation Plan</option>
-                    <option value="Site Survey">Site Survey</option>
-                    <option value="Technical Document">Technical Document</option>
-                    <option value="Permit">Permit</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Photo">Photo</option>
-                    <option value="Data Export">Data Export</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Upload Progress */}
-              {isUploading && (
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-300">Uploading files...</span>
-                    <span className="text-sm text-gray-300">{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-orange-500 h-2 rounded-full transition-all duration-300 ease-out"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-
-              {/* Upload Error */}
-              {uploadError && (
-                <div className="mt-6 p-4 bg-red-900 bg-opacity-50 border border-red-500 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-red-400 font-medium">Upload Failed</span>
-                  </div>
-                  <p className="text-red-300 text-sm mt-1">{uploadError}</p>
-                  <button
-                    onClick={() => setUploadError(null)}
-                    className="mt-2 text-red-400 hover:text-red-300 text-sm underline"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowUploadModal(false);
-                    setUploadError(null);
-                  }}
-                  disabled={isUploading}
-                  className="px-6 py-2 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUploadSubmit}
-                  disabled={uploadedFiles.length === 0 || isUploading}
-                  className="px-6 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
-                >
-                  {isUploading ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span>Uploading...</span>
-                    </>
-                  ) : (
-                    <span>Upload {uploadedFiles.length > 0 ? `(${uploadedFiles.length})` : ''}</span>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Edit Document Modal */}
-        {
-          showEditModal && editingDocument && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-white">Edit Document</h3>
-                  <button
-                    onClick={() => setShowEditModal(false)}
-                    className="text-gray-400 hover:text-white transition-colors"
-                    title="Close edit modal"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Document Name</label>
-                    <input
-                      type="text"
-                      value={editingDocument.name}
-                      onChange={(e) => handleEditInputChange('name', e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Document Type</label>
-                    <select
-                      value={editingDocument.type}
-                      onChange={(e) => handleEditInputChange('type', e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="Installation Plan">Installation Plan</option>
-                      <option value="Site Survey">Site Survey</option>
-                      <option value="Technical Document">Technical Document</option>
-                      <option value="Permit">Permit</option>
-                      <option value="Contract">Contract</option>
-                      <option value="Photo">Photo</option>
-                      <option value="Data Export">Data Export</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
-                    <select
-                      value={editingDocument.status}
-                      onChange={(e) => handleEditInputChange('status', e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="signed">Signed</option>
-                      <option value="expired">Expired</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Related To</label>
-                    <input
-                      type="text"
-                      value={editingDocument.related}
-                      onChange={(e) => handleEditInputChange('related', e.target.value)}
-                      placeholder="Project, Contact, or Job reference"
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveDocument}
-                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        {/* Production PDF Viewer (Primary - Recommended) */}
-        {
-          showProductionPdfViewer && currentDocument && (
-            <ProductionPdfViewer
-              fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-              fileName={currentDocument.name}
-              onCloseAction={() => {
-                setShowProductionPdfViewer(false);
-                setCurrentDocument(null);
-              }}
-            />
-          )
-        }
-
-        {/* Enhanced PDF Viewer (Primary) */}
-        {
-          showEnhancedPdfViewer && currentDocument && (
-            <EnhancedPdfViewer
-              fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-              fileName={currentDocument.name}
-              onCloseAction={() => {
-                setShowEnhancedPdfViewer(false);
-                setCurrentDocument(null);
-              }}
-              onExtractedDataAction={(data) => {
-                setExtractedPdfData(data);
-                console.log('Extracted PDF data:', data);
-              }}
-            />
-          )
-        }
-
-        {/* Improved Simple PDF Viewer */}
-        {
-          showImprovedSimplePdfViewer && currentDocument && (
-            <ImprovedSimplePdfViewer
-              fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-              fileName={currentDocument.name}
-              onCloseAction={() => {
-                setShowImprovedSimplePdfViewer(false);
-                setCurrentDocument(null);
-              }}
-            />
-          )
-        }
-
-        {/* Legacy Advanced PDF Viewer */}
-        {
-          showPdfViewer && currentDocument && (
-            <LazyPdfViewer
-              fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-              fileName={currentDocument.name}
-              onCloseAction={() => setShowPdfViewer(false)}
-              onExtractedDataAction={(data) => {
-                setExtractedPdfData(data);
-                console.log('Extracted PDF data:', data);
-              }}
-            />
-          )
-        }
-
-        {/* Click outside to close dropdown */}
-        {
-          activeDropdown && (
-            <div
-              className="fixed inset-0 z-0"
-              onClick={() => setActiveDropdown(null)}
-            ></div>
-          )
-        }
-
-        {/* Click outside to close column settings */}
-        {
-          showColumnSettings && (
-            <div
-              className="fixed inset-0 z-0"
-              onClick={() => setShowColumnSettings(false)}
-            ></div>
-          )
-        }
-      </div >
-    </DashboardLayout >
+        </div>
+      )}
+    </DashboardLayout>
   );
 }

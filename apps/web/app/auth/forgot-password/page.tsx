@@ -11,12 +11,12 @@ export default function ForgotPasswordPage() {
 
   // tRPC mutation hook for forgot password
   const forgotPasswordMutation = trpc.forgotPassword.useMutation({
-    onSuccess: (result) => {
+    onSuccess: (result: { success: boolean }) => {
       if (result.success) {
         setIsSubmitted(true);
       }
     },
-    onError: (error) => {
+    onError: (error: { message?: string }) => {
       setError(error.message || 'Something went wrong. Please try again.');
     },
   });
@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
 
             <h2 className="text-2xl font-bold text-white mb-4">Check Your Email!</h2>
             <p className="text-gray-300 mb-6">
-              We've sent password reset instructions to <strong className="text-white">{email}</strong>
+              We&apos;ve sent password reset instructions to <strong className="text-white">{email}</strong>
             </p>
 
             <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 mb-6">
@@ -112,7 +112,7 @@ export default function ForgotPasswordPage() {
             </h1>
           </div>
           <h2 className="text-xl text-gray-300 mb-2">Forgot your password?</h2>
-          <p className="text-gray-400">No worries! Enter your email and we'll send you reset instructions.</p>
+          <p className="text-gray-400">No worries! Enter your email and we&apos;ll send you reset instructions.</p>
         </div>
 
         {/* Forgot Password Form */}

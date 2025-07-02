@@ -32,7 +32,7 @@ export default function SignupPage() {
 
   // tRPC mutation hook
   const signupMutation = trpc.register.useMutation({
-    onSuccess: (result: any) => {
+    onSuccess: (result: { success?: boolean; user?: { id: string; email: string; firstName?: string; lastName?: string; organization?: { id: string; name: string; slug: string; plan: string } } }) => {
       if (result?.success && result?.user) {
         // Store user session immediately - no email verification needed
         localStorage.setItem('pulse_user', JSON.stringify({
@@ -55,7 +55,7 @@ export default function SignupPage() {
         setError('Registration failed. Please try again.');
       }
     },
-    onError: (error: any) => {
+    onError: (error: { message?: string }) => {
       setError(error.message || 'Something went wrong. Please try again.');
     },
   });
@@ -115,7 +115,7 @@ export default function SignupPage() {
     }
   };
 
-  const updateFormData = (field: keyof SignupForm, value: any) => {
+  const updateFormData = (field: keyof SignupForm, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
