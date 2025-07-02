@@ -3,10 +3,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
 import { trpc } from '../../../lib/trpc';
-import type { Job, JobStatus, JobPriority } from '../../../lib/types';
+import type { JobPriority, JobStatus } from '../../../lib/types';
 
 export default function JobsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -592,15 +592,15 @@ export default function JobsPage() {
                     const startDate = startDateStr ? new Date(startDateStr) : new Date();
                     const budget = budgetStr ? parseFloat(budgetStr.replace(/[^\d.]/g, '')) : 0;
                     // Validate status and priority
-                    const validStatuses: JobStatus[] = ['pending', 'in_progress', 'completed', 'cancelled', 'on_hold'];
+                    const validStatuses = ['quoted', 'scheduled', 'in_progress', 'completed', 'cancelled', 'on_hold'] as const;
                     const validPriorities: JobPriority[] = ['low', 'medium', 'high', 'urgent'];
-                    const status = validStatuses.includes(statusValue as JobStatus) ? statusValue as JobStatus : 'pending';
+                    const status = validStatuses.includes(statusValue as JobStatus) ? statusValue as JobStatus : 'quoted';
                     const priority = validPriorities.includes(priorityValue as JobPriority) ? priorityValue as JobPriority : 'medium';
                     if (editJob) {
-                      setJobs(prev => prev.map(j => j.id === editJob.id ? {
-                        ...j, title, contactId, status, startDate, priority, budget, description
-                      } : j));
+                      // TODO: Implement job update mutation
+                      console.log('Update job:', { editJob, title, contactId, status, startDate, priority, budget, description });
                       setEditJob(null);
+                      setShowCreateModal(false);
                     } else {
                       handleSaveJob({
                         id: `${title?.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { trpc } from '../trpc';
-import { getFromLocalStorage, setToLocalStorage, removeFromLocalStorage } from '../utils/index';
+import { useEffect, useState } from 'react';
 import { STORAGE_KEYS } from '../constants';
+import { trpc } from '../trpc';
+import { getFromLocalStorage, removeFromLocalStorage, setToLocalStorage } from '../utils/index';
 
 interface AuthUser {
     id: string;
@@ -37,8 +37,7 @@ export function useAuth() {
 
     // tRPC mutations
     const loginMutation = trpc.login.useMutation();
-    const signupMutation = trpc.signup.useMutation();
-    const logoutMutation = trpc.logout.useMutation();
+    const registerMutation = trpc.register.useMutation();
 
     // Initialize auth state from localStorage
     useEffect(() => {
@@ -69,7 +68,7 @@ export function useAuth() {
                     id: result.user.id || 'temp-id',
                     email: result.user.email || '',
                     name: `${result.user.firstName || ''} ${result.user.lastName || ''}`.trim() || 'User',
-                    role: result.user.role || 'employee',
+                    role: 'employee', // Default role since not provided by API
                 };
 
                 // Store user data
@@ -95,7 +94,13 @@ export function useAuth() {
 
     const signup = async (data: SignupData) => {
         try {
-            const result = await signupMutation.mutateAsync(data);
+            const result = await registerMutation.mutateAsync({
+                email: data.email,
+                password: data.password,
+                firstName: data.name.split(' ')[0] || 'User',
+                lastName: data.name.split(' ').slice(1).join(' ') || '',
+                organizationName: 'Default Organization'
+            });
 
             if (result?.success) {
                 return { success: true };
@@ -109,26 +114,19 @@ export function useAuth() {
     };
 
     const logout = async () => {
-        try {
-            await logoutMutation.mutateAsync();
-        } catch (error) {
-            // Continue with logout even if API call fails
-            console.error('Logout API error:', error);
-        } finally {
-            // Clear local storage
-            removeFromLocalStorage(STORAGE_KEYS.USER);
-            removeFromLocalStorage(STORAGE_KEYS.SESSION);
+        // Clear local storage
+        removeFromLocalStorage(STORAGE_KEYS.USER);
+        removeFromLocalStorage(STORAGE_KEYS.SESSION);
 
-            // Update state
-            setAuthState({
-                user: null,
-                isLoading: false,
-                isAuthenticated: false,
-            });
+        // Update state
+        setAuthState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false,
+        });
 
-            // Redirect to login
-            router.push('/auth');
-        }
+        // Redirect to login
+        router.push('/auth');
     };
 
     const checkAuth = () => {
@@ -150,7 +148,7 @@ export function useAuth() {
         logout,
         checkAuth,
         isLoggingIn: loginMutation.isPending,
-        isSigningUp: signupMutation.isPending,
-        isLoggingOut: logoutMutation.isPending,
+        isSigningUp: registerMutation.isPending,
+        isLoggingOut: false, // No logout mutation available
     };
 } 

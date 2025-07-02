@@ -80,7 +80,7 @@ export default function DocumentsPage() {
       url: '/api/files/sample-contract.pdf',
       tags: ['permit', 'legal', 'application'],
       pages: 8,
-      lastViewed: null,
+      lastViewed: undefined,
       securityLevel: 'public',
       accessCount: 3
     },

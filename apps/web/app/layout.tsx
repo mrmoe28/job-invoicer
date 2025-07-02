@@ -1,8 +1,8 @@
-import './globals.css'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
-import { TrpcProvider } from '../providers'
 import { ReactNode } from 'react'
-import type { Metadata } from 'next'
+import { TrpcProvider } from '../providers'
+import './globals.css'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -11,6 +11,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'),
   title: {
     default: 'PulseCRM - Crew Management Dashboard',
     template: '%s | PulseCRM'
@@ -24,15 +25,6 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f97316' },
-    { media: '(prefers-color-scheme: dark)', color: '#ea580c' },
-  ],
   openGraph: {
     type: 'website',
     siteName: 'PulseCRM',
@@ -53,6 +45,16 @@ export const metadata: Metadata = {
     description: 'Modern React-based CRM dashboard for crew management',
     images: ['/og-image.png'],
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f97316' },
+    { media: '(prefers-color-scheme: dark)', color: '#ea580c' },
+  ],
 }
 
 interface RootLayoutProps {

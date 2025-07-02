@@ -1,12 +1,12 @@
-import { 
-  JobStatus, 
-  TaskStatus, 
-  JobPriority, 
+import {
+  CONTACT_TYPE_COLORS,
   ContactType,
   JOB_STATUS_COLORS,
-  TASK_STATUS_COLORS,
+  JobPriority,
+  JobStatus,
   PRIORITY_COLORS,
-  CONTACT_TYPE_COLORS
+  TASK_STATUS_COLORS,
+  TaskStatus
 } from '../lib/types';
 
 interface StatusBadgeProps {
@@ -16,11 +16,11 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-export default function StatusBadge({ 
-  variant, 
-  value, 
+export default function StatusBadge({
+  variant,
+  value,
   size = 'md',
-  className = '' 
+  className = ''
 }: StatusBadgeProps) {
   const getColorClass = () => {
     switch (variant) {
@@ -52,24 +52,18 @@ export default function StatusBadge({
     if (variant === 'job-status') {
       const status = value as JobStatus;
       switch (status) {
-        case 'Draft':
+        case 'quoted':
           return '📝';
-        case 'Quoted':
-          return '💰';
-        case 'Approved':
-          return '✅';
-        case 'Scheduled':
+        case 'scheduled':
           return '📅';
-        case 'In Progress':
+        case 'in_progress':
           return '🔧';
-        case 'On Hold':
-          return '⏸️';
-        case 'Completed':
+        case 'completed':
           return '✨';
-        case 'Cancelled':
+        case 'cancelled':
           return '❌';
-        case 'Invoiced':
-          return '🧾';
+        case 'on_hold':
+          return '⏸️';
         default:
           return null;
       }
@@ -94,13 +88,13 @@ export default function StatusBadge({
     if (variant === 'priority') {
       const priority = value as JobPriority;
       switch (priority) {
-        case 'Low':
+        case 'low':
           return '🟢';
-        case 'Medium':
+        case 'medium':
           return '🟡';
-        case 'High':
+        case 'high':
           return '🟠';
-        case 'Urgent':
+        case 'urgent':
           return '🔴';
         default:
           return null;
@@ -129,7 +123,7 @@ export default function StatusBadge({
   const icon = getIcon();
 
   return (
-    <span 
+    <span
       className={`
         inline-flex items-center font-medium rounded-full text-white
         ${getColorClass()}
@@ -144,78 +138,78 @@ export default function StatusBadge({
 }
 
 // Convenience components for specific badge types
-export function JobStatusBadge({ 
-  status, 
-  size = 'md', 
-  className = '' 
-}: { 
-  status: JobStatus; 
-  size?: 'sm' | 'md' | 'lg'; 
-  className?: string; 
+export function JobStatusBadge({
+  status,
+  size = 'md',
+  className = ''
+}: {
+  status: JobStatus;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }) {
   return (
-    <StatusBadge 
-      variant="job-status" 
-      value={status} 
-      size={size} 
-      className={className} 
+    <StatusBadge
+      variant="job-status"
+      value={status}
+      size={size}
+      className={className}
     />
   );
 }
 
-export function TaskStatusBadge({ 
-  status, 
-  size = 'md', 
-  className = '' 
-}: { 
-  status: TaskStatus; 
-  size?: 'sm' | 'md' | 'lg'; 
-  className?: string; 
+export function TaskStatusBadge({
+  status,
+  size = 'md',
+  className = ''
+}: {
+  status: TaskStatus;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }) {
   return (
-    <StatusBadge 
-      variant="task-status" 
-      value={status} 
-      size={size} 
-      className={className} 
+    <StatusBadge
+      variant="task-status"
+      value={status}
+      size={size}
+      className={className}
     />
   );
 }
 
-export function PriorityBadge({ 
-  priority, 
-  size = 'md', 
-  className = '' 
-}: { 
-  priority: JobPriority; 
-  size?: 'sm' | 'md' | 'lg'; 
-  className?: string; 
+export function PriorityBadge({
+  priority,
+  size = 'md',
+  className = ''
+}: {
+  priority: JobPriority;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }) {
   return (
-    <StatusBadge 
-      variant="priority" 
-      value={priority} 
-      size={size} 
-      className={className} 
+    <StatusBadge
+      variant="priority"
+      value={priority}
+      size={size}
+      className={className}
     />
   );
 }
 
-export function ContactTypeBadge({ 
-  type, 
-  size = 'md', 
-  className = '' 
-}: { 
-  type: ContactType; 
-  size?: 'sm' | 'md' | 'lg'; 
-  className?: string; 
+export function ContactTypeBadge({
+  type,
+  size = 'md',
+  className = ''
+}: {
+  type: ContactType;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }) {
   return (
-    <StatusBadge 
-      variant="contact-type" 
-      value={type} 
-      size={size} 
-      className={className} 
+    <StatusBadge
+      variant="contact-type"
+      value={type}
+      size={size}
+      className={className}
     />
   );
 } 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
 
 type Schedule = {
@@ -56,17 +56,17 @@ function SchedulingContent() {
     const startingDayOfWeek = firstDay.getDay();
 
     const days = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
-    
+
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(day);
     }
-    
+
     return days;
   };
 
@@ -102,11 +102,11 @@ function SchedulingContent() {
 
   const getFormattedDate = (date: Date | null) => {
     if (!date) return 'No date selected';
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
@@ -129,7 +129,7 @@ function SchedulingContent() {
   };
 
   // Function to get schedules for a specific date
-  const getSchedulesForDate = (day: number) => {
+  const getSchedulesForDate = (day: number | null) => {
     if (!day) return [];
     const dateString = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0];
     return schedules.filter((schedule: Schedule) => schedule.date === dateString);
@@ -194,16 +194,16 @@ function SchedulingContent() {
 
       // Success feedback
       setSuccessMessage('Schedule created successfully!');
-      
+
       // Reset form and close modal after brief delay
       setTimeout(() => {
         setShowAddScheduleModal(false);
-        setScheduleForm({ 
-          date: '', 
-          employee: '', 
-          job: '', 
-          startTime: '09:00', 
-          endTime: '17:00' 
+        setScheduleForm({
+          date: '',
+          employee: '',
+          job: '',
+          startTime: '09:00',
+          endTime: '17:00'
         });
         setSuccessMessage('');
       }, 1500);
@@ -220,7 +220,7 @@ function SchedulingContent() {
       <div className="space-y-6">
         {/* Add Schedule Button */}
         <div className="flex justify-end">
-          <button 
+          <button
             onClick={handleAddSchedule}
             className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
@@ -241,7 +241,7 @@ function SchedulingContent() {
 
             {/* Calendar Navigation */}
             <div className="flex items-center justify-between mb-6">
-              <button 
+              <button
                 onClick={() => navigateMonth(-1)}
                 className="p-2 text-gray-400 hover:text-white"
               >
@@ -249,12 +249,12 @@ function SchedulingContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              
+
               <h4 className="text-lg font-semibold text-white">
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h4>
-              
-              <button 
+
+              <button
                 onClick={() => navigateMonth(1)}
                 className="p-2 text-gray-400 hover:text-white"
               >
@@ -281,15 +281,14 @@ function SchedulingContent() {
                     key={index}
                     onClick={day ? () => handleDateClick(day) : undefined}
                     disabled={day === null}
-                    className={`aspect-square flex flex-col items-center justify-start p-1 text-sm rounded-lg transition-colors relative ${
-                      day === null
+                    className={`aspect-square flex flex-col items-center justify-start p-1 text-sm rounded-lg transition-colors relative ${day === null
                         ? 'cursor-default'
                         : isSelected(day)
-                        ? 'bg-blue-600 text-white font-semibold'
-                        : isToday(day)
-                        ? 'bg-orange-500 text-white font-semibold'
-                        : 'text-gray-300 hover:bg-gray-700 cursor-pointer'
-                    }`}
+                          ? 'bg-blue-600 text-white font-semibold'
+                          : isToday(day)
+                            ? 'bg-orange-500 text-white font-semibold'
+                            : 'text-gray-300 hover:bg-gray-700 cursor-pointer'
+                      }`}
                   >
                     {day && (
                       <>
@@ -299,20 +298,18 @@ function SchedulingContent() {
                             {daySchedules.slice(0, 2).map((schedule, scheduleIndex) => (
                               <div
                                 key={scheduleIndex}
-                                className={`text-[8px] px-1 py-0.5 rounded truncate w-full ${
-                                  isSelected(day) || isToday(day)
+                                className={`text-[8px] px-1 py-0.5 rounded truncate w-full ${isSelected(day) || isToday(day)
                                     ? 'bg-white bg-opacity-20 text-white'
                                     : 'bg-orange-500 text-white'
-                                }`}
+                                  }`}
                                 title={`${schedule.employee}: ${schedule.job} (${schedule.startTime}-${schedule.endTime})`}
                               >
                                 {schedule.employee.split(' ')[0]}: {schedule.job.substring(0, 8)}
                               </div>
                             ))}
                             {daySchedules.length > 2 && (
-                              <div className={`text-[7px] text-center ${
-                                isSelected(day) || isToday(day) ? 'text-white' : 'text-gray-400'
-                              }`}>
+                              <div className={`text-[7px] text-center ${isSelected(day) || isToday(day) ? 'text-white' : 'text-gray-400'
+                                }`}>
                                 +{daySchedules.length - 2} more
                               </div>
                             )}
@@ -347,7 +344,7 @@ function SchedulingContent() {
                 Schedules for {getFormattedDate(selectedDate)}
               </h3>
               <p className="text-gray-400 text-sm">
-                {selectedDate 
+                {selectedDate
                   ? `${getSchedulesForDate(selectedDate.getDate()).length} schedule${getSchedulesForDate(selectedDate.getDate()).length !== 1 ? 's' : ''} found`
                   : 'Select a date to view schedules'
                 }
@@ -364,10 +361,10 @@ function SchedulingContent() {
                   </div>
                   <h4 className="text-lg font-medium text-white mb-2">No schedules available</h4>
                   <p className="text-gray-400 mb-6">
-                    No schedules found for {selectedDate.toLocaleDateString()}. Click the button below 
+                    No schedules found for {selectedDate.toLocaleDateString()}. Click the button below
                     to create a schedule for this date.
                   </p>
-                  <button 
+                  <button
                     onClick={handleCreateFirstSchedule}
                     className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
                   >
@@ -411,7 +408,7 @@ function SchedulingContent() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold text-white mb-4">Create New Schedule</h3>
-              
+
               {/* Error/Success Messages */}
               {error && (
                 <div className="bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm mb-4">

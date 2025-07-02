@@ -1,11 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
-import { 
-  Contact, 
-  Job, 
-  CreateContactPayload, 
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Contact,
+  CreateContactPayload,
   CreateJobPayload,
+  Job,
   JobFilters,
-  JobSortOptions} from './types';
+  JobSortOptions
+} from './types';
 
 // =============================================================================
 // GENERIC HOOKS
@@ -16,7 +17,7 @@ import {
  */
 export function useLoading(initialState = false) {
   const [isLoading, setIsLoading] = useState(initialState);
-  
+
   const withLoading = useCallback(async <T>(
     asyncFn: () => Promise<T>
   ): Promise<T> => {
@@ -45,19 +46,19 @@ export function useFormState<T extends Record<string, unknown>>(
 
   const updateField = useCallback((field: keyof T, value: unknown) => {
     setData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
-    
+
     // Mark field as touched
     setTouched(prev => ({ ...prev, [field]: true }));
   }, [errors]);
 
   const validate = useCallback(() => {
     if (!validator) return true;
-    
+
     const newErrors = validator(data);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -85,7 +86,7 @@ export function useFormState<T extends Record<string, unknown>>(
  */
 export function useModal(initialOpen = false) {
   const [isOpen, setIsOpen] = useState(initialOpen);
-  
+
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
   const toggle = useCallback(() => setIsOpen(prev => !prev), []);
@@ -113,7 +114,7 @@ export function useContacts() {
 
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(contact => 
+      filtered = filtered.filter(contact =>
         contact.firstName.toLowerCase().includes(search) ||
         contact.lastName.toLowerCase().includes(search) ||
         contact.email.toLowerCase().includes(search) ||
@@ -132,14 +133,14 @@ export function useContacts() {
     return withLoading(async () => {
       // Simulate API call - replace with actual API integration
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const newContact: Contact = {
         ...contactData,
         id: crypto.randomUUID(),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       setContacts(prev => [...prev, newContact]);
       return newContact;
     });
@@ -149,9 +150,9 @@ export function useContacts() {
     return withLoading(async () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setContacts(prev => prev.map(contact => 
-        contact.id === id 
+
+      setContacts(prev => prev.map(contact =>
+        contact.id === id
           ? { ...contact, ...updates, updatedAt: new Date() }
           : contact
       ));
@@ -162,7 +163,7 @@ export function useContacts() {
     return withLoading(async () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       setContacts(prev => prev.filter(contact => contact.id !== id));
     });
   }, [withLoading]);
@@ -222,7 +223,7 @@ export function useJobs() {
 
     if (filters.search) {
       const search = filters.search.toLowerCase();
-      filtered = filtered.filter(job => 
+      filtered = filtered.filter(job =>
         job.title.toLowerCase().includes(search) ||
         job.description?.toLowerCase().includes(search) ||
         job.location?.toLowerCase().includes(search)
@@ -238,7 +239,7 @@ export function useJobs() {
     }
 
     if (filters.tags && filters.tags.length > 0) {
-      filtered = filtered.filter(job => 
+      filtered = filtered.filter(job =>
         job.tags?.some(tag => filters.tags!.includes(tag))
       );
     }
@@ -284,14 +285,14 @@ export function useJobs() {
     return withLoading(async () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1200));
-      
+
       const newJob: Job = {
         ...jobData,
         id: crypto.randomUUID(),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       setJobs(prev => [...prev, newJob]);
       return newJob;
     });
@@ -301,9 +302,9 @@ export function useJobs() {
     return withLoading(async () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setJobs(prev => prev.map(job => 
-        job.id === id 
+
+      setJobs(prev => prev.map(job =>
+        job.id === id
           ? { ...job, ...updates, updatedAt: new Date() }
           : job
       ));
@@ -311,9 +312,9 @@ export function useJobs() {
   }, [withLoading]);
 
   const updateJobStatus = useCallback(async (id: string, status: Job['status']) => {
-    return updateJob(id, { 
+    return updateJob(id, {
       status,
-      ...(status === 'Completed' ? { completedAt: new Date() } : {})
+      ...(status === 'completed' ? { completedAt: new Date() } : {})
     });
   }, [updateJob]);
 
@@ -321,7 +322,7 @@ export function useJobs() {
     return withLoading(async () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       setJobs(prev => prev.filter(job => job.id !== id));
     });
   }, [withLoading]);
@@ -364,11 +365,11 @@ export function useJobs() {
  */
 export function usePagination(totalItems: number, itemsPerPage = 10) {
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  
+
   const goToPage = useCallback((page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   }, [totalPages]);
@@ -419,14 +420,14 @@ export function usePagination(totalItems: number, itemsPerPage = 10) {
  * Hook for persisting state in localStorage
  */
 export function useLocalStorage<T>(
-  key: string, 
+  key: string,
   initialValue: T
 ): [T, (value: T | ((prev: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (typeof window === 'undefined') {
       return initialValue;
     }
-    
+
     try {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
@@ -440,7 +441,7 @@ export function useLocalStorage<T>(
     try {
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
-      
+
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }

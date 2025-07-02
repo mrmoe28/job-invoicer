@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Job, JobStatus, JobPriority, Contact, CreateJobPayload } from '../lib/types';
+import { Contact, CreateJobPayload, Job, JobPriority, JobStatus } from '../lib/types';
 
 interface JobFormProps {
   onSubmitAction: (job: CreateJobPayload) => void;
@@ -11,19 +11,19 @@ interface JobFormProps {
   isLoading?: boolean;
 }
 
-export default function JobForm({ 
-  onSubmitAction, 
-  onCancelAction, 
-  initialData, 
+export default function JobForm({
+  onSubmitAction,
+  onCancelAction,
+  initialData,
   contacts,
-  isLoading = false 
+  isLoading = false
 }: JobFormProps) {
   const [formData, setFormData] = useState<CreateJobPayload>({
     title: initialData?.title || '',
     description: initialData?.description || '',
     contactId: initialData?.contactId || '',
-    status: initialData?.status || 'Draft',
-    priority: initialData?.priority || 'Medium',
+    status: initialData?.status || 'quoted',
+    priority: initialData?.priority || 'medium',
     startDate: initialData?.startDate || new Date(),
     endDate: initialData?.endDate,
     estimatedHours: initialData?.estimatedHours,
@@ -105,11 +105,10 @@ export default function JobForm({
   };
 
   const jobStatuses: JobStatus[] = [
-    'Draft', 'Quoted', 'Approved', 'Scheduled', 'In Progress', 
-    'On Hold', 'Completed', 'Cancelled', 'Invoiced'
+    'quoted', 'scheduled', 'in_progress', 'completed', 'cancelled', 'on_hold'
   ];
 
-  const jobPriorities: JobPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
+  const jobPriorities: JobPriority[] = ['low', 'medium', 'high', 'urgent'];
 
   const selectedContact = contacts.find(c => c.id === formData.contactId);
 
