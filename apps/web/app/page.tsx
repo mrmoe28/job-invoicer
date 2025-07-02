@@ -26,7 +26,7 @@ export default function HomePage() {
         localStorage.removeItem('pulse_user');
       }
     }
-    
+
     // Show landing page for 2 seconds, then redirect to auth
     setShowLanding(true);
     const timer = setTimeout(() => {
@@ -61,31 +61,17 @@ export default function HomePage() {
           <p className="text-gray-400">Next-generation construction CRM platform</p>
         </div>
 
-        {/* Quick Access Cards */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          {/* Demo Access */}
-          <Link href="/demo" className="group">
-            <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/30 rounded-xl p-6 hover:border-orange-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/20">
-              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        {/* Quick Access */}
+        <div className="mb-12">
+          <Link href="/auth" className="group inline-block">
+            <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/30 rounded-xl p-8 hover:border-orange-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/20 max-w-md mx-auto">
+              <div className="w-16 h-16 bg-orange-500 rounded-lg flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Quick Demo</h3>
-              <p className="text-gray-300 text-sm">Instant access to full dashboard</p>
-            </div>
-          </Link>
-
-          {/* Admin Portal */}
-          <Link href="/admin" className="group">
-            <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/30 rounded-xl p-6 hover:border-blue-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v-2H7v-2H4a1 1 0 01-1-1v-1m0 0V9a6 6 0 016-6h2a1 1 0 011 1v3m0 0v3a6 6 0 01-7.743 5.743L11 17H9v-2H7v-2H4a1 1 0 01-1-1v-1m0 0V9a6 6 0 016-6h2a1 1 0 011 1v3" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Admin Portal</h3>
-              <p className="text-gray-300 text-sm">Secure administrative access</p>
+              <h3 className="text-xl font-semibold text-white mb-2">Get Started</h3>
+              <p className="text-gray-300">Sign in to your workspace or create a new account</p>
             </div>
           </Link>
         </div>
@@ -93,8 +79,8 @@ export default function HomePage() {
         {/* Manual Login */}
         <div className="text-center">
           <p className="text-gray-400 text-sm mb-4">Need manual login?</p>
-          <Link 
-            href="/auth" 
+          <Link
+            href="/auth"
             className="inline-flex items-center text-gray-300 hover:text-white transition-colors"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

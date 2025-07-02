@@ -32,10 +32,13 @@ export default function SignupPage() {
 
   // tRPC mutation hook
   const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<any>(null);
 
   const signupMutation = trpc.register.useMutation({
     onSuccess: (result) => {
-      if (result.success && result.requiresVerification) {
+      if (result.success) {
+        // Store result and show success message
+        setRegistrationResult(result);
         setShowEmailVerificationMessage(true);
       }
     },
@@ -114,10 +117,21 @@ export default function SignupPage() {
             </svg>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email!</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {registrationResult?.requiresVerification ? 'Check Your Email!' : 'Account Created!'}
+          </h1>
           <p className="text-gray-600 mb-6">
-            We've sent a verification link to <strong>{formData.email}</strong>.
-            Please check your email and click the verification link to activate your account.
+            {registrationResult?.requiresVerification ? (
+              <>
+                We&apos;ve sent a verification link to <strong>{formData.email}</strong>.
+                Please check your email and click the verification link to activate your account.
+              </>
+            ) : (
+              <>
+                Your account has been created successfully for <strong>{formData.email}</strong>.
+                You can now log in and start using your account.
+              </>
+            )}
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">

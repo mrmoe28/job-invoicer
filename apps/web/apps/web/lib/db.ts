@@ -1,15 +1,15 @@
 // Mock database for development - will be replaced with real database later
 export const db = {
-  query: {
-    users: {
-      findFirst: () => Promise.resolve(null),
-      findMany: () => Promise.resolve([])
-    },
-    organizations: {
-      findFirst: () => Promise.resolve(null),
-      findMany: () => Promise.resolve([])
+    query: {
+        users: {
+            findFirst: () => Promise.resolve(null),
+            findMany: () => Promise.resolve([])
+        },
+        organizations: {
+            findFirst: () => Promise.resolve(null),
+            findMany: () => Promise.resolve([])
+        }
     }
-  }
 };
 
 // Helper function to set organization context (for multi-tenancy)
@@ -25,4 +25,4 @@ export async function getCurrentOrganization(userId: string) {
     return null;
 }
 
-export type Database = typeof db;
+export type Database = typeof db; 
