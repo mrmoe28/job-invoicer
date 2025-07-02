@@ -3,7 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/dashboard-layout';
 import dynamic from 'next/dynamic';
-import { Upload, Search, Filter, Grid, List, Eye, Download, Trash2, File, Plus, Calendar, Tag } from 'lucide-react';
+import { Upload, Search, Filter, Grid, List, Eye, Download, Trash2, File, Plus, Calendar, Tag, Shield, Lock } from 'lucide-react';
+import { getSecurityPresetForDocument, SECURITY_PRESETS } from '../../../lib/security-presets';
 
 // Import enhanced PDF components
 const EnhancedPDFUpload = dynamic(() => import('../../../components/pdf/enhanced-pdf-upload'), {
@@ -11,7 +12,7 @@ const EnhancedPDFUpload = dynamic(() => import('../../../components/pdf/enhanced
   loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>
 });
 
-const EnhancedPDFViewer = dynamic(() => import('../../../components/pdf/enhanced-pdf-viewer'), {
+const SecurePDFViewer = dynamic(() => import('../../../components/pdf/secure-pdf-viewer'), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>
 });
@@ -29,6 +30,8 @@ interface DocumentItem {
   tags?: string[];
   pages?: number;
   lastViewed?: string;
+  securityLevel?: 'public' | 'restricted' | 'confidential';
+  accessCount?: number;
 }
 
 export default function DocumentsPage() {
@@ -43,7 +46,7 @@ export default function DocumentsPage() {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
 
-  // Sample PDF documents with enhanced metadata
+  // Sample PDF documents with enhanced metadata and security levels
   const initialDocuments: DocumentItem[] = [
     {
       id: '1',
@@ -56,7 +59,9 @@ export default function DocumentsPage() {
       url: '/sample-contract.pdf',
       tags: ['contract', 'phase-1', 'legal'],
       pages: 12,
-      lastViewed: '2024-07-02'
+      lastViewed: '2024-07-02',
+      securityLevel: 'restricted',
+      accessCount: 8
     },
     {
       id: '2',
@@ -66,23 +71,57 @@ export default function DocumentsPage() {
       size: '1.8 MB',
       date: '2024-06-28',
       related: 'City Hall',
-      url: '/sample-permit.pdf',
+      url: '/sample-contract.pdf',
       tags: ['permit', 'legal', 'application'],
       pages: 8,
-      lastViewed: null
+      lastViewed: null,
+      securityLevel: 'public',
+      accessCount: 3
     },
     {
       id: '3',
-      name: 'Safety Compliance Report.pdf',
+      name: 'Confidential Safety Report.pdf',
       type: 'Report',
       status: 'Reviewed',
       size: '3.2 MB',
       date: '2024-06-25',
       related: 'Safety Team',
-      url: '/sample-report.pdf',
-      tags: ['safety', 'compliance', 'report'],
+      url: '/sample-contract.pdf',
+      tags: ['safety', 'compliance', 'confidential'],
       pages: 18,
-      lastViewed: '2024-06-30'
+      lastViewed: '2024-06-30',
+      securityLevel: 'confidential',
+      accessCount: 2
+    },
+    {
+      id: '4',
+      name: 'Internal Company Policy.pdf',
+      type: 'Policy',
+      status: 'Active',
+      size: '1.2 MB',
+      date: '2024-06-20',
+      related: 'HR Department',
+      url: '/sample-contract.pdf',
+      tags: ['policy', 'internal', 'hr'],
+      pages: 6,
+      lastViewed: '2024-07-01',
+      securityLevel: 'restricted',
+      accessCount: 15
+    },
+    {
+      id: '5',
+      name: 'Public Project Specifications.pdf',
+      type: 'Specifications',
+      status: 'Published',
+      size: '4.1 MB',
+      date: '2024-06-15',
+      related: 'Public Works',
+      url: '/sample-contract.pdf',
+      tags: ['public', 'specifications', 'project'],
+      pages: 24,
+      lastViewed: '2024-06-28',
+      securityLevel: 'public',
+      accessCount: 45
     }
   ];
 
@@ -147,28 +186,35 @@ export default function DocumentsPage() {
   const uniqueStatuses = [...new Set(documents.map(doc => doc.status))];
   const uniqueTypes = [...new Set(documents.map(doc => doc.type))];
 
-  // Handle document upload completion
+  // Handle document upload completion with security assignment
   const handleUploadComplete = useCallback((uploadedFiles: any[]) => {
-    const newDocuments = uploadedFiles.map((file) => ({
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      type: getDocumentType(file.name),
-      status: 'Active',
-      size: formatFileSize(file.size || 0),
-      date: new Date().toISOString().split('T')[0],
-      related: 'New Upload',
-      url: file.uploadedUrl || file.url,
-      fileName: file.fileName,
-      tags: ['new', 'uploaded'],
-      pages: Math.floor(Math.random() * 20) + 1, // In real app, extract from PDF
-      lastViewed: null
-    }));
+    const newDocuments = uploadedFiles.map((file) => {
+      const docType = getDocumentType(file.name);
+      const securityConfig = getSecurityPresetForDocument(docType, file.name);
+      
+      return {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        type: docType,
+        status: 'Active',
+        size: formatFileSize(file.size || 0),
+        date: new Date().toISOString().split('T')[0],
+        related: 'New Upload',
+        url: file.uploadedUrl || file.url,
+        fileName: file.fileName,
+        tags: ['new', 'uploaded'],
+        pages: Math.floor(Math.random() * 20) + 1, // In real app, extract from PDF
+        lastViewed: null,
+        securityLevel: securityConfig.accessLevel,
+        accessCount: 0
+      };
+    });
 
     setDocuments(prev => [...newDocuments, ...prev]);
     setShowUploadModal(false);
   }, []);
 
-  // Document actions
+  // Document actions with security integration
   const handleDocumentAction = useCallback((documentId: string, action: 'view' | 'download' | 'edit' | 'delete') => {
     const document = documents.find(doc => doc.id === documentId);
     if (!document) return;
@@ -177,15 +223,26 @@ export default function DocumentsPage() {
       case 'view':
         setCurrentDocument(document);
         setShowPdfViewer(true);
-        // Update last viewed
+        // Update last viewed and access count
         setDocuments(prev => prev.map(doc => 
           doc.id === documentId 
-            ? { ...doc, lastViewed: new Date().toISOString().split('T')[0] }
+            ? { 
+                ...doc, 
+                lastViewed: new Date().toISOString().split('T')[0],
+                accessCount: (doc.accessCount || 0) + 1
+              }
             : doc
         ));
         break;
 
       case 'download':
+        // Check if document allows downloads based on security level
+        const securityConfig = getSecurityPresetForDocument(document.type, document.name);
+        if (!securityConfig.allowDownload && document.securityLevel !== 'public') {
+          alert('Download is not permitted for this document due to security restrictions.');
+          return;
+        }
+
         if (document.url) {
           const link = window.document.createElement('a');
           link.href = document.url;
@@ -272,6 +329,42 @@ export default function DocumentsPage() {
 
   const getFileIcon = (type: string) => {
     return <File className="w-8 h-8 text-red-400" />;
+  };
+
+  // Security badge helpers
+  const getSecurityBadge = (securityLevel?: string) => {
+    switch (securityLevel) {
+      case 'confidential':
+        return { 
+          icon: <Lock className="w-3 h-3" />, 
+          color: 'bg-red-900 text-red-300 border border-red-700',
+          label: 'Confidential' 
+        };
+      case 'restricted':
+        return { 
+          icon: <Shield className="w-3 h-3" />, 
+          color: 'bg-yellow-900 text-yellow-300 border border-yellow-700',
+          label: 'Restricted' 
+        };
+      case 'public':
+      default:
+        return { 
+          icon: <Eye className="w-3 h-3" />, 
+          color: 'bg-green-900 text-green-300 border border-green-700',
+          label: 'Public' 
+        };
+    }
+  };
+
+  const getSecurityIcon = (securityLevel?: string) => {
+    switch (securityLevel) {
+      case 'confidential':
+        return <Lock className="w-4 h-4 text-red-400" />;
+      case 'restricted':
+        return <Shield className="w-4 h-4 text-yellow-400" />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -434,87 +527,119 @@ export default function DocumentsPage() {
             {/* Grid View */}
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredDocuments.map((doc) => (
-                  <div key={doc.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors">
-                    <div className="flex items-start justify-between mb-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedDocuments.includes(doc.id)}
-                        onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
-                        className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
-                      />
-                      <span className={`px-2 py-1 rounded text-xs ${getStatusColor(doc.status)}`}>
-                        {doc.status}
-                      </span>
-                    </div>
-
-                    <div className="aspect-[3/4] bg-gray-700 rounded-lg mb-4 flex items-center justify-center">
-                      {getFileIcon(doc.type)}
-                    </div>
-                    
-                    <h3 className="font-semibold text-white mb-2 truncate" title={doc.name}>
-                      {doc.name}
-                    </h3>
-                    
-                    <div className="text-sm text-gray-400 mb-3 space-y-1">
-                      <div className="flex justify-between">
-                        <span>Type:</span>
-                        <span>{doc.type}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Size:</span>
-                        <span>{doc.size}</span>
-                      </div>
-                      {doc.pages && (
-                        <div className="flex justify-between">
-                          <span>Pages:</span>
-                          <span>{doc.pages}</span>
+                {filteredDocuments.map((doc) => {
+                  const securityBadge = getSecurityBadge(doc.securityLevel);
+                  const securityIcon = getSecurityIcon(doc.securityLevel);
+                  
+                  return (
+                    <div key={doc.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors">
+                      <div className="flex items-start justify-between mb-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedDocuments.includes(doc.id)}
+                          onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
+                          className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                        />
+                        <div className="flex items-center gap-2">
+                          {/* Security Badge */}
+                          <span className={`px-2 py-1 rounded text-xs flex items-center gap-1 ${securityBadge.color}`}>
+                            {securityBadge.icon}
+                            {securityBadge.label}
+                          </span>
+                          {/* Status Badge */}
+                          <span className={`px-2 py-1 rounded text-xs ${getStatusColor(doc.status)}`}>
+                            {doc.status}
+                          </span>
                         </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span>Date:</span>
-                        <span>{doc.date}</span>
                       </div>
-                    </div>
 
-                    {doc.tags && doc.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {doc.tags.slice(0, 3).map((tag) => (
-                          <span key={tag} className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
-                            #{tag}
-                          </span>
-                        ))}
-                        {doc.tags.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
-                            +{doc.tags.length - 3}
-                          </span>
+                      <div className="aspect-[3/4] bg-gray-700 rounded-lg mb-4 flex items-center justify-center relative">
+                        {getFileIcon(doc.type)}
+                        {securityIcon && (
+                          <div className="absolute top-2 right-2">
+                            {securityIcon}
+                          </div>
+                        )}
+                        {doc.accessCount && doc.accessCount > 0 && (
+                          <div className="absolute bottom-2 left-2">
+                            <span className="text-xs bg-gray-900 text-gray-300 px-2 py-1 rounded">
+                              {doc.accessCount} views
+                            </span>
+                          </div>
                         )}
                       </div>
-                    )}
-                    
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleDocumentAction(doc.id, 'view')}
-                        className="flex-1 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors flex items-center justify-center"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </button>
-                      <button
-                        onClick={() => handleDocumentAction(doc.id, 'download')}
-                        className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDocumentAction(doc.id, 'delete')}
-                        className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-red-600 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      
+                      <h3 className="font-semibold text-white mb-2 truncate" title={doc.name}>
+                        {doc.name}
+                      </h3>
+                      
+                      <div className="text-sm text-gray-400 mb-3 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Type:</span>
+                          <span>{doc.type}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Size:</span>
+                          <span>{doc.size}</span>
+                        </div>
+                        {doc.pages && (
+                          <div className="flex justify-between">
+                            <span>Pages:</span>
+                            <span>{doc.pages}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span>Date:</span>
+                          <span>{doc.date}</span>
+                        </div>
+                        {doc.lastViewed && (
+                          <div className="flex justify-between">
+                            <span>Last viewed:</span>
+                            <span>{doc.lastViewed}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {doc.tags && doc.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {doc.tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
+                              #{tag}
+                            </span>
+                          ))}
+                          {doc.tags.length > 3 && (
+                            <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
+                              +{doc.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDocumentAction(doc.id, 'view')}
+                          className="flex-1 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors flex items-center justify-center"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleDocumentAction(doc.id, 'download')}
+                          className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
+                          title={doc.securityLevel === 'confidential' ? 'Download restricted' : 'Download'}
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDocumentAction(doc.id, 'delete')}
+                          className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-red-600 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               /* List View */
@@ -629,17 +754,27 @@ export default function DocumentsPage() {
           </div>
         )}
 
-        {/* PDF Viewer Modal */}
+        {/* Secure PDF Viewer Modal */}
         {showPdfViewer && currentDocument && (
           <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
             <div className="w-full h-full">
-              <EnhancedPDFViewer
+              <SecurePDFViewer
                 fileUrl={currentDocument.url || '/sample-contract.pdf'}
                 fileName={currentDocument.name}
+                documentId={currentDocument.id}
                 onClose={() => setShowPdfViewer(false)}
                 className="w-full h-full"
+                security={getSecurityPresetForDocument(currentDocument.type, currentDocument.name)}
                 onLoadSuccess={(pdf) => console.log('PDF loaded:', pdf.numPages, 'pages')}
                 onLoadError={(error) => console.error('PDF error:', error)}
+                onSecurityViolation={(violation) => {
+                  console.warn('Security violation:', violation);
+                  // In production, you might want to log this to an audit system
+                }}
+                onViewingComplete={(session) => {
+                  console.log('Viewing session completed:', session);
+                  // In production, save viewing analytics
+                }}
               />
             </div>
           </div>
