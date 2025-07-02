@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -82,6 +82,7 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               placeholder="Enter your email address"
+              autoComplete="off"
             />
           </div>
 
@@ -97,6 +98,7 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               placeholder="Enter your password"
+              autoComplete="off"
             />
           </div>
 
