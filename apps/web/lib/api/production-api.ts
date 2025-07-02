@@ -1,14 +1,14 @@
 import { initTRPC, TRPCError } from '@trpc/server';
-import { z } from 'zod';
 import { pbkdf2Sync, randomBytes } from 'crypto';
+import { z } from 'zod';
 
 // Simple in-memory storage for now - will be replaced with real DB later
+// Cleared all existing user data
 const users = new Map<string, any>();
 const organizations = new Map<string, any>();
 const verificationTokens = new Map<string, any>();
 
 // Import real email service
-import { sendVerificationEmail } from '../email';
 
 const t = initTRPC.create();
 
@@ -57,9 +57,8 @@ export const appRouter = t.router({
                 };
                 organizations.set(orgId, organization);
 
-                // Create user (auto-verify in development)
+                // Create user (email verification disabled)
                 const userId = randomBytes(16).toString('hex');
-                const isDevelopment = process.env.NODE_ENV === 'development';
                 const user = {
                     id: userId,
                     email: input.email,
@@ -68,59 +67,17 @@ export const appRouter = t.router({
                     firstName: input.firstName,
                     lastName: input.lastName,
                     organizationId: orgId,
-                    emailVerified: isDevelopment, // Auto-verify in development
+                    emailVerified: true, // Always verified - no email verification required
                     createdAt: new Date(),
                     updatedAt: new Date(),
                 };
                 users.set(userId, user);
 
-                // Generate verification token
-                const verificationToken = randomBytes(32).toString('hex');
-                const expiresAt = new Date();
-                expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours from now
-
-                verificationTokens.set(verificationToken, {
-                    userId: userId,
-                    token: verificationToken,
-                    type: 'email_verification',
-                    expiresAt,
-                    createdAt: new Date(),
-                });
-
-                // Send verification email
-                try {
-                    // Determine base URL for different environments
-                    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
-                    if (!baseUrl) {
-                        // For Vercel deployments
-                        if (process.env.VERCEL_URL) {
-                            baseUrl = `https://${process.env.VERCEL_URL}`;
-                        }
-                        // For local development
-                        else {
-                            baseUrl = 'http://localhost:3010';
-                        }
-                    }
-
-                    const verificationUrl = `${baseUrl}/auth/verify?token=${verificationToken}`;
-                    await sendVerificationEmail({
-                        email: user.email,
-                        firstName: user.firstName,
-                        verificationUrl
-                    });
-                } catch (emailError) {
-                    console.error('Failed to send verification email:', emailError);
-                    // Don't fail registration if email sending fails
-                }
-
                 return {
                     success: true,
-                    message: isDevelopment
-                        ? 'User registered successfully. Email verification bypassed in development.'
-                        : 'User registered successfully. Please check your email for verification.',
+                    message: 'User registered successfully.',
                     userId: user.id,
-                    requiresVerification: !isDevelopment,
+                    requiresVerification: false,
                     user: {
                         id: user.id,
                         email: user.email,
@@ -222,14 +179,7 @@ export const appRouter = t.router({
                     });
                 }
 
-                // Check if email is verified (bypass in development)
-                const isDevelopment = process.env.NODE_ENV === 'development';
-                if (!user.emailVerified && !isDevelopment) {
-                    throw new TRPCError({
-                        code: 'FORBIDDEN',
-                        message: 'Please verify your email before logging in'
-                    });
-                }
+                // Email verification disabled - all users can login
 
                 // Get organization
                 const organization = organizations.get(user.organizationId);
@@ -557,54 +507,8 @@ export const appRouter = t.router({
         }).optional())
         .query(async ({ input = {} }) => {
             try {
-                // Mock jobs data for now
-                const mockJobs = [
-                    {
-                        id: '1',
-                        title: 'Website Redesign',
-                        description: 'Complete overhaul of company website',
-                        status: 'active',
-                        priority: 'high',
-                        assignedTo: 'John Doe',
-                        dueDate: new Date('2025-02-15'),
-                        createdAt: new Date('2025-01-01'),
-                        companyId: Array.from(organizations.keys())[0] || 'default',
-                    },
-                    {
-                        id: '2',
-                        title: 'Database Migration',
-                        description: 'Migrate legacy database to new system',
-                        status: 'pending',
-                        priority: 'medium',
-                        assignedTo: 'Jane Smith',
-                        dueDate: new Date('2025-03-01'),
-                        createdAt: new Date('2025-01-05'),
-                        companyId: Array.from(organizations.keys())[0] || 'default',
-                    },
-                    {
-                        id: '3',
-                        title: 'Security Audit',
-                        description: 'Comprehensive security assessment',
-                        status: 'completed',
-                        priority: 'high',
-                        assignedTo: 'Mike Johnson',
-                        dueDate: new Date('2025-01-20'),
-                        createdAt: new Date('2024-12-15'),
-                        companyId: Array.from(organizations.keys())[0] || 'default',
-                    }
-                ];
-
-                let filteredJobs = mockJobs;
-
-                if (input.status) {
-                    filteredJobs = mockJobs.filter(job => job.status === input.status);
-                }
-
-                if (input.limit) {
-                    filteredJobs = filteredJobs.slice(0, input.limit);
-                }
-
-                return filteredJobs;
+                // Return empty array - no demo data
+                return [];
             } catch (error) {
                 console.error('Get jobs error:', error);
                 throw new TRPCError({

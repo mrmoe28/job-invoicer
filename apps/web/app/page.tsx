@@ -9,6 +9,24 @@ export default function HomePage() {
   const [showLanding, setShowLanding] = useState(false);
 
   useEffect(() => {
+    // Clear all user data and localStorage on app start
+    const clearAllData = () => {
+      try {
+        // Clear all localStorage items
+        localStorage.clear();
+
+        // Clear sessionStorage
+        sessionStorage.clear();
+
+        console.log('All user data cleared on app start');
+      } catch (error) {
+        console.error('Error clearing data:', error);
+      }
+    };
+
+    // Clear data first
+    clearAllData();
+
     const userData = localStorage.getItem('pulse_user');
     if (userData) {
       try {
