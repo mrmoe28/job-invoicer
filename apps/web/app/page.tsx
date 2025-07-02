@@ -9,38 +9,29 @@ export default function HomePage() {
   const [showLanding, setShowLanding] = useState(false);
 
   useEffect(() => {
-    // Clear all user data and localStorage on app start
-    const clearAllData = () => {
-      try {
-        // Clear all localStorage items
-        localStorage.clear();
-
-        // Clear sessionStorage
-        sessionStorage.clear();
-
-        console.log('All user data cleared on app start');
-      } catch (error) {
-        console.error('Error clearing data:', error);
-      }
-    };
-
-    // Clear data first
-    clearAllData();
-
     const userData = localStorage.getItem('pulse_user');
-    if (userData) {
+    const sessionActive = localStorage.getItem('pulse_session_active');
+
+    console.log('Homepage auth check:', { userData: !!userData, sessionActive });
+
+    if (userData && sessionActive === 'true') {
       try {
         const user = JSON.parse(userData);
+        console.log('Parsed user:', { id: user.id, email: user.email });
+
         // Check if user has valid credentials with proper property names
         if (user && user.id && user.email) {
+          console.log('Valid user found, redirecting to dashboard');
           router.replace('/dashboard');
           return;
         } else {
+          console.log('Invalid user data, clearing localStorage');
           // Invalid user data, clear and show landing
           localStorage.removeItem('pulse_user');
           localStorage.removeItem('pulse_session_active');
         }
-      } catch {
+      } catch (error) {
+        console.log('Error parsing user data:', error);
         // Invalid JSON, clear and show landing
         localStorage.removeItem('pulse_user');
         localStorage.removeItem('pulse_session_active');

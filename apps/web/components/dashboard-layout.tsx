@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import TopNavigation from './top-navigation';
 
 interface DashboardLayoutProps {
@@ -17,14 +17,19 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   useEffect(() => {
     const userData = localStorage.getItem('pulse_user');
     const sessionActive = localStorage.getItem('pulse_session_active');
-    
+
+    console.log('Dashboard auth check:', { userData: !!userData, sessionActive });
+
     if (!userData || sessionActive !== 'true') {
+      console.log('No valid session, redirecting to auth');
       router.push('/auth');
       return;
     }
-    
+
     try {
-      setUser(JSON.parse(userData));
+      const user = JSON.parse(userData);
+      console.log('Dashboard user loaded:', { id: user.id, email: user.email });
+      setUser(user);
     } catch (error) {
       console.error('Error parsing user data:', error);
       router.push('/auth');
@@ -42,7 +47,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   return (
     <div className="min-h-screen bg-gray-900">
       <TopNavigation user={user} />
-      
+
       <main className="p-6">
         {(title || subtitle) && (
           <div className="mb-6">

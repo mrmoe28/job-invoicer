@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface SignupForm {
   firstName: string;
@@ -33,9 +33,10 @@ export default function SignupPage() {
   // tRPC mutation hook
   const signupMutation = trpc.register.useMutation({
     onSuccess: (result: any) => {
+      console.log('Signup success result:', result);
+
       if (result?.success && result?.user) {
-        // Store user session immediately - no email verification needed
-        localStorage.setItem('pulse_user', JSON.stringify({
+        const userToStore = {
           id: result.user.id || 'temp-id',
           email: result.user.email || '',
           name: `${result.user.firstName || ''} ${result.user.lastName || ''}`.trim() || 'User',
@@ -44,14 +45,22 @@ export default function SignupPage() {
           organizationName: result.user.organization?.name || formData.organizationName,
           organizationSlug: result.user.organization?.slug || 'org',
           plan: 'pro', // Default plan
-        }));
+        };
+
+        console.log('Storing user data:', userToStore);
+
+        // Store user session immediately - no email verification needed
+        localStorage.setItem('pulse_user', JSON.stringify(userToStore));
 
         // Set session flag to indicate successful authentication
         localStorage.setItem('pulse_session_active', 'true');
 
+        console.log('User data stored, redirecting to dashboard');
+
         // Redirect to dashboard immediately
         router.push('/dashboard');
       } else {
+        console.log('Signup failed:', result);
         setError('Registration failed. Please try again.');
       }
     },
