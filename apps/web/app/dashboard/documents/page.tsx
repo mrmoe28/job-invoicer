@@ -78,7 +78,7 @@ export default function DocumentsPage() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [csvData, setCsvData] = useState<string[][]>([]);
-  const [editingCell, setEditingCell] = useState<{docId: string, field: string} | null>(null);
+  const [editingCell, setEditingCell] = useState<{ docId: string, field: string } | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [columnSettings, setColumnSettings] = useState([
     { id: 'document', label: 'Document', visible: true, order: 0 },
@@ -102,49 +102,12 @@ export default function DocumentsPage() {
     url?: string;
   }
 
-  const initialDocuments: DocumentItem[] = [
-    {
-      id: 'demo-pdf-1',
-      name: 'Sample Contract.pdf',
-      type: 'Contract',
-      status: 'approved',
-      size: '2.4 MB',
-      date: 'Dec 15, 2024',
-      related: 'Johnson Project',
-    },
-    {
-      id: 'demo-pdf-2',
-      name: 'Project Proposal.pdf',
-      type: 'Proposal',
-      status: 'draft',
-      size: '1.8 MB',
-      date: 'Dec 12, 2024',
-      related: 'Wilson Project',
-    },
-    {
-      id: 'demo-img-1', 
-      name: 'Site Photo.jpg',
-      type: 'Photo',
-      status: 'approved', 
-      size: '1.8 MB',
-      date: 'Dec 10, 2024',
-      related: 'Smith Project',
-    },
-    {
-      id: 'demo-csv-1',
-      name: 'Material List.csv', 
-      type: 'Spreadsheet',
-      status: 'draft',
-      size: '0.3 MB', 
-      date: 'Dec 8, 2024',
-      related: 'Wilson Project',
-    }
-  ];
+  const initialDocuments: DocumentItem[] = [];
 
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
     if (typeof window === 'undefined') return initialDocuments;
     try {
-      const stored = localStorage.getItem('documents');
+      const stored = localStorage.getItem('user_documents');
       return stored ? JSON.parse(stored) : initialDocuments;
     } catch {
       return initialDocuments;
@@ -154,7 +117,7 @@ export default function DocumentsPage() {
   // persist
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('documents', JSON.stringify(documents));
+      localStorage.setItem('user_documents', JSON.stringify(documents));
       localStorage.setItem('documentsViewMode', viewMode);
     }
   }, [documents, viewMode]);
@@ -209,15 +172,15 @@ export default function DocumentsPage() {
   const handleDocumentAction = useCallback((documentId: string, action: 'view' | 'download' | 'edit' | 'delete') => {
     console.log(`Document ${action}:`, documentId);
     setActiveDropdown(null); // Close dropdown after action
-    
+
     const document = documents.find(doc => doc.id === documentId);
-    
+
     switch (action) {
       case 'view':
         if (document) {
           setCurrentDocument(document);
           const fileType = getFileType(document.name);
-          
+
           if (fileType === 'pdf') {
             // Close all other viewers first
             setShowViewerModal(false);
@@ -226,7 +189,7 @@ export default function DocumentsPage() {
             setShowEnhancedPdfViewer(false);
             setShowImprovedSimplePdfViewer(false);
             setShowProductionPdfViewer(false);
-            
+
             // Open the appropriate PDF viewer based on type
             switch (pdfViewerType) {
               case 'production':
@@ -256,7 +219,7 @@ export default function DocumentsPage() {
             setShowImprovedSimplePdfViewer(false);
             setShowProductionPdfViewer(false);
             setZoomLevel(1);
-            
+
             // Load CSV data if it's a CSV file
             if (document.name.toLowerCase().endsWith('.csv')) {
               loadCSVData(document);
@@ -310,10 +273,10 @@ export default function DocumentsPage() {
           if (document.url && document.url.startsWith('blob:')) {
             URL.revokeObjectURL(document.url);
           }
-          
+
           // Actually remove the document from the list
           setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-          
+
           // Remove from selected documents if it was selected
           setSelectedDocuments(prev => prev.filter(id => id !== documentId));
         }
@@ -325,7 +288,7 @@ export default function DocumentsPage() {
     if (!editingDocument) return;
 
     // Update the document in the list
-    setDocuments(prev => prev.map(doc => 
+    setDocuments(prev => prev.map(doc =>
       doc.id === editingDocument.id ? editingDocument : doc
     ));
 
@@ -346,7 +309,7 @@ export default function DocumentsPage() {
   }, [showColumnSettings]);
 
   const handleColumnToggle = useCallback((columnId: string) => {
-    setColumnSettings(prev => prev.map(col => 
+    setColumnSettings(prev => prev.map(col =>
       col.id === columnId ? { ...col, visible: !col.visible } : col
     ));
   }, []);
@@ -356,13 +319,13 @@ export default function DocumentsPage() {
       const columns = [...prev];
       const currentIndex = columns.findIndex(col => col.id === columnId);
       const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      
+
       if (newIndex >= 0 && newIndex < columns.length) {
         // Swap the orders
         const temp = columns[currentIndex].order;
         columns[currentIndex].order = columns[newIndex].order;
         columns[newIndex].order = temp;
-        
+
         // Sort by order
         return columns.sort((a, b) => a.order - b.order);
       }
@@ -405,7 +368,7 @@ export default function DocumentsPage() {
     const touch1 = touches[0];
     const touch2 = touches[1];
     return Math.sqrt(
-      Math.pow(touch2.clientX - touch1.clientX, 2) + 
+      Math.pow(touch2.clientX - touch1.clientX, 2) +
       Math.pow(touch2.clientY - touch1.clientY, 2)
     );
   };
@@ -422,7 +385,7 @@ export default function DocumentsPage() {
     if (isPinching && e.touches.length === 2) {
       const currentDistance = getTouchDistance(e.touches);
       const scaleFactor = currentDistance / lastTouchDistance;
-      
+
       setZoomLevel(prev => Math.max(0.25, Math.min(3, prev * scaleFactor)));
       setLastTouchDistance(currentDistance);
       e.preventDefault();
@@ -468,7 +431,7 @@ export default function DocumentsPage() {
     }
 
     console.log('Uploading files:', uploadedFiles);
-    
+
     try {
       // Create FormData for file upload
       const formData = new FormData();
@@ -487,7 +450,7 @@ export default function DocumentsPage() {
       }
 
       const result = await response.json();
-      
+
       if (result.success && result.files) {
         // Create document entries for uploaded files
         const newDocuments = result.files.map((fileData: any) => ({
@@ -505,15 +468,15 @@ export default function DocumentsPage() {
 
         // Add new documents to the existing list
         setDocuments(prev => [...prev, ...newDocuments]);
-        
+
         setShowUploadModal(false);
         setUploadedFiles([]);
-        
+
         console.log('Files uploaded successfully:', result);
       } else {
         throw new Error(result.error || 'Upload failed');
       }
-      
+
     } catch (error) {
       console.error('Upload error:', error);
       // Show error to user - you might want to add a state for this
@@ -523,13 +486,13 @@ export default function DocumentsPage() {
 
   const getDocumentType = (filename: string): string => {
     const extension = filename.toLowerCase().split('.').pop();
-    
+
     const typeMap: { [key: string]: string } = {
       'pdf': 'Contract',
-      'doc': 'Document', 
+      'doc': 'Document',
       'docx': 'Document',
       'xls': 'Spreadsheet',
-      'xlsx': 'Spreadsheet', 
+      'xlsx': 'Spreadsheet',
       'csv': 'Spreadsheet',
       'jpg': 'Photo',
       'jpeg': 'Photo',
@@ -537,7 +500,7 @@ export default function DocumentsPage() {
       'gif': 'Photo',
       'webp': 'Photo'
     };
-    
+
     return typeMap[extension || ''] || 'Other';
   };
 
@@ -555,7 +518,7 @@ export default function DocumentsPage() {
   }, []);
 
   const handleCellSave = useCallback((docId: string, field: string) => {
-    setDocuments(prev => prev.map(doc => 
+    setDocuments(prev => prev.map(doc =>
       doc.id === docId ? { ...doc, [field]: editingValue } : doc
     ));
     setEditingCell(null);
@@ -588,11 +551,11 @@ export default function DocumentsPage() {
       case 'image':
         // Use the API endpoint for images too
         return `/api/files/${encodeURIComponent(filename)}`;
-        
+
       case 'csv':
         // Use the API endpoint for CSV files
         return `/api/files/${encodeURIComponent(filename)}`;
-        
+
       default:
         // For other file types, use the API endpoint
         return `/api/files/${encodeURIComponent(filename)}`;
@@ -620,10 +583,10 @@ export default function DocumentsPage() {
             }}
           />
         );
-      
+
       case 'image':
         return (
-          <div 
+          <div
             className="w-full h-full flex items-center justify-center overflow-auto"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -631,7 +594,7 @@ export default function DocumentsPage() {
             ref={viewerRef}
           >
             <div
-              style={{ 
+              style={{
                 transform: `scale(${zoomLevel})`,
                 transformOrigin: 'center',
                 transition: isPinching ? 'none' : 'transform 0.2s ease',
@@ -649,7 +612,7 @@ export default function DocumentsPage() {
             </div>
           </div>
         );
-      
+
       case 'csv':
         return (
           <div className="w-full h-full overflow-auto">
@@ -684,7 +647,7 @@ export default function DocumentsPage() {
             </div>
           </div>
         );
-      
+
       default:
         return (
           <div className="w-full h-full flex items-center justify-center">
@@ -708,7 +671,7 @@ export default function DocumentsPage() {
         {/* Header Actions */}
         <div className="flex items-center justify-between">
           <div className="flex space-x-4">
-            <button 
+            <button
               onClick={handleUploadDocument}
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
@@ -717,7 +680,7 @@ export default function DocumentsPage() {
               </svg>
               Upload Document
             </button>
-            <button 
+            <button
               onClick={handleCreateDocument}
               className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg font-medium border border-gray-600 transition-colors"
             >
@@ -813,11 +776,10 @@ export default function DocumentsPage() {
             <button
               key={tab}
               onClick={() => handleStatusFilter(tab)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                statusFilter === tab 
-                  ? 'bg-gray-700 text-white' 
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${statusFilter === tab
+                  ? 'bg-gray-700 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-gray-700'
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -967,7 +929,7 @@ export default function DocumentsPage() {
                         case 'actions':
                           return (
                             <div className="relative overflow-visible">
-                              <button 
+                              <button
                                 onClick={() => toggleDropdown(doc.id)}
                                 className="text-gray-400 hover:text-white transition-colors p-1 rounded"
                                 title="Document actions"
@@ -977,14 +939,13 @@ export default function DocumentsPage() {
                                 </svg>
                               </button>
                               {activeDropdown === doc.id && (
-                                <div 
-                                  className={`absolute right-0 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-50 ${
-                                    documents.length === 1 || documents.indexOf(doc) === 0
+                                <div
+                                  className={`absolute right-0 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-50 ${documents.length === 1 || documents.indexOf(doc) === 0
                                       ? 'top-8'
                                       : documents.indexOf(doc) >= documents.length - 2
                                         ? 'bottom-8'
                                         : 'top-8'
-                                  }`}
+                                    }`}
                                 >
                                   <div className="py-1">
                                     <button
@@ -1037,8 +998,8 @@ export default function DocumentsPage() {
                     return (
                       <tr key={doc.id} className="border-t border-gray-700 hover:bg-gray-700 overflow-visible">
                         <td className="p-4">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
                             className="rounded bg-gray-600 border-gray-500"
                             aria-label={`Select document ${doc.name}`}
@@ -1122,7 +1083,7 @@ export default function DocumentsPage() {
                 <h3 className="text-lg font-semibold text-white">{currentDocument.name}</h3>
                 <span className="text-sm text-gray-400">{currentDocument.size}</span>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 {/* Zoom Controls (for images and PDFs) */}
                 {['image', 'pdf'].includes(getFileType(currentDocument.name)) && (
@@ -1159,7 +1120,7 @@ export default function DocumentsPage() {
                     <div className="w-px h-6 bg-gray-600 mx-2"></div>
                   </>
                 )}
-                
+
                 {/* Download Button */}
                 <button
                   onClick={() => handleDocumentAction(currentDocument.id, 'download')}
@@ -1170,7 +1131,7 @@ export default function DocumentsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </button>
-                
+
                 {/* Close Button */}
                 <button
                   onClick={() => {
@@ -1187,16 +1148,16 @@ export default function DocumentsPage() {
                 </button>
               </div>
             </div>
-            
+
             {/* Viewer Content */}
             <div className="flex-1 bg-gray-900 overflow-hidden">
               {renderDocumentViewer()}
             </div>
-            
+
             {/* Footer with file info */}
             <div className="bg-gray-800 border-t border-gray-700 p-2 text-center">
               <p className="text-sm text-gray-400">
-                {getFileType(currentDocument.name).toUpperCase()} • {currentDocument.size} • 
+                {getFileType(currentDocument.name).toUpperCase()} • {currentDocument.size} •
                 {getFileType(currentDocument.name) === 'image' && ' Pinch to zoom or use controls above'}
                 {getFileType(currentDocument.name) === 'pdf' && ' Use zoom controls above to resize'}
                 {getFileType(currentDocument.name) === 'csv' && ' Tabular data view'}
@@ -1227,11 +1188,10 @@ export default function DocumentsPage() {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  isDragOver 
-                    ? 'border-orange-500 bg-orange-500 bg-opacity-10' 
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragOver
+                    ? 'border-orange-500 bg-orange-500 bg-opacity-10'
                     : 'border-gray-600 hover:border-gray-500'
-                }`}
+                  }`}
               >
                 <div className="flex flex-col items-center space-y-4">
                   <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
@@ -1304,7 +1264,7 @@ export default function DocumentsPage() {
               {uploadedFiles.length > 0 && (
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-300 mb-2">Document Type</label>
-                  <select 
+                  <select
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
                     aria-label="Select document type"
                   >
@@ -1487,16 +1447,16 @@ export default function DocumentsPage() {
 
         {/* Click outside to close dropdown */}
         {activeDropdown && (
-          <div 
-            className="fixed inset-0 z-0" 
+          <div
+            className="fixed inset-0 z-0"
             onClick={() => setActiveDropdown(null)}
           ></div>
         )}
-        
+
         {/* Click outside to close column settings */}
         {showColumnSettings && (
-          <div 
-            className="fixed inset-0 z-0" 
+          <div
+            className="fixed inset-0 z-0"
             onClick={() => setShowColumnSettings(false)}
           ></div>
         )}

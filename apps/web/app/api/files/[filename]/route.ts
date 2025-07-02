@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const filename = params.filename;
-    
+
     if (!filename) {
       return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
     }
@@ -26,21 +26,23 @@ export async function GET(
 
     // Check if file exists
     if (!existsSync(filePath)) {
-      // If file doesn't exist, try to serve a demo file for development
-      return serveNonexistentFileContent(filename);
+      return NextResponse.json({
+        error: 'File not found',
+        message: 'This file has not been uploaded to the server.'
+      }, { status: 404 });
     }
 
     try {
       // Read the file
       const fileBuffer = await readFile(filePath);
-      
+
       // Determine content type based on file extension
       const contentType = getContentType(filename);
-      
+
       // Determine if file should be downloaded or displayed inline
       const isDownload = request.nextUrl.searchParams.get('download') === 'true';
       const disposition = isDownload ? 'attachment' : 'inline';
-      
+
       // Get original filename from the stored filename (remove timestamp and random ID)
       const originalName = getOriginalFilename(filename);
 
@@ -67,7 +69,7 @@ export async function GET(
 
 function getContentType(filename: string): string {
   const ext = path.extname(filename).toLowerCase();
-  
+
   const mimeTypes: { [key: string]: string } = {
     '.pdf': 'application/pdf',
     '.jpg': 'image/jpeg',
@@ -96,66 +98,4 @@ function getOriginalFilename(storedFilename: string): string {
   return storedFilename; // Fallback to stored filename
 }
 
-async function serveNonexistentFileContent(filename: string): Promise<NextResponse> {
-  const ext = path.extname(filename).toLowerCase();
-  
-  if (ext === '.pdf') {
-    // For PDF files, return a simple demo PDF content
-    return serveDemoPdfContent(filename);
-  } else if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
-    // For images, redirect to a placeholder service
-    const imageUrl = `https://via.placeholder.com/800x600/374151/ffffff?text=Demo+Image`;
-    return NextResponse.redirect(imageUrl);
-  } else if (ext === '.csv') {
-    // For CSV files, return demo CSV content
-    const csvContent = `Name,Type,Status,Date\nDemo File,CSV,Active,${new Date().toISOString().split('T')[0]}\nSample Data,Document,Draft,${new Date().toISOString().split('T')[0]}`;
-    return new NextResponse(csvContent, {
-      headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': `inline; filename="${filename}"`,
-      },
-    });
-  }
-  
-  // For other file types, return 404
-  return NextResponse.json({ 
-    error: 'File not found',
-    message: 'This appears to be a demo file that is not actually stored on the server.'
-  }, { status: 404 });
-}
 
-async function serveDemoPdfContent(filename: string): Promise<NextResponse> {
-  // Create a simple PDF-like response that will work with the PDF viewer
-  // In a real implementation, you might want to generate a simple PDF or redirect to a demo PDF
-  
-  // For now, redirect to a reliable demo PDF
-  const demoPdfUrls = [
-    'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    'https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf',
-    'https://scholar.harvard.edu/files/torman_personal/files/samplepdf.pdf'
-  ];
-  
-  // Use filename hash to consistently return same PDF for same file
-  const index = Math.abs(filename.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % demoPdfUrls.length;
-  const demoUrl = demoPdfUrls[index];
-  
-  try {
-    // Try to fetch the demo PDF and proxy it
-    const response = await fetch(demoUrl);
-    if (response.ok) {
-      const pdfBuffer = await response.arrayBuffer();
-      return new NextResponse(pdfBuffer, {
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `inline; filename="${filename}"`,
-          'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
-        },
-      });
-    }
-  } catch (error) {
-    console.warn('Failed to fetch demo PDF:', error);
-  }
-  
-  // Fallback: redirect to demo PDF
-  return NextResponse.redirect(demoUrl);
-}

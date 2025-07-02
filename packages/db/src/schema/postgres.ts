@@ -1,9 +1,9 @@
-import { 
-  pgTable, 
-  serial, 
-  text, 
-  timestamp, 
-  varchar, 
+import {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
   decimal,
   integer,
   boolean,
@@ -243,6 +243,40 @@ export const jobAssignments = pgTable('job_assignments', {
   uniqueActiveAssignment: unique().on(table.jobId, table.crewMemberId, table.isActive),
 }));
 
+// Email Verification Tokens table - for email verification and password resets
+export const verificationTokens = pgTable('verification_tokens', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: varchar('email', { length: 255 }).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  type: varchar('type', { length: 50 }).notNull(), // 'email_verification', 'password_reset'
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  emailIdx: index('verification_tokens_email_idx').on(table.email),
+  tokenIdx: index('verification_tokens_token_idx').on(table.token),
+  typeIdx: index('verification_tokens_type_idx').on(table.type),
+  expiresIdx: index('verification_tokens_expires_idx').on(table.expiresAt),
+}));
+
+// User Sessions table - for managing active user sessions
+export const userSessions = pgTable('user_sessions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  sessionToken: varchar('session_token', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  ipAddress: varchar('ip_address', { length: 45 }), // supports IPv6
+  userAgent: text('user_agent'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  lastAccessedAt: timestamp('last_accessed_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index('user_sessions_user_idx').on(table.userId),
+  tokenIdx: index('user_sessions_token_idx').on(table.sessionToken),
+  expiresIdx: index('user_sessions_expires_idx').on(table.expiresAt),
+  activeIdx: index('user_sessions_active_idx').on(table.isActive),
+}));
+
 // Define relationships
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   users: many(users),
@@ -266,6 +300,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   assignedJobs: many(jobs),
   assignedTasks: many(tasks),
+  sessions: many(userSessions),
 }));
 
 export const companiesRelations = relations(companies, ({ one, many }) => ({
@@ -367,5 +402,12 @@ export const jobAssignmentsRelations = relations(jobAssignments, ({ one }) => ({
   crewMember: one(crewMembers, {
     fields: [jobAssignments.crewMemberId],
     references: [crewMembers.id],
+  }),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
+    references: [users.id],
   }),
 }));

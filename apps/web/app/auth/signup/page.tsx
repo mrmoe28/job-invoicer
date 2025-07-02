@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
 
@@ -27,29 +26,17 @@ export default function SignupPage() {
     plan: 'pro', // Default to pro plan
     agreeToTerms: false,
   });
-  
+
   const [error, setError] = useState('');
   const [step, setStep] = useState(1); // 1: Personal Info, 2: Organization Info (removed plan selection)
-  const router = useRouter();
 
   // tRPC mutation hook
-  const signupMutation = trpc.signup.useMutation({
-    onSuccess: (result) => {
-      if (result.success) {
-        // Store user session
-        localStorage.setItem('pulse_user', JSON.stringify({
-          id: result.user.id,
-          email: result.user.email,
-          name: `${result.user.firstName} ${result.user.lastName}`,
-          role: result.user.role,
-          organizationId: result.organization.id,
-          organizationName: result.organization.name,
-          organizationSlug: result.organization.slug,
-          plan: result.organization.plan,
-        }));
+  const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
 
-        // Redirect to dashboard
-        router.push('/dashboard');
+  const signupMutation = trpc.register.useMutation({
+    onSuccess: (result) => {
+      if (result.success && result.requiresVerification) {
+        setShowEmailVerificationMessage(true);
       }
     },
     onError: (error) => {
@@ -75,7 +62,7 @@ export default function SignupPage() {
 
   const handleNext = () => {
     setError('');
-    
+
     if (step === 1) {
       const error = validateStep1();
       if (error) {
@@ -102,7 +89,6 @@ export default function SignupPage() {
       email: formData.email,
       password: formData.password,
       organizationName: formData.organizationName,
-      plan: formData.plan,
     });
   };
 
@@ -116,6 +102,53 @@ export default function SignupPage() {
   const updateFormData = (field: keyof SignupForm, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Show email verification message if signup was successful
+  if (showEmailVerificationMessage) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email!</h1>
+          <p className="text-gray-600 mb-6">
+            We've sent a verification link to <strong>{formData.email}</strong>.
+            Please check your email and click the verification link to activate your account.
+          </p>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-blue-800">
+              <strong>Next steps:</strong>
+            </p>
+            <ol className="text-sm text-blue-700 mt-2 list-decimal list-inside space-y-1">
+              <li>Check your email inbox (and spam folder)</li>
+              <li>Click the verification link</li>
+              <li>Return here to log in</li>
+            </ol>
+          </div>
+
+          <div className="space-y-3">
+            <Link
+              href="/login"
+              className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors inline-block"
+            >
+              Go to Login
+            </Link>
+            <button
+              onClick={() => setShowEmailVerificationMessage(false)}
+              className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
+              Back to Signup
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
@@ -138,17 +171,15 @@ export default function SignupPage() {
         <div className="flex items-center justify-center space-x-4 mb-8">
           {[1, 2].map((stepNumber) => (
             <div key={stepNumber} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step >= stepNumber 
-                  ? 'bg-orange-500 text-white' 
-                  : 'bg-gray-700 text-gray-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${step >= stepNumber
+                ? 'bg-orange-500 text-white'
+                : 'bg-gray-700 text-gray-400'
+                }`}>
                 {stepNumber}
               </div>
               {stepNumber < 2 && (
-                <div className={`w-8 h-1 ${
-                  step > stepNumber ? 'bg-orange-500' : 'bg-gray-700'
-                }`} />
+                <div className={`w-8 h-1 ${step > stepNumber ? 'bg-orange-500' : 'bg-gray-700'
+                  }`} />
               )}
             </div>
           ))}
@@ -159,7 +190,7 @@ export default function SignupPage() {
           {step === 1 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white mb-4">Personal Information</h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -238,7 +269,7 @@ export default function SignupPage() {
           {step === 2 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white mb-4">Organization Information</h3>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Organization Name
@@ -295,7 +326,7 @@ export default function SignupPage() {
                 Back
               </button>
             )}
-            
+
             {step < 2 ? (
               <button
                 type="button"

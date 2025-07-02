@@ -1,4 +1,4 @@
-// Standalone API for ConstructFlow/PulseCRM
-// This provides working CRUD functionality with demo data for immediate deployment
+// Production API for ConstructFlow/PulseCRM
+// This provides working CRUD functionality with real database connections
 
-export * from './demo-api';
+export * from './production-api';
