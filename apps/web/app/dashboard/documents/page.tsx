@@ -1,5 +1,6 @@
 'use client';
 
+import PDFPreview from '@/components/pdf-preview';
 import { Download, Eye, File, Grid, List, Lock, Plus, Search, Shield, Trash2, Upload } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
@@ -277,9 +278,7 @@ export default function DocumentsPage() {
         break;
 
       case 'delete':
-        if (confirm(`Are you sure you want to delete "${document.name}"?`)) {
-          setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-        }
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
         break;
     }
   }, [documents]);
@@ -288,11 +287,8 @@ export default function DocumentsPage() {
   const handleBulkDelete = useCallback(() => {
     if (selectedDocuments.length === 0) return;
 
-    const count = selectedDocuments.length;
-    if (confirm(`Are you sure you want to delete ${count} document${count > 1 ? 's' : ''}?`)) {
-      setDocuments(prev => prev.filter(doc => !selectedDocuments.includes(doc.id)));
-      setSelectedDocuments([]);
-    }
+    setDocuments(prev => prev.filter(doc => !selectedDocuments.includes(doc.id)));
+    setSelectedDocuments([]);
   }, [selectedDocuments]);
 
   const handleSelectDocument = useCallback((docId: string, checked: boolean) => {
@@ -550,6 +546,7 @@ export default function DocumentsPage() {
                     checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
                     onChange={(e) => handleSelectAll(e.target.checked)}
                     className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                    aria-label="Select all documents"
                   />
                   Select All
                 </label>
@@ -571,6 +568,7 @@ export default function DocumentsPage() {
                           checked={selectedDocuments.includes(doc.id)}
                           onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
                           className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                          aria-label={`Select document ${doc.name}`}
                         />
                         <div className="flex items-center gap-2">
                           {/* Security Badge */}
@@ -585,16 +583,29 @@ export default function DocumentsPage() {
                         </div>
                       </div>
 
-                      <div className="aspect-[3/4] bg-gray-700 rounded-lg mb-4 flex items-center justify-center relative">
-                        {getFileIcon(doc.type)}
-                        {securityIcon && (
-                          <div className="absolute top-2 right-2">
-                            {securityIcon}
-                          </div>
+                      <div className="aspect-[3/4] bg-gray-700 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden">
+                        {/* Show PDF preview for PDF documents with URL, otherwise show file icon */}
+                        {doc.type === 'PDF Document' && doc.url ? (
+                          <PDFPreview
+                            fileUrl={doc.url}
+                            fileName={doc.name}
+                            className="w-full h-full"
+                          />
+                        ) : (
+                          <>
+                            {getFileIcon(doc.type)}
+                            {securityIcon && (
+                              <div className="absolute top-2 right-2">
+                                {securityIcon}
+                              </div>
+                            )}
+                          </>
                         )}
+
+                        {/* Access count overlay */}
                         {doc.accessCount && doc.accessCount > 0 && (
                           <div className="absolute bottom-2 left-2">
-                            <span className="text-xs bg-gray-900 text-gray-300 px-2 py-1 rounded">
+                            <span className="text-xs bg-black bg-opacity-70 text-gray-300 px-2 py-1 rounded">
                               {doc.accessCount} views
                             </span>
                           </div>
@@ -686,6 +697,7 @@ export default function DocumentsPage() {
                             checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
                             onChange={(e) => handleSelectAll(e.target.checked)}
                             className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                            aria-label="Select all documents"
                           />
                         </th>
                         <th className="text-left p-4 font-medium">Document</th>
@@ -706,6 +718,7 @@ export default function DocumentsPage() {
                               checked={selectedDocuments.includes(doc.id)}
                               onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
                               className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                              aria-label={`Select document ${doc.name}`}
                             />
                           </td>
                           <td className="p-4">
@@ -778,7 +791,7 @@ export default function DocumentsPage() {
             <div className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
               <EnhancedPDFUpload
                 onUploadComplete={handleUploadComplete}
-                onUploadError={(error) => console.error('Upload error:', error)}
+                onUploadError={(error: any) => console.error('Upload error:', error)}
                 onClose={() => setShowUploadModal(false)}
                 className="w-full"
               />

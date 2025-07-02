@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
-import { trpc } from '@/lib/trpc';
 
 interface UserProfile {
   firstName: string;
@@ -11,6 +10,8 @@ interface UserProfile {
   phone: string;
   role: string;
   profileImage?: string;
+  companyName: string;
+  companyLogo?: string;
 }
 
 export default function ProfilePage() {
@@ -20,7 +21,9 @@ export default function ProfilePage() {
     email: '',
     phone: '',
     role: 'Administrator',
-    profileImage: ''
+    profileImage: '',
+    companyName: '',
+    companyLogo: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -28,6 +31,11 @@ export default function ProfilePage() {
   const [previewImage, setPreviewImage] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Company logo states
+  const [previewCompanyLogo, setPreviewCompanyLogo] = useState<string>('');
+  const [selectedCompanyLogoFile, setSelectedCompanyLogoFile] = useState<File | null>(null);
+  const companyLogoInputRef = useRef<HTMLInputElement>(null);
 
   // Load user data from localStorage on component mount
   useEffect(() => {
@@ -41,11 +49,16 @@ export default function ProfilePage() {
           email: user.email || '',
           phone: user.phone || '', // Added phone storage
           role: user.role || 'Administrator',
-          profileImage: user.profileImage || ''
+          profileImage: user.profileImage || '',
+          companyName: user.companyName || '',
+          companyLogo: user.companyLogo || ''
         };
         setProfile(userProfile);
         if (userProfile.profileImage) {
           setPreviewImage(userProfile.profileImage);
+        }
+        if (userProfile.companyLogo) {
+          setPreviewCompanyLogo(userProfile.companyLogo);
         }
       } catch (error) {
         console.error('Error parsing user data:', error);
@@ -61,7 +74,7 @@ export default function ProfilePage() {
         setError('Please select a valid image file (JPG, PNG, GIF)');
         return;
       }
-      
+
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         setError('Image file size must be less than 5MB');
@@ -69,7 +82,7 @@ export default function ProfilePage() {
       }
 
       setSelectedFile(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -77,7 +90,7 @@ export default function ProfilePage() {
         setPreviewImage(result);
       };
       reader.readAsDataURL(file);
-      
+
       // Clear any existing errors
       setError('');
     }
@@ -96,6 +109,50 @@ export default function ProfilePage() {
     fileInputRef.current?.click();
   };
 
+  // Company logo handlers
+  const handleCompanyLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file (JPG, PNG, GIF)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image file size must be less than 5MB');
+        return;
+      }
+
+      setSelectedCompanyLogoFile(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setPreviewCompanyLogo(result);
+      };
+      reader.readAsDataURL(file);
+
+      // Clear any existing errors
+      setError('');
+    }
+  };
+
+  const handleRemoveCompanyLogo = () => {
+    setSelectedCompanyLogoFile(null);
+    setPreviewCompanyLogo('');
+    setProfile(prev => ({ ...prev, companyLogo: '' }));
+    if (companyLogoInputRef.current) {
+      companyLogoInputRef.current.value = '';
+    }
+  };
+
+  const handleCompanyLogoUpload = () => {
+    companyLogoInputRef.current?.click();
+  };
+
   const handleInputChange = (field: keyof UserProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
     // Clear messages when user starts typing
@@ -112,7 +169,7 @@ export default function ProfilePage() {
       // Simulate API call for now
       // TODO: Implement actual user update API
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Update localStorage with new data including profile image
       const userData = localStorage.getItem('pulse_user');
       if (userData) {
@@ -121,13 +178,20 @@ export default function ProfilePage() {
         user.email = profile.email;
         user.phone = profile.phone;
         user.role = profile.role;
-        
+        user.companyName = profile.companyName;
+
         // Save profile image if one was selected
         if (previewImage) {
           user.profileImage = previewImage;
           setProfile(prev => ({ ...prev, profileImage: previewImage }));
         }
-        
+
+        // Save company logo if one was selected
+        if (previewCompanyLogo) {
+          user.companyLogo = previewCompanyLogo;
+          setProfile(prev => ({ ...prev, companyLogo: previewCompanyLogo }));
+        }
+
         localStorage.setItem('pulse_user', JSON.stringify(user));
       }
 
@@ -137,10 +201,10 @@ export default function ProfilePage() {
       }
 
       setSuccessMessage('Profile updated successfully!');
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(''), 3000);
-      
+
     } catch (error) {
       setError('Failed to update profile. Please try again.');
       console.error('Profile update error:', error);
@@ -196,7 +260,7 @@ export default function ProfilePage() {
                     </svg>
                   </div>
                 )}
-                
+
                 {/* Remove button - only show if there's an image */}
                 {(previewImage || profile.profileImage) && (
                   <button
@@ -208,7 +272,7 @@ export default function ProfilePage() {
                   </button>
                 )}
               </div>
-              
+
               {/* Upload Controls */}
               <div className="flex-1">
                 <div className="mb-4">
@@ -217,7 +281,7 @@ export default function ProfilePage() {
                     JPG, PNG or GIF. Max file size: 5MB. Recommended size: 400x400px
                   </p>
                 </div>
-                
+
                 <div className="flex space-x-3">
                   <button
                     onClick={handleImageUpload}
@@ -225,7 +289,7 @@ export default function ProfilePage() {
                   >
                     Choose File
                   </button>
-                  
+
                   {selectedFile && (
                     <div className="flex items-center text-sm text-gray-300">
                       <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,13 +299,88 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Hidden file input */}
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handleImageSelect}
+                  className="hidden"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Company Logo */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl">
+          <div className="p-6 border-b border-gray-700">
+            <h3 className="text-lg font-semibold text-white">Company Logo</h3>
+          </div>
+          <div className="p-6">
+            <div className="flex items-center space-x-6">
+              {/* Current Company Logo */}
+              <div className="relative">
+                {previewCompanyLogo || profile.companyLogo ? (
+                  <img
+                    src={previewCompanyLogo || profile.companyLogo}
+                    alt="Company Logo"
+                    className="w-24 h-24 rounded-lg object-contain border-4 border-gray-600 bg-white"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-lg bg-gray-600 border-4 border-gray-600 flex items-center justify-center">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Remove button - only show if there's a logo */}
+                {(previewCompanyLogo || profile.companyLogo) && (
+                  <button
+                    onClick={handleRemoveCompanyLogo}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm transition-colors"
+                    title="Remove logo"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* Upload Controls */}
+              <div className="flex-1">
+                <div className="mb-4">
+                  <h4 className="text-white font-medium mb-2">Upload company logo</h4>
+                  <p className="text-gray-400 text-sm mb-4">
+                    JPG, PNG or GIF. Max file size: 5MB. Recommended size: 400x400px
+                  </p>
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleCompanyLogoUpload}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Choose File
+                  </button>
+
+                  {selectedCompanyLogoFile && (
+                    <div className="flex items-center text-sm text-gray-300">
+                      <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {selectedCompanyLogoFile.name}
+                    </div>
+                  )}
+                </div>
+
+                {/* Hidden file input */}
+                <input
+                  ref={companyLogoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCompanyLogoSelect}
                   className="hidden"
                 />
               </div>
@@ -295,7 +434,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">Role</label>
-                <select 
+                <select
                   value={profile.role}
                   onChange={(e) => handleInputChange('role', e.target.value)}
                   className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -305,13 +444,22 @@ export default function ProfilePage() {
                   <option value="Crew Member">Crew Member</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Company Name</label>
+                <input
+                  type="text"
+                  value={profile.companyName}
+                  onChange={(e) => handleInputChange('companyName', e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <button 
+          <button
             onClick={handleSave}
             disabled={isLoading}
             className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"

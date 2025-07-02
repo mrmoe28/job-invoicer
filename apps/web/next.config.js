@@ -89,7 +89,7 @@ const nextConfig = {
     return [
       {
         // Allow iframe embedding for file API routes (PDFs, images)
-        source: '/api/files/(.*)',
+        source: '/api/files/:path*',
         headers: [
           {
             key: 'X-Frame-Options',
@@ -106,6 +106,10 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             value: "frame-ancestors 'self'",
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'fullscreen=()',
           },
         ],
       },
@@ -124,6 +128,10 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'fullscreen=()',
           },
         ],
       },

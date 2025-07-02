@@ -14,7 +14,7 @@ type Schedule = {
 
 function SchedulingContent() {
   const searchParams = useSearchParams();
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 5, 14)); // June 14, 2025
+  const [currentDate, setCurrentDate] = useState(new Date()); // Use actual current date
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
 
@@ -44,6 +44,10 @@ function SchedulingContent() {
         setCurrentDate(paramDate);
         setSelectedDate(paramDate);
       }
+    } else {
+      // If no date parameter, set selected date to today to highlight it
+      const today = new Date();
+      setSelectedDate(today);
     }
   }, [searchParams]);
 
@@ -244,19 +248,34 @@ function SchedulingContent() {
               <button
                 onClick={() => navigateMonth(-1)}
                 className="p-2 text-gray-400 hover:text-white"
+                aria-label="Previous month"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
 
-              <h4 className="text-lg font-semibold text-white">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </h4>
+              <div className="flex items-center gap-4">
+                <h4 className="text-lg font-semibold text-white">
+                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                </h4>
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    setCurrentDate(today);
+                    setSelectedDate(today);
+                  }}
+                  className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded font-medium transition-colors"
+                  title="Go to today"
+                >
+                  Today
+                </button>
+              </div>
 
               <button
                 onClick={() => navigateMonth(1)}
                 className="p-2 text-gray-400 hover:text-white"
+                aria-label="Next month"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -282,25 +301,30 @@ function SchedulingContent() {
                     onClick={day ? () => handleDateClick(day) : undefined}
                     disabled={day === null}
                     className={`aspect-square flex flex-col items-center justify-start p-1 text-sm rounded-lg transition-colors relative ${day === null
-                        ? 'cursor-default'
-                        : isSelected(day)
-                          ? 'bg-blue-600 text-white font-semibold'
-                          : isToday(day)
-                            ? 'bg-orange-500 text-white font-semibold'
-                            : 'text-gray-300 hover:bg-gray-700 cursor-pointer'
+                      ? 'cursor-default'
+                      : isSelected(day)
+                        ? 'bg-blue-600 text-white font-semibold'
+                        : isToday(day)
+                          ? 'bg-orange-500 text-white font-semibold ring-2 ring-orange-300'
+                          : 'text-gray-300 hover:bg-gray-700 cursor-pointer'
                       }`}
                   >
                     {day && (
                       <>
                         <span className="text-xs font-medium mb-1">{day}</span>
+                        {isToday(day) && (
+                          <span className="text-[7px] font-bold text-white bg-white bg-opacity-20 px-1 rounded absolute top-0 right-0">
+                            TODAY
+                          </span>
+                        )}
                         {daySchedules.length > 0 && (
                           <div className="flex flex-col gap-0.5 w-full">
                             {daySchedules.slice(0, 2).map((schedule, scheduleIndex) => (
                               <div
                                 key={scheduleIndex}
                                 className={`text-[8px] px-1 py-0.5 rounded truncate w-full ${isSelected(day) || isToday(day)
-                                    ? 'bg-white bg-opacity-20 text-white'
-                                    : 'bg-orange-500 text-white'
+                                  ? 'bg-white bg-opacity-20 text-white'
+                                  : 'bg-orange-500 text-white'
                                   }`}
                                 title={`${schedule.employee}: ${schedule.job} (${schedule.startTime}-${schedule.endTime})`}
                               >
@@ -429,6 +453,7 @@ function SchedulingContent() {
                     value={scheduleForm.date || selectedDate?.toISOString().split('T')[0] || ''}
                     onChange={e => setScheduleForm(f => ({ ...f, date: e.target.value }))}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                    aria-label="Schedule date"
                   />
                 </div>
                 <div>
@@ -437,6 +462,7 @@ function SchedulingContent() {
                     value={scheduleForm.employee}
                     onChange={e => setScheduleForm(f => ({ ...f, employee: e.target.value }))}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                    aria-label="Select employee or team"
                   >
                     <option value="">Select employee...</option>
                     <option value="john">John Smith</option>
@@ -452,6 +478,7 @@ function SchedulingContent() {
                     value={scheduleForm.job}
                     onChange={e => setScheduleForm(f => ({ ...f, job: e.target.value }))}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400"
+                    aria-label="Job or task description"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -462,6 +489,7 @@ function SchedulingContent() {
                       value={scheduleForm.startTime}
                       onChange={e => setScheduleForm(f => ({ ...f, startTime: e.target.value }))}
                       className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                      aria-label="Schedule start time"
                     />
                   </div>
                   <div>
@@ -471,6 +499,7 @@ function SchedulingContent() {
                       value={scheduleForm.endTime}
                       onChange={e => setScheduleForm(f => ({ ...f, endTime: e.target.value }))}
                       className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                      aria-label="Schedule end time"
                     />
                   </div>
                 </div>

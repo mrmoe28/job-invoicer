@@ -3,6 +3,7 @@
 import { CheckCircle, Download, Eye, FileText, Upload } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import EnhancedFileUpload from './enhanced-file-upload';
+import PDFPreview from './pdf-preview';
 import UniversalDocumentViewer from './pdf/universal-document-viewer';
 
 interface SolarDocument {
@@ -128,41 +129,52 @@ export default function SolarDocumentManager() {
                         </button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {documents.map((doc) => (
-                            <div key={doc.id} className="bg-gray-700 rounded-lg p-4 hover:bg-gray-650 transition-colors">
-                                <div className="flex items-start justify-between mb-3">
-                                    <FileText className="w-8 h-8 text-orange-500 flex-shrink-0" />
-                                    <div className="flex items-center gap-1">
-                                        <CheckCircle className="w-4 h-4 text-green-400" />
+                            <div key={doc.id} className="bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-colors">
+                                {/* PDF Preview Section */}
+                                <div className="relative">
+                                    <PDFPreview
+                                        fileUrl={doc.url}
+                                        fileName={doc.name}
+                                        width={300}
+                                        height={200}
+                                        className="w-full"
+                                    />
+                                    {/* Status Badge Overlay */}
+                                    <div className="absolute top-3 left-3 flex items-center gap-1 bg-black bg-opacity-70 rounded-full px-2 py-1">
+                                        <CheckCircle className="w-3 h-3 text-green-400" />
                                         <span className="text-xs text-green-400">Ready</span>
                                     </div>
                                 </div>
 
-                                <h3 className="font-medium text-white mb-2 truncate" title={doc.name}>
-                                    {doc.name}
-                                </h3>
+                                {/* Document Info Section */}
+                                <div className="p-4">
+                                    <h3 className="font-medium text-white mb-2 truncate" title={doc.name}>
+                                        {doc.name}
+                                    </h3>
 
-                                <div className="text-sm text-gray-400 mb-4 space-y-1">
-                                    <div>Size: {doc.size}</div>
-                                    <div>Uploaded: {doc.uploadedAt}</div>
-                                </div>
+                                    <div className="text-sm text-gray-400 mb-4 space-y-1">
+                                        <div>Size: {doc.size}</div>
+                                        <div>Uploaded: {doc.uploadedAt}</div>
+                                    </div>
 
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleViewDocument(doc)}
-                                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center gap-1 transition-colors"
-                                    >
-                                        <Eye className="w-4 h-4" />
-                                        View
-                                    </button>
-                                    <button
-                                        onClick={() => handleDownloadDocument(doc)}
-                                        className="bg-gray-600 hover:bg-gray-500 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center transition-colors"
-                                        title="Download PDF"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleViewDocument(doc)}
+                                            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center gap-1 transition-colors"
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                            View
+                                        </button>
+                                        <button
+                                            onClick={() => handleDownloadDocument(doc)}
+                                            className="bg-gray-600 hover:bg-gray-500 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center transition-colors"
+                                            title="Download PDF"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -229,7 +241,7 @@ export default function SolarDocumentManager() {
                         <div>
                             <h3 className="font-medium text-white mb-1">View & Review</h3>
                             <p className="text-gray-400">
-                                Click "View" to open documents in the secure PDF viewer with zoom and navigation controls.
+                                Preview documents in the cards, then click "View" for full-screen reading with zoom controls.
                             </p>
                         </div>
                     </div>

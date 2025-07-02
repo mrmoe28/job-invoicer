@@ -144,10 +144,8 @@ export default function JobsPage() {
   }, [jobs]);
 
   const handleJobDelete = useCallback((jobId: string) => {
-    if (confirm('Are you sure you want to delete this job?')) {
-      // TODO: Implement job deletion API
-      console.log('Delete job:', jobId);
-    }
+    // TODO: Implement job deletion API
+    console.log('Delete job:', jobId);
   }, []);
 
   const handleSelectJob = useCallback((jobId: string, checked: boolean) => {
@@ -179,6 +177,10 @@ export default function JobsPage() {
       window.removeEventListener('openJobModal', handleOpenJobModal);
     };
   }, []);
+
+  const handleDeleteJob = (id: string) => {
+    setJobs(jobs.filter(job => job.id !== id));
+  };
 
   return (
     <DashboardLayout title="Job Management">
