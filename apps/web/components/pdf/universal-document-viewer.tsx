@@ -219,6 +219,30 @@ const PDFViewer: React.FC<{
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [actualFileUrl, setActualFileUrl] = useState(fileUrl);
+
+    // Check if file exists and fallback to public directory if needed
+    useEffect(() => {
+        const checkFileExists = async () => {
+            try {
+                const response = await fetch(fileUrl, { method: 'HEAD' });
+                if (!response.ok) {
+                    // If API file doesn't exist, try public directory
+                    if (fileUrl.includes('/api/files/')) {
+                        const publicUrl = fileUrl.replace('/api/files/', '/');
+                        const publicResponse = await fetch(publicUrl, { method: 'HEAD' });
+                        if (publicResponse.ok) {
+                            setActualFileUrl(publicUrl);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking file existence:', error);
+            }
+        };
+
+        checkFileExists();
+    }, [fileUrl]);
 
     const handleIframeLoad = () => {
         setLoading(false);
@@ -231,7 +255,7 @@ const PDFViewer: React.FC<{
 
     const downloadPDF = () => {
         const link = document.createElement('a');
-        link.href = fileUrl;
+        link.href = actualFileUrl;
         link.download = fileName || 'document.pdf';
         document.body.appendChild(link);
         link.click();
@@ -243,7 +267,7 @@ const PDFViewer: React.FC<{
     };
 
     const openInNewTab = () => {
-        window.open(fileUrl, '_blank');
+        window.open(actualFileUrl, '_blank');
     };
 
     return (
@@ -333,7 +357,7 @@ const PDFViewer: React.FC<{
                 )}
 
                 <iframe
-                    src={`${fileUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+                    src={`${actualFileUrl}#toolbar=1&navpanes=1&scrollbar=1`}
                     width="100%"
                     height="100%"
                     onLoad={handleIframeLoad}
@@ -350,10 +374,8 @@ const PDFViewer: React.FC<{
 export default function UniversalDocumentViewer({
     fileUrl,
     fileName,
-    documentId,
     className,
     onClose,
-    showControls = true,
     height = '800px',
     onLoadSuccess,
     onLoadError,

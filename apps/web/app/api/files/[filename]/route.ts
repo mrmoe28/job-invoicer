@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { readFile, stat } from 'fs/promises';
 import { existsSync } from 'fs';
+import { readFile, stat } from 'fs/promises';
+import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
 export async function GET(
@@ -49,18 +49,27 @@ export async function GET(
 
     const contentType = contentTypeMap[ext] || 'application/octet-stream';
 
+    // Create response headers
+    const headers: HeadersInit = {
+      'Content-Type': contentType,
+      'Content-Length': fileStats.size.toString(),
+      'Content-Disposition': `inline; filename="${filename}"`,
+      'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
+    // Allow iframe embedding for PDFs and images
+    if (ext === '.pdf' || contentType.startsWith('image/')) {
+      headers['X-Frame-Options'] = 'SAMEORIGIN';
+      headers['Content-Security-Policy'] = "frame-ancestors 'self'";
+    }
+
     // Create response with proper headers
     const response = new NextResponse(new Uint8Array(fileBuffer), {
       status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Content-Length': fileStats.size.toString(),
-        'Content-Disposition': `inline; filename="${filename}"`,
-        'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
+      headers,
     });
 
     return response;
