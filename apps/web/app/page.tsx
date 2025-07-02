@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function HomePage() {
   const router = useRouter();
@@ -20,10 +20,12 @@ export default function HomePage() {
         } else {
           // Invalid user data, clear and show landing
           localStorage.removeItem('pulse_user');
+          localStorage.removeItem('pulse_session_active');
         }
       } catch {
         // Invalid JSON, clear and show landing
         localStorage.removeItem('pulse_user');
+        localStorage.removeItem('pulse_session_active');
       }
     }
 

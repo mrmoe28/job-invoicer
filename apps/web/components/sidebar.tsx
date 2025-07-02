@@ -73,6 +73,7 @@ export default function Sidebar({ isOpen, onCloseAction }: SidebarProps) {
 
   const handleLogout = () => {
     localStorage.removeItem('pulse_user');
+    localStorage.removeItem('pulse_session_active');
     router.push('/auth');
   };
 
@@ -80,7 +81,7 @@ export default function Sidebar({ isOpen, onCloseAction }: SidebarProps) {
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
           onClick={onCloseAction}
         />
@@ -118,8 +119,8 @@ export default function Sidebar({ isOpen, onCloseAction }: SidebarProps) {
                   onClick={onCloseAction}
                   className={`
                     flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150
-                    ${isActive 
-                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
+                    ${isActive
+                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                     }
                   `}

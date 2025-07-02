@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 const Icons = {
   dashboard: (
@@ -106,12 +106,12 @@ export default function TopNavigation({ user }: TopNavigationProps) {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
+
     // Also listen for custom profile update events
     const handleProfileUpdate = () => {
       handleStorageChange();
     };
-    
+
     window.addEventListener('profileImageUpdated', handleProfileUpdate);
 
     return () => {
@@ -123,7 +123,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
   const renderAvatar = (size: 'small' | 'medium' = 'small') => {
     const sizeClasses = size === 'small' ? 'w-8 h-8' : 'w-10 h-10';
     const textSize = size === 'small' ? 'text-sm' : 'text-base';
-    
+
     if (profileImage) {
       return (
         <img
@@ -133,24 +133,21 @@ export default function TopNavigation({ user }: TopNavigationProps) {
         />
       );
     }
-    
+
     return (
       <div className={`${sizeClasses} bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center`}>
         <span className={`text-white font-medium ${textSize}`}>
-          {(user.avatar ?? user.name ?? 'U').slice(0,1).toUpperCase()}
+          {(user.avatar ?? user.name ?? 'U').slice(0, 1).toUpperCase()}
         </span>
       </div>
     );
   };
 
   const handleLogout = () => {
-    // Only clear session flag, preserve user data and settings for next login
+    // Clear both session and user data for proper logout
     localStorage.removeItem('pulse_session_active');
-    
-    // Optionally: You could also clear user data completely with:
-    // localStorage.removeItem('pulse_user');
-    // But for better UX, we preserve profile settings, images, etc.
-    
+    localStorage.removeItem('pulse_user');
+
     router.push('/auth');
   };
 
@@ -210,11 +207,10 @@ export default function TopNavigation({ user }: TopNavigationProps) {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${
-                    isActive 
-                      ? 'bg-orange-500 text-white' 
+                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive
+                      ? 'bg-orange-500 text-white'
                       : 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  }`}
+                    }`}
                 >
                   <span className="mr-2">
                     {item.icon}
@@ -228,7 +224,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
           {/* Right side - New Job, More, Search, Notifications, User */}
           <div className="ml-auto flex items-center space-x-4">
             {/* New Job Button */}
-            <button 
+            <button
               onClick={handleNewJob}
               className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-sm font-medium border border-gray-700 transition-colors"
             >
@@ -240,7 +236,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
 
             {/* More dropdown */}
             <div className="relative" ref={moreRef}>
-              <button 
+              <button
                 onClick={() => setIsMoreOpen(!isMoreOpen)}
                 className="text-gray-300 hover:text-white px-3 py-2 rounded-lg text-sm font-medium border border-gray-700"
               >
@@ -277,7 +273,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
             </div>
 
             {/* Search */}
-            <button 
+            <button
               onClick={handleGlobalSearch}
               className="text-gray-400 hover:text-white transition-colors"
               title="Global search"
@@ -325,7 +321,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
 
             {/* User Profile & Settings Dropdown */}
             <div className="relative" ref={settingsRef}>
-              <button 
+              <button
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                 className="flex items-center space-x-3 text-right hover:bg-gray-800 px-3 py-2 rounded-lg transition-colors"
               >

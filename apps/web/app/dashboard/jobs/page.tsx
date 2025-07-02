@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
 import { trpc } from '../../../lib/trpc';
@@ -47,7 +48,7 @@ export default function JobsPage() {
       setShowCreateModal(false);
       setEditJob(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error creating job:', error);
       alert('Failed to create job. Please try again.');
     },
@@ -71,7 +72,6 @@ export default function JobsPage() {
     console.log("Changing job view mode to:", mode);
     // TODO: Implement different view layouts (list/grid/kanban)
   }, []);
-
 
   const handleJobColumns = useCallback(() => {
     setShowColumnSettings(!showColumnSettings);
@@ -106,7 +106,6 @@ export default function JobsPage() {
   const getVisibleColumns = useCallback(() => {
     return columnSettings.filter(col => col.visible).sort((a, b) => a.order - b.order);
   }, [columnSettings]);
-
 
   const handleSaveJob = (jobData: any) => {
     if (!jobData.title?.trim()) {
@@ -144,8 +143,8 @@ export default function JobsPage() {
   }, [jobs]);
 
   const handleJobDelete = useCallback((jobId: string) => {
-    // TODO: Implement job deletion API
-    console.log('Delete job:', jobId);
+    // TODO: Implement job deletion logic
+    console.log('Deleting job:', jobId);
   }, []);
 
   const handleSelectJob = useCallback((jobId: string, checked: boolean) => {
@@ -159,12 +158,12 @@ export default function JobsPage() {
 
   const handleSelectAllJobs = useCallback((checked: boolean) => {
     if (checked) {
-      setSelectedJobs(['website-redesign']);
+      setSelectedJobs(jobs.map(job => job.id));
     } else {
       setSelectedJobs([]);
     }
     console.log("Select all jobs:", checked);
-  }, []);
+  }, [jobs]);
 
   // Listen for job creation modal trigger from navigation
   useEffect(() => {
@@ -178,24 +177,34 @@ export default function JobsPage() {
     };
   }, []);
 
-  const handleDeleteJob = (id: string) => {
-    setJobs(jobs.filter(job => job.id !== id));
-  };
+  const router = useRouter();
 
   return (
     <DashboardLayout title="Job Management">
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => alert('Assign Crew Member modal coming soon!')}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            Assign Crew Member
-          </button>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center px-3 py-2 text-gray-400 hover:text-white transition-colors"
+              title="Go back"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+            <button
+              onClick={() => alert('Assign Crew Member modal coming soon!')}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Assign Crew Member
+            </button>
+          </div>
 
           <div className="flex items-center space-x-4">
             <div className="relative">

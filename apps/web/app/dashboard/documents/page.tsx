@@ -3,6 +3,7 @@
 import PDFPreview from '@/components/pdf-preview';
 import { Download, Eye, File, Grid, List, Lock, Plus, Search, Shield, Trash2, Upload } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/layout/dashboard-layout';
 import { getSecurityPresetForDocument } from '../../../lib/security-presets';
@@ -48,89 +49,15 @@ export default function DocumentsPage() {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
 
+  const router = useRouter();
+
   // Ensure client-side rendering for hydration consistency
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   // Sample PDF documents with enhanced metadata and security levels
-  const initialDocuments: DocumentItem[] = [
-    {
-      id: '1',
-      name: 'Construction Contract - Phase 1.pdf',
-      type: 'Contract',
-      status: 'Active',
-      size: '2.4 MB',
-      date: '2024-07-01',
-      related: 'Project Alpha',
-      url: '/api/files/sample-contract.pdf',
-      tags: ['contract', 'phase-1', 'legal'],
-      pages: 12,
-      lastViewed: '2024-07-02',
-      securityLevel: 'restricted',
-      accessCount: 8
-    },
-    {
-      id: '2',
-      name: 'Building Permit Application.pdf',
-      type: 'Permit',
-      status: 'Pending',
-      size: '1.8 MB',
-      date: '2024-06-28',
-      related: 'City Hall',
-      url: '/api/files/sample-contract.pdf',
-      tags: ['permit', 'legal', 'application'],
-      pages: 8,
-      lastViewed: undefined,
-      securityLevel: 'public',
-      accessCount: 3
-    },
-    {
-      id: '3',
-      name: 'Confidential Safety Report.pdf',
-      type: 'Report',
-      status: 'Reviewed',
-      size: '3.2 MB',
-      date: '2024-06-25',
-      related: 'Safety Team',
-      url: '/api/files/sample-contract.pdf',
-      tags: ['safety', 'compliance', 'confidential'],
-      pages: 18,
-      lastViewed: '2024-06-30',
-      securityLevel: 'confidential',
-      accessCount: 2
-    },
-    {
-      id: '4',
-      name: 'Internal Company Policy.pdf',
-      type: 'Policy',
-      status: 'Active',
-      size: '1.2 MB',
-      date: '2024-06-20',
-      related: 'HR Department',
-      url: '/api/files/sample-contract.pdf',
-      tags: ['policy', 'internal', 'hr'],
-      pages: 6,
-      lastViewed: '2024-07-01',
-      securityLevel: 'restricted',
-      accessCount: 15
-    },
-    {
-      id: '5',
-      name: 'Public Project Specifications.pdf',
-      type: 'Specifications',
-      status: 'Published',
-      size: '4.1 MB',
-      date: '2024-06-15',
-      related: 'Public Works',
-      url: '/api/files/sample-contract.pdf',
-      tags: ['public', 'specifications', 'project'],
-      pages: 24,
-      lastViewed: '2024-06-28',
-      securityLevel: 'public',
-      accessCount: 45
-    }
-  ];
+  const initialDocuments: DocumentItem[] = [];
 
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
     if (typeof window === 'undefined') return initialDocuments;
@@ -395,6 +322,16 @@ export default function DocumentsPage() {
         {/* Header Actions */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center px-3 py-2 text-gray-400 hover:text-white transition-colors"
+              title="Go back"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
             <button
               onClick={() => setShowUploadModal(true)}
               className="inline-flex items-center px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
