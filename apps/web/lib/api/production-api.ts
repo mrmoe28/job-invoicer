@@ -7,11 +7,8 @@ const users = new Map<string, any>();
 const organizations = new Map<string, any>();
 const verificationTokens = new Map<string, any>();
 
-// Mock email function - will be replaced with real email service
-async function sendVerificationEmail({ email, firstName, verificationUrl }: { email: string; firstName: string; verificationUrl: string }) {
-    console.log(`Mock: Sending verification email to ${email} (${firstName}) with URL: ${verificationUrl}`);
-    return { success: true };
-}
+// Import real email service
+import { sendVerificationEmail } from '../email';
 
 const t = initTRPC.create();
 
@@ -60,8 +57,9 @@ export const appRouter = t.router({
                 };
                 organizations.set(orgId, organization);
 
-                // Create user
+                // Create user (auto-verify in development)
                 const userId = randomBytes(16).toString('hex');
+                const isDevelopment = process.env.NODE_ENV === 'development';
                 const user = {
                     id: userId,
                     email: input.email,
@@ -70,7 +68,7 @@ export const appRouter = t.router({
                     firstName: input.firstName,
                     lastName: input.lastName,
                     organizationId: orgId,
-                    emailVerified: false,
+                    emailVerified: isDevelopment, // Auto-verify in development
                     createdAt: new Date(),
                     updatedAt: new Date(),
                 };
@@ -105,7 +103,7 @@ export const appRouter = t.router({
                         }
                     }
 
-                    const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
+                    const verificationUrl = `${baseUrl}/auth/verify?token=${verificationToken}`;
                     await sendVerificationEmail({
                         email: user.email,
                         firstName: user.firstName,
@@ -118,9 +116,11 @@ export const appRouter = t.router({
 
                 return {
                     success: true,
-                    message: 'User registered successfully. Please check your email for verification.',
+                    message: isDevelopment
+                        ? 'User registered successfully. Email verification bypassed in development.'
+                        : 'User registered successfully. Please check your email for verification.',
                     userId: user.id,
-                    requiresVerification: true
+                    requiresVerification: !isDevelopment
                 };
             } catch (error) {
                 console.error('Registration error:', error);
@@ -215,8 +215,9 @@ export const appRouter = t.router({
                     });
                 }
 
-                // Check if email is verified
-                if (!user.emailVerified) {
+                // Check if email is verified (bypass in development)
+                const isDevelopment = process.env.NODE_ENV === 'development';
+                if (!user.emailVerified && !isDevelopment) {
                     throw new TRPCError({
                         code: 'FORBIDDEN',
                         message: 'Please verify your email before logging in'
