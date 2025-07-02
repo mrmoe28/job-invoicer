@@ -7,7 +7,7 @@ interface DashboardLayoutProps {
     subtitle?: string;
 }
 
-export function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             {/* Main Content */}

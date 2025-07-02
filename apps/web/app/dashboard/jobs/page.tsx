@@ -1,5 +1,8 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { useState, useCallback, useEffect } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
 import { trpc } from '../../../lib/trpc';
@@ -35,7 +38,7 @@ export default function JobsPage() {
   const utils = trpc.useUtils();
   const { data: jobs = [], isLoading } = trpc.getJobs.useQuery({});
   const { data: companies = [] } = trpc.getCompanies.useQuery();
-  
+
   const createJobMutation = trpc.createJob.useMutation({
     onSuccess: () => {
       // Invalidate and refetch jobs list and dashboard stats
@@ -76,7 +79,7 @@ export default function JobsPage() {
   }, [showColumnSettings]);
 
   const handleColumnToggle = useCallback((columnId: string) => {
-    setColumnSettings(prev => prev.map(col => 
+    setColumnSettings(prev => prev.map(col =>
       col.id === columnId ? { ...col, visible: !col.visible } : col
     ));
   }, []);
@@ -86,13 +89,13 @@ export default function JobsPage() {
       const columns = [...prev];
       const currentIndex = columns.findIndex(col => col.id === columnId);
       const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      
+
       if (newIndex >= 0 && newIndex < columns.length) {
         // Swap the orders
         const temp = columns[currentIndex].order;
         columns[currentIndex].order = columns[newIndex].order;
         columns[newIndex].order = temp;
-        
+
         // Sort by order
         return columns.sort((a, b) => a.order - b.order);
       }
@@ -110,7 +113,7 @@ export default function JobsPage() {
       alert('Please enter a job title');
       return;
     }
-    
+
     if (!companies.length) {
       alert('No companies available. Please create a company first.');
       return;
@@ -118,17 +121,14 @@ export default function JobsPage() {
 
     // Use the first available company as default
     const companyId = companies[0].id;
-    
+
     createJobMutation.mutate({
       title: jobData.title,
       description: jobData.description || '',
       companyId: companyId,
-      status: jobData.status || 'quoted',
       priority: jobData.priority || 'medium',
-      estimatedStartDate: jobData.startDate?.toISOString(),
-      estimatedBudget: jobData.budget?.toString() || '0',
-      location: jobData.address || '',
-      notes: jobData.description || '',
+      assignedTo: jobData.assignedTo || '',
+      dueDate: jobData.startDate?.toISOString() || new Date().toISOString(),
     });
   };
 
@@ -185,7 +185,7 @@ export default function JobsPage() {
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex items-center justify-between">
-          <button 
+          <button
             onClick={() => alert('Assign Crew Member modal coming soon!')}
             className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
@@ -194,7 +194,7 @@ export default function JobsPage() {
             </svg>
             Assign Crew Member
           </button>
-          
+
           <div className="flex items-center space-x-4">
             <div className="relative">
               <input
@@ -208,15 +208,15 @@ export default function JobsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            
-            <select 
+
+            <select
               value={filterContact}
               onChange={handleFilterContact}
               className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             >
               <option value="">Filter by Contact</option>
             </select>
-            <button 
+            <button
               onClick={handleJobColumns}
               className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-gray-300 rounded-lg transition-colors"
               title="Column settings"
@@ -235,7 +235,7 @@ export default function JobsPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold text-white">Jobs</h3>
               <div className="flex space-x-4">
-                <button 
+                <button
                   onClick={() => handleJobViewChange('list')}
                   className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-orange-500 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}`}
                   title="List view"
@@ -244,7 +244,7 @@ export default function JobsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                   </svg>
                 </button>
-                <button 
+                <button
                   onClick={() => handleJobViewChange('grid')}
                   className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-orange-500 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}`}
                   title="Grid view"
@@ -253,7 +253,7 @@ export default function JobsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
                 </button>
-                <button 
+                <button
                   onClick={() => handleJobViewChange('kanban')}
                   className={`p-2 rounded transition-colors ${viewMode === 'kanban' ? 'bg-orange-500 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}`}
                   title="Kanban view"
@@ -276,7 +276,7 @@ export default function JobsPage() {
             ) : jobs.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-400">No jobs found. Create your first job to get started!</p>
-                <button 
+                <button
                   onClick={() => setShowCreateModal(true)}
                   className="mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                 >
@@ -288,7 +288,7 @@ export default function JobsPage() {
                 <thead className="bg-gray-700">
                   <tr>
                     <th className="text-left p-4 text-gray-300 font-medium">
-                      <input 
+                      <input
                         type="checkbox"
                         checked={selectedJobs.length === jobs.length}
                         onChange={(e) => handleSelectAllJobs(e.target.checked)}
@@ -296,7 +296,7 @@ export default function JobsPage() {
                         aria-label="Select all jobs"
                       />
                     </th>
-                    {getVisibleColumns().filter(col => !['notes','updates','tasks','image'].includes(col.id)).map((column) => (
+                    {getVisibleColumns().filter(col => !['notes', 'updates', 'tasks', 'image'].includes(col.id)).map((column) => (
                       <th key={column.id} className={`text-left p-4 text-gray-300 font-medium ${column.id === 'actions' ? 'text-center' : ''}`}>
                         {column.label}
                       </th>
@@ -307,15 +307,15 @@ export default function JobsPage() {
                   {jobs.map((job) => (
                     <tr key={job.id} className="border-t border-gray-700 hover:bg-gray-700">
                       <td className="p-4">
-                        <input 
+                        <input
                           type="checkbox"
                           checked={selectedJobs.includes(job.id)}
                           onChange={(e) => handleSelectJob(job.id, e.target.checked)}
-                          className="rounded bg-gray-600 border-gray-500" 
+                          className="rounded bg-gray-600 border-gray-500"
                         />
                       </td>
                       <td className="p-4 text-white font-medium">{job.title}</td>
-                      <td className="p-4 text-gray-300">{job.companyName || 'N/A'}</td>
+                      <td className="p-4 text-gray-300">{(job as any).companyName || 'N/A'}</td>
                       <td className="p-4">
                         <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm">{job.status}</span>
                       </td>
@@ -324,7 +324,7 @@ export default function JobsPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex space-x-2">
-                          <button 
+                          <button
                             onClick={() => handleJobView(job.id)}
                             className="text-blue-400 hover:text-blue-300 transition-colors"
                             title="View job details"
@@ -334,7 +334,7 @@ export default function JobsPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleJobEdit(job.id)}
                             className="text-gray-400 hover:text-gray-300 transition-colors"
                             title="Edit job"
@@ -343,7 +343,7 @@ export default function JobsPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleJobDelete(job.id)}
                             className="text-red-400 hover:text-red-300 transition-colors"
                             title="Delete job"
@@ -446,7 +446,7 @@ export default function JobsPage() {
                     <span className="text-gray-300">{column.label}</span>
                   </label>
                   <div className="flex space-x-2">
-                    <button 
+                    <button
                       onClick={() => handleColumnReorder(column.id, 'up')}
                       disabled={column.order === 0}
                       className="p-1 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -456,7 +456,7 @@ export default function JobsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                       </svg>
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleColumnReorder(column.id, 'down')}
                       disabled={column.order === columnSettings.length - 1}
                       className="p-1 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -471,13 +471,13 @@ export default function JobsPage() {
               ))}
             </div>
             <div className="flex justify-end space-x-3 mt-6">
-              <button 
+              <button
                 onClick={() => setShowColumnSettings(false)}
                 className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => setShowColumnSettings(false)}
                 className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
               >
@@ -671,8 +671,8 @@ export default function JobsPage() {
 
         {/* Click outside to close column settings */}
         {showColumnSettings && (
-          <div 
-            className="fixed inset-0 z-0" 
+          <div
+            className="fixed inset-0 z-0"
             onClick={() => setShowColumnSettings(false)}
           ></div>
         )}

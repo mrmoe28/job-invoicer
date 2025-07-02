@@ -32,7 +32,7 @@ export default function SignupPage() {
 
   // tRPC mutation hook
   const signupMutation = trpc.register.useMutation({
-    onSuccess: (result: { success?: boolean; user?: { id: string; email: string; firstName?: string; lastName?: string; organization?: { id: string; name: string; slug: string; plan: string } } }) => {
+    onSuccess: (result: any) => {
       if (result?.success && result?.user) {
         // Store user session immediately - no email verification needed
         localStorage.setItem('pulse_user', JSON.stringify({

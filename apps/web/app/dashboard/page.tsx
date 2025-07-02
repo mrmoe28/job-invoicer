@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '../../components/layout/dashboard-layout';
+import DashboardLayout from '../../components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Icons } from '../../components/ui/icons';

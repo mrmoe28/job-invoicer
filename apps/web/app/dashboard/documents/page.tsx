@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import DashboardLayout from '../../../components/dashboard-layout';
+import DashboardLayout from '../../../components/layout/dashboard-layout';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 
