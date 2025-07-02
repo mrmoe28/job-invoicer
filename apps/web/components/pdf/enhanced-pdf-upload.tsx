@@ -117,37 +117,106 @@ export default function EnhancedPDFUpload({
         if (xhr.status === 200) {
           try {
             const response = JSON.parse(xhr.responseText);
-            if (response.success && response.files && response.files.length > 0) {
-              const uploadedFile = response.files[0];
-              setUploadedFiles(prev => prev.map(f =>
-                f.id === file.id
-                  ? {
-                    ...f,
-                    progress: 100,
-                    status: 'success',
-                    uploadedUrl: uploadedFile.url
+            console.log('Upload response:', response);
+
+            // Handle both single file (response.file) and multiple files (response.files) responses
+            let uploadedFile: any;
+            if (response.success) {
+              if (response.file) {
+                // Single file response
+                uploadedFile = response.file;
+              } else if (response.files && response.files.length > 0) {
+                // Multiple files response
+                uploadedFile = response.files[0];
+              } else {
+                throw new Error('No file data in response');
+              }
+
+              setUploadedFiles(prev => {
+                const updated = prev.map(f =>
+                  f.id === file.id
+                    ? {
+                      ...f,
+                      progress: 100,
+                      status: 'success' as const,
+                      uploadedUrl: uploadedFile.url
+                    }
+                    : f
+                );
+
+                // Check completion after state update
+                setTimeout(() => {
+                  const allComplete = updated.every(f => f.status !== 'uploading');
+                  if (allComplete) {
+                    setIsUploading(false);
+                    const successfulFiles = updated.filter(f => f.status === 'success');
+                    if (successfulFiles.length > 0) {
+                      onUploadComplete?.(successfulFiles);
+                    }
                   }
-                  : f
-              ));
+                }, 100);
+
+                return updated;
+              });
             } else {
               throw new Error(response.error || 'Upload failed');
             }
           } catch (parseError) {
-            throw new Error('Invalid server response');
+            console.error('Response parse error:', parseError);
+            setUploadedFiles(prev => prev.map(f =>
+              f.id === file.id
+                ? { ...f, status: 'error' as const, error: 'Invalid server response' }
+                : f
+            ));
           }
         } else {
-          throw new Error(`Upload failed: ${xhr.statusText}`);
+          console.error('Upload failed with status:', xhr.status, xhr.statusText);
+          setUploadedFiles(prev => prev.map(f =>
+            f.id === file.id
+              ? { ...f, status: 'error' as const, error: `Upload failed: ${xhr.statusText}` }
+              : f
+          ));
         }
       });
 
       // Handle errors
-      xhr.addEventListener('error', () => {
+      xhr.addEventListener('error', (e) => {
+        console.error('Network error:', e);
+        setUploadedFiles(prev => {
+          const updated = prev.map(f =>
+            f.id === file.id
+              ? { ...f, status: 'error' as const, error: 'Network error occurred' }
+              : f
+          );
+
+          // Check completion after state update
+          setTimeout(() => {
+            const allComplete = updated.every(f => f.status !== 'uploading');
+            if (allComplete) {
+              setIsUploading(false);
+              const successfulFiles = updated.filter(f => f.status === 'success');
+              if (successfulFiles.length > 0) {
+                onUploadComplete?.(successfulFiles);
+              }
+            }
+          }, 100);
+
+          return updated;
+        });
+      });
+
+      // Handle timeout
+      xhr.addEventListener('timeout', () => {
+        console.error('Upload timeout');
         setUploadedFiles(prev => prev.map(f =>
           f.id === file.id
-            ? { ...f, status: 'error', error: 'Network error occurred' }
+            ? { ...f, status: 'error' as const, error: 'Upload timeout' }
             : f
         ));
       });
+
+      // Set timeout (30 seconds)
+      xhr.timeout = 30000;
 
       // Send request
       xhr.open('POST', '/api/files/upload');
@@ -159,24 +228,13 @@ export default function EnhancedPDFUpload({
         f.id === file.id
           ? {
             ...f,
-            status: 'error',
+            status: 'error' as const,
             error: error instanceof Error ? error.message : 'Upload failed'
           }
           : f
       ));
+      setIsUploading(false);
     }
-
-    // Check if all uploads are complete
-    setTimeout(() => {
-      const allComplete = uploadedFiles.every(f => f.status !== 'uploading');
-      if (allComplete) {
-        setIsUploading(false);
-        const successfulFiles = uploadedFiles.filter(f => f.status === 'success');
-        if (successfulFiles.length > 0) {
-          onUploadComplete?.(successfulFiles);
-        }
-      }
-    }, 500);
   };
 
   // Drag and drop handlers
