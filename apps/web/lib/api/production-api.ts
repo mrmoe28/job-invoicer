@@ -120,7 +120,14 @@ export const appRouter = t.router({
                         ? 'User registered successfully. Email verification bypassed in development.'
                         : 'User registered successfully. Please check your email for verification.',
                     userId: user.id,
-                    requiresVerification: !isDevelopment
+                    requiresVerification: !isDevelopment,
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        organization: organization
+                    }
                 };
             } catch (error) {
                 console.error('Registration error:', error);
@@ -249,6 +256,145 @@ export const appRouter = t.router({
             }
         }),
 
+    // Forgot password
+    forgotPassword: t.procedure
+        .input(z.object({
+            email: z.string().email(),
+        }))
+        .mutation(async ({ input }) => {
+            try {
+                // Find user
+                const user = Array.from(users.values()).find(
+                    (u: any) => u.email === input.email
+                );
+
+                // Always return success for security (don't reveal if email exists)
+                // But only send email if user actually exists
+                if (user) {
+                    // Generate password reset token
+                    const resetToken = randomBytes(32).toString('hex');
+                    const expiresAt = new Date();
+                    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour from now
+
+                    verificationTokens.set(resetToken, {
+                        userId: user.id,
+                        token: resetToken,
+                        type: 'password_reset',
+                        expiresAt,
+                        createdAt: new Date(),
+                    });
+
+                    // Send password reset email
+                    try {
+                        // Determine base URL for different environments
+                        let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+                        if (!baseUrl) {
+                            // For Vercel deployments
+                            if (process.env.VERCEL_URL) {
+                                baseUrl = `https://${process.env.VERCEL_URL}`;
+                            }
+                            // For local development
+                            else {
+                                baseUrl = 'http://localhost:3010';
+                            }
+                        }
+
+                        const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`;
+
+                        // For now, just log the reset URL (in real app, send email)
+                        console.log('Password reset URL:', resetUrl);
+                        console.log('Reset token for', user.email, ':', resetToken);
+
+                        // TODO: Send actual email with sendPasswordResetEmail function
+                        // await sendPasswordResetEmail({
+                        //     email: user.email,
+                        //     firstName: user.firstName,
+                        //     resetUrl
+                        // });
+                    } catch (emailError) {
+                        console.error('Failed to send password reset email:', emailError);
+                        // Don't fail the request if email sending fails
+                    }
+                }
+
+                return {
+                    success: true,
+                    message: 'If an account with that email exists, we have sent a password reset link.'
+                };
+            } catch (error) {
+                console.error('Forgot password error:', error);
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: 'Failed to process forgot password request'
+                });
+            }
+        }),
+
+    // Reset password
+    resetPassword: t.procedure
+        .input(z.object({
+            token: z.string(),
+            newPassword: z.string().min(6),
+        }))
+        .mutation(async ({ input }) => {
+            try {
+                // Find reset token
+                const tokenRecord = verificationTokens.get(input.token);
+
+                if (!tokenRecord || tokenRecord.type !== 'password_reset') {
+                    throw new TRPCError({
+                        code: 'NOT_FOUND',
+                        message: 'Invalid or expired reset token'
+                    });
+                }
+
+                // Check if token is expired
+                if (tokenRecord.expiresAt < new Date()) {
+                    verificationTokens.delete(input.token);
+                    throw new TRPCError({
+                        code: 'BAD_REQUEST',
+                        message: 'Reset token has expired'
+                    });
+                }
+
+                // Update user password
+                const user = users.get(tokenRecord.userId);
+                if (!user) {
+                    throw new TRPCError({
+                        code: 'NOT_FOUND',
+                        message: 'User not found'
+                    });
+                }
+
+                // Hash new password
+                const salt = randomBytes(16).toString('hex');
+                const hashedPassword = pbkdf2Sync(input.newPassword, salt, 1000, 64, 'sha512').toString('hex');
+
+                user.passwordHash = hashedPassword;
+                user.passwordSalt = salt;
+                user.updatedAt = new Date();
+                users.set(user.id, user);
+
+                // Delete used token
+                verificationTokens.delete(input.token);
+
+                return {
+                    success: true,
+                    message: 'Password reset successfully'
+                };
+            } catch (error) {
+                console.error('Reset password error:', error);
+                if (error instanceof TRPCError) {
+                    throw error;
+                }
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: 'Failed to reset password'
+                });
+            }
+        }),
+
     // Get companies
     getCompanies: t.procedure
         .query(async () => {
@@ -352,6 +498,155 @@ export const appRouter = t.router({
                 throw new TRPCError({
                     code: 'INTERNAL_SERVER_ERROR',
                     message: 'Failed to delete company'
+                });
+            }
+        }),
+
+    // Get users
+    getUsers: t.procedure
+        .query(async () => {
+            try {
+                const userList = Array.from(users.values()).map(user => ({
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    emailVerified: user.emailVerified,
+                    createdAt: user.createdAt,
+                    organization: organizations.get(user.organizationId)
+                }));
+                return userList;
+            } catch (error) {
+                console.error('Get users error:', error);
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: 'Failed to fetch users'
+                });
+            }
+        }),
+
+    // Get dashboard stats
+    getDashboardStats: t.procedure
+        .query(async () => {
+            try {
+                const totalUsers = users.size;
+                const totalOrganizations = organizations.size;
+                const verifiedUsers = Array.from(users.values()).filter(user => user.emailVerified).length;
+
+                return {
+                    totalUsers,
+                    totalOrganizations,
+                    verifiedUsers,
+                    activeJobs: 0, // Placeholder for now
+                    completedJobs: 0, // Placeholder for now
+                };
+            } catch (error) {
+                console.error('Get dashboard stats error:', error);
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: 'Failed to fetch dashboard stats'
+                });
+            }
+        }),
+
+    // Get jobs
+    getJobs: t.procedure
+        .input(z.object({
+            status: z.string().optional(),
+            limit: z.number().optional(),
+        }).optional())
+        .query(async ({ input = {} }) => {
+            try {
+                // Mock jobs data for now
+                const mockJobs = [
+                    {
+                        id: '1',
+                        title: 'Website Redesign',
+                        description: 'Complete overhaul of company website',
+                        status: 'active',
+                        priority: 'high',
+                        assignedTo: 'John Doe',
+                        dueDate: new Date('2025-02-15'),
+                        createdAt: new Date('2025-01-01'),
+                        companyId: Array.from(organizations.keys())[0] || 'default',
+                    },
+                    {
+                        id: '2',
+                        title: 'Database Migration',
+                        description: 'Migrate legacy database to new system',
+                        status: 'pending',
+                        priority: 'medium',
+                        assignedTo: 'Jane Smith',
+                        dueDate: new Date('2025-03-01'),
+                        createdAt: new Date('2025-01-05'),
+                        companyId: Array.from(organizations.keys())[0] || 'default',
+                    },
+                    {
+                        id: '3',
+                        title: 'Security Audit',
+                        description: 'Comprehensive security assessment',
+                        status: 'completed',
+                        priority: 'high',
+                        assignedTo: 'Mike Johnson',
+                        dueDate: new Date('2025-01-20'),
+                        createdAt: new Date('2024-12-15'),
+                        companyId: Array.from(organizations.keys())[0] || 'default',
+                    }
+                ];
+
+                let filteredJobs = mockJobs;
+
+                if (input.status) {
+                    filteredJobs = mockJobs.filter(job => job.status === input.status);
+                }
+
+                if (input.limit) {
+                    filteredJobs = filteredJobs.slice(0, input.limit);
+                }
+
+                return filteredJobs;
+            } catch (error) {
+                console.error('Get jobs error:', error);
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: 'Failed to fetch jobs'
+                });
+            }
+        }),
+
+    // Create job
+    createJob: t.procedure
+        .input(z.object({
+            title: z.string().min(1),
+            description: z.string().min(1),
+            priority: z.enum(['low', 'medium', 'high']),
+            assignedTo: z.string().min(1),
+            dueDate: z.string(), // ISO date string
+            companyId: z.string(),
+        }))
+        .mutation(async ({ input }) => {
+            try {
+                const jobId = randomBytes(16).toString('hex');
+                const job = {
+                    id: jobId,
+                    title: input.title,
+                    description: input.description,
+                    status: 'pending' as const,
+                    priority: input.priority,
+                    assignedTo: input.assignedTo,
+                    dueDate: new Date(input.dueDate),
+                    createdAt: new Date(),
+                    companyId: input.companyId,
+                };
+
+                // In a real app, this would be stored in a database
+                // For now, we'll just return the created job
+                return job;
+            } catch (error) {
+                console.error('Create job error:', error);
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: 'Failed to create job'
                 });
             }
         }),

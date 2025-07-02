@@ -62,7 +62,7 @@ function ResetPasswordForm() {
 
     resetPasswordMutation.mutate({
       token,
-      password,
+      newPassword: password,
     });
   };
 

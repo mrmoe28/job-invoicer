@@ -7,6 +7,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import DashboardLayout from '../../../components/dashboard-layout';
 import dynamic from 'next/dynamic';
+import SmartPDFViewer from '../../../components/smart-pdf-viewer';
 import Image from 'next/image';
 
 // Enhanced PDF viewers with better reliability
@@ -66,7 +67,7 @@ export default function DocumentsPage() {
   const [showEnhancedPdfViewer, setShowEnhancedPdfViewer] = useState(false);
   const [showImprovedSimplePdfViewer, setShowImprovedSimplePdfViewer] = useState(false);
   const [showProductionPdfViewer, setShowProductionPdfViewer] = useState(false);
-  const [pdfViewerType, setPdfViewerType] = useState<'production' | 'enhanced' | 'improved-simple' | 'legacy-advanced' | 'legacy-simple'>('production');
+
   const [showEditModal, setShowEditModal] = useState(false);
   const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [currentDocument, setCurrentDocument] = useState<any>(null);
@@ -75,6 +76,9 @@ export default function DocumentsPage() {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [csvData, setCsvData] = useState<string[][]>([]);
@@ -181,49 +185,18 @@ export default function DocumentsPage() {
           setCurrentDocument(document);
           const fileType = getFileType(document.name);
 
-          if (fileType === 'pdf') {
-            // Close all other viewers first
-            setShowViewerModal(false);
-            setShowPdfViewer(false);
-            setShowSimplePdfViewer(false);
-            setShowEnhancedPdfViewer(false);
-            setShowImprovedSimplePdfViewer(false);
-            setShowProductionPdfViewer(false);
+          // Use the smart modal viewer for all file types
+          setShowViewerModal(true);
+          setShowPdfViewer(false);
+          setShowSimplePdfViewer(false);
+          setShowEnhancedPdfViewer(false);
+          setShowImprovedSimplePdfViewer(false);
+          setShowProductionPdfViewer(false);
+          setZoomLevel(1);
 
-            // Open the appropriate PDF viewer based on type
-            switch (pdfViewerType) {
-              case 'production':
-                setShowProductionPdfViewer(true);
-                break;
-              case 'enhanced':
-                setShowEnhancedPdfViewer(true);
-                break;
-              case 'improved-simple':
-                setShowImprovedSimplePdfViewer(true);
-                break;
-              case 'legacy-advanced':
-                setShowPdfViewer(true);
-                break;
-              case 'legacy-simple':
-                setShowSimplePdfViewer(true);
-                break;
-              default:
-                setShowProductionPdfViewer(true); // Default to production viewer
-            }
-          } else {
-            // Use simple modal for other file types
-            setShowViewerModal(true);
-            setShowPdfViewer(false);
-            setShowSimplePdfViewer(false);
-            setShowEnhancedPdfViewer(false);
-            setShowImprovedSimplePdfViewer(false);
-            setShowProductionPdfViewer(false);
-            setZoomLevel(1);
-
-            // Load CSV data if it's a CSV file
-            if (document.name.toLowerCase().endsWith('.csv')) {
-              loadCSVData(document);
-            }
+          // Load CSV data if it's a CSV file
+          if (document.name.toLowerCase().endsWith('.csv')) {
+            loadCSVData(document);
           }
         }
         break;
@@ -427,17 +400,44 @@ export default function DocumentsPage() {
 
   const handleUploadSubmit = useCallback(async () => {
     if (uploadedFiles.length === 0) {
+      console.warn('No files selected for upload');
       return;
     }
 
-    console.log('Uploading files:', uploadedFiles);
+    console.log('Uploading files:', uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadError(null);
 
     try {
+      // Validate files before upload
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'csv', 'txt', 'doc', 'docx', 'xls', 'xlsx'];
+
+      for (const file of uploadedFiles) {
+        if (file.size === 0) {
+          throw new Error(`File "${file.name}" is empty`);
+        }
+        if (file.size > maxSize) {
+          throw new Error(`File "${file.name}" is too large (max 10MB)`);
+        }
+        const extension = file.name.toLowerCase().split('.').pop() || '';
+        if (!allowedExtensions.includes(extension)) {
+          throw new Error(`File "${file.name}" has unsupported extension ".${extension}"`);
+        }
+      }
+
       // Create FormData for file upload
       const formData = new FormData();
       uploadedFiles.forEach(file => {
         formData.append('files', file);
       });
+
+      console.log('📤 Sending upload request...');
+
+      // Simulate progress for user feedback
+      setUploadProgress(25);
 
       // Upload files to the API
       const response = await fetch('/api/files/upload', {
@@ -445,15 +445,28 @@ export default function DocumentsPage() {
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+      setUploadProgress(75);
+
+      console.log('📥 Upload response:', response.status, response.statusText);
+
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response JSON:', parseError);
+        throw new Error(`Server returned invalid response (${response.status})`);
       }
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || `Upload failed: ${response.statusText}`);
+      }
 
-      if (result.success && result.files) {
+      // Handle both single file and multiple files response
+      const files = result.files || (result.file ? [result.file] : []);
+
+      if (result.success && files.length > 0) {
         // Create document entries for uploaded files
-        const newDocuments = result.files.map((fileData: any) => ({
+        const newDocuments = files.map((fileData: any) => ({
           id: fileData.id,
           name: fileData.originalName,
           type: getDocumentType(fileData.originalName),
@@ -463,24 +476,35 @@ export default function DocumentsPage() {
           related: 'N/A',
           // Use API endpoint for file serving
           url: fileData.url,
-          fileName: fileData.fileName, // Store the server filename for API calls
+          fileName: fileData.filename, // Store the server filename for API calls
         }));
 
         // Add new documents to the existing list
         setDocuments(prev => [...prev, ...newDocuments]);
 
-        setShowUploadModal(false);
-        setUploadedFiles([]);
+        setUploadProgress(100);
 
-        console.log('Files uploaded successfully:', result);
+        // Brief delay to show 100% progress
+        setTimeout(() => {
+          setShowUploadModal(false);
+          setUploadedFiles([]);
+          setIsUploading(false);
+          setUploadProgress(0);
+        }, 500);
+
+        console.log('✅ Files uploaded successfully:', newDocuments.length, 'files');
       } else {
-        throw new Error(result.error || 'Upload failed');
+        throw new Error(result.error || 'Upload failed - no files returned');
       }
 
     } catch (error) {
-      console.error('Upload error:', error);
-      // Show error to user - you might want to add a state for this
-      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Upload error:', error);
+
+      // Show detailed error to user
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setUploadError(errorMessage);
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   }, [uploadedFiles]);
 
@@ -573,14 +597,12 @@ export default function DocumentsPage() {
     switch (fileType) {
       case 'pdf':
         return (
-          <LazyPdfViewer
-            fileUrl={fileUrl}
-            fileName={currentDocument.name}
-            onCloseAction={() => setShowViewerModal(false)}
-            onExtractedDataAction={(data) => {
-              setExtractedPdfData(data);
-              console.log('Extracted PDF data:', data);
-            }}
+          <SmartPDFViewer
+            src={fileUrl}
+            className="w-full h-full"
+            onLoadStart={() => console.log('PDF loading started:', currentDocument.name)}
+            onLoadComplete={() => console.log('PDF loaded successfully:', currentDocument.name)}
+            onLoadError={(error) => console.error('PDF load error:', error)}
           />
         );
 
@@ -705,69 +727,18 @@ export default function DocumentsPage() {
           </div>
         </div>
 
-        {/* PDF Viewer Selector */}
+        {/* Smart PDF Viewer Info */}
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-white font-medium">PDF Viewer Settings</h3>
-              <p className="text-gray-400 text-sm">Choose your preferred PDF viewer for best compatibility</p>
+              <h3 className="text-white font-medium">Smart PDF Viewer</h3>
+              <p className="text-gray-400 text-sm">Automatically selects the best PDF viewer based on your browser and device capabilities</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="pdfViewer"
-                  value="production"
-                  checked={pdfViewerType === 'production'}
-                  onChange={(e) => setPdfViewerType(e.target.value as any)}
-                  className="text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-gray-300 text-sm">Production (Recommended)</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="pdfViewer"
-                  value="enhanced"
-                  checked={pdfViewerType === 'enhanced'}
-                  onChange={(e) => setPdfViewerType(e.target.value as any)}
-                  className="text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-gray-300 text-sm">Enhanced (React-PDF)</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="pdfViewer"
-                  value="improved-simple"
-                  checked={pdfViewerType === 'improved-simple'}
-                  onChange={(e) => setPdfViewerType(e.target.value as any)}
-                  className="text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-gray-300 text-sm">Browser Native</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="pdfViewer"
-                  value="legacy-advanced"
-                  checked={pdfViewerType === 'legacy-advanced'}
-                  onChange={(e) => setPdfViewerType(e.target.value as any)}
-                  className="text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-gray-300 text-sm">Legacy Advanced</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="pdfViewer"
-                  value="legacy-simple"
-                  checked={pdfViewerType === 'legacy-simple'}
-                  onChange={(e) => setPdfViewerType(e.target.value as any)}
-                  className="text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-gray-300 text-sm">Legacy Simple</span>
-              </label>
+            <div className="flex items-center space-x-2 text-green-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm">Auto-Detection Enabled</span>
             </div>
           </div>
         </div>
@@ -777,8 +748,8 @@ export default function DocumentsPage() {
               key={tab}
               onClick={() => handleStatusFilter(tab)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${statusFilter === tab
-                  ? 'bg-gray-700 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                ? 'bg-gray-700 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-gray-700'
                 }`}
             >
               {tab}
@@ -941,10 +912,10 @@ export default function DocumentsPage() {
                               {activeDropdown === doc.id && (
                                 <div
                                   className={`absolute right-0 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-50 ${documents.length === 1 || documents.indexOf(doc) === 0
-                                      ? 'top-8'
-                                      : documents.indexOf(doc) >= documents.length - 2
-                                        ? 'bottom-8'
-                                        : 'top-8'
+                                    ? 'top-8'
+                                    : documents.indexOf(doc) >= documents.length - 2
+                                      ? 'bottom-8'
+                                      : 'top-8'
                                     }`}
                                 >
                                   <div className="py-1">
@@ -1169,7 +1140,7 @@ export default function DocumentsPage() {
         {/* Upload Modal */}
         {showUploadModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-white">Upload Documents</h3>
                 <button
@@ -1189,8 +1160,8 @@ export default function DocumentsPage() {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragOver
-                    ? 'border-orange-500 bg-orange-500 bg-opacity-10'
-                    : 'border-gray-600 hover:border-gray-500'
+                  ? 'border-orange-500 bg-orange-500 bg-opacity-10'
+                  : 'border-gray-600 hover:border-gray-500'
                   }`}
               >
                 <div className="flex flex-col items-center space-y-4">
@@ -1280,20 +1251,68 @@ export default function DocumentsPage() {
                 </div>
               )}
 
+              {/* Upload Progress */}
+              {isUploading && (
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-300">Uploading files...</span>
+                    <span className="text-sm text-gray-300">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-orange-500 h-2 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Upload Error */}
+              {uploadError && (
+                <div className="mt-6 p-4 bg-red-900 bg-opacity-50 border border-red-500 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-red-400 font-medium">Upload Failed</span>
+                  </div>
+                  <p className="text-red-300 text-sm mt-1">{uploadError}</p>
+                  <button
+                    onClick={() => setUploadError(null)}
+                    className="mt-2 text-red-400 hover:text-red-300 text-sm underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex justify-end space-x-3 mt-6">
                 <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="px-6 py-2 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors"
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setUploadError(null);
+                  }}
+                  disabled={isUploading}
+                  className="px-6 py-2 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleUploadSubmit}
-                  disabled={uploadedFiles.length === 0}
-                  className="px-6 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                  disabled={uploadedFiles.length === 0 || isUploading}
+                  className="px-6 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
                 >
-                  Upload {uploadedFiles.length > 0 ? `(${uploadedFiles.length})` : ''}
+                  {isUploading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <span>Upload {uploadedFiles.length > 0 ? `(${uploadedFiles.length})` : ''}</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -1301,166 +1320,180 @@ export default function DocumentsPage() {
         )}
 
         {/* Edit Document Modal */}
-        {showEditModal && editingDocument && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white">Edit Document</h3>
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                  title="Close edit modal"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Document Name</label>
-                  <input
-                    type="text"
-                    value={editingDocument.name}
-                    onChange={(e) => handleEditInputChange('name', e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Document Type</label>
-                  <select
-                    value={editingDocument.type}
-                    onChange={(e) => handleEditInputChange('type', e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
+        {
+          showEditModal && editingDocument && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-white">Edit Document</h3>
+                  <button
+                    onClick={() => setShowEditModal(false)}
+                    className="text-gray-400 hover:text-white transition-colors"
+                    title="Close edit modal"
                   >
-                    <option value="Installation Plan">Installation Plan</option>
-                    <option value="Site Survey">Site Survey</option>
-                    <option value="Technical Document">Technical Document</option>
-                    <option value="Permit">Permit</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Photo">Photo</option>
-                    <option value="Data Export">Data Export</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
-                  <select
-                    value={editingDocument.status}
-                    onChange={(e) => handleEditInputChange('status', e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Document Name</label>
+                    <input
+                      type="text"
+                      value={editingDocument.name}
+                      onChange={(e) => handleEditInputChange('name', e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Document Type</label>
+                    <select
+                      value={editingDocument.type}
+                      onChange={(e) => handleEditInputChange('type', e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="Installation Plan">Installation Plan</option>
+                      <option value="Site Survey">Site Survey</option>
+                      <option value="Technical Document">Technical Document</option>
+                      <option value="Permit">Permit</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Photo">Photo</option>
+                      <option value="Data Export">Data Export</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
+                    <select
+                      value={editingDocument.status}
+                      onChange={(e) => handleEditInputChange('status', e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="signed">Signed</option>
+                      <option value="expired">Expired</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Related To</label>
+                    <input
+                      type="text"
+                      value={editingDocument.related}
+                      onChange={(e) => handleEditInputChange('related', e.target.value)}
+                      placeholder="Project, Contact, or Job reference"
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors"
                   >
-                    <option value="draft">Draft</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="signed">Signed</option>
-                    <option value="expired">Expired</option>
-                    <option value="archived">Archived</option>
-                  </select>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveDocument}
+                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Save Changes
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Related To</label>
-                  <input
-                    type="text"
-                    value={editingDocument.related}
-                    onChange={(e) => handleEditInputChange('related', e.target.value)}
-                    placeholder="Project, Contact, or Job reference"
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveDocument}
-                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Save Changes
-                </button>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {/* Production PDF Viewer (Primary - Recommended) */}
-        {showProductionPdfViewer && currentDocument && (
-          <ProductionPdfViewer
-            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-            fileName={currentDocument.name}
-            onCloseAction={() => {
-              setShowProductionPdfViewer(false);
-              setCurrentDocument(null);
-            }}
-          />
-        )}
+        {
+          showProductionPdfViewer && currentDocument && (
+            <ProductionPdfViewer
+              fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+              fileName={currentDocument.name}
+              onCloseAction={() => {
+                setShowProductionPdfViewer(false);
+                setCurrentDocument(null);
+              }}
+            />
+          )
+        }
 
         {/* Enhanced PDF Viewer (Primary) */}
-        {showEnhancedPdfViewer && currentDocument && (
-          <EnhancedPdfViewer
-            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-            fileName={currentDocument.name}
-            onCloseAction={() => {
-              setShowEnhancedPdfViewer(false);
-              setCurrentDocument(null);
-            }}
-            onExtractedDataAction={(data) => {
-              setExtractedPdfData(data);
-              console.log('Extracted PDF data:', data);
-            }}
-          />
-        )}
+        {
+          showEnhancedPdfViewer && currentDocument && (
+            <EnhancedPdfViewer
+              fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+              fileName={currentDocument.name}
+              onCloseAction={() => {
+                setShowEnhancedPdfViewer(false);
+                setCurrentDocument(null);
+              }}
+              onExtractedDataAction={(data) => {
+                setExtractedPdfData(data);
+                console.log('Extracted PDF data:', data);
+              }}
+            />
+          )
+        }
 
         {/* Improved Simple PDF Viewer */}
-        {showImprovedSimplePdfViewer && currentDocument && (
-          <ImprovedSimplePdfViewer
-            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-            fileName={currentDocument.name}
-            onCloseAction={() => {
-              setShowImprovedSimplePdfViewer(false);
-              setCurrentDocument(null);
-            }}
-          />
-        )}
+        {
+          showImprovedSimplePdfViewer && currentDocument && (
+            <ImprovedSimplePdfViewer
+              fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+              fileName={currentDocument.name}
+              onCloseAction={() => {
+                setShowImprovedSimplePdfViewer(false);
+                setCurrentDocument(null);
+              }}
+            />
+          )
+        }
 
         {/* Legacy Advanced PDF Viewer */}
-        {showPdfViewer && currentDocument && (
-          <LazyPdfViewer
-            fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
-            fileName={currentDocument.name}
-            onCloseAction={() => setShowPdfViewer(false)}
-            onExtractedDataAction={(data) => {
-              setExtractedPdfData(data);
-              console.log('Extracted PDF data:', data);
-            }}
-          />
-        )}
+        {
+          showPdfViewer && currentDocument && (
+            <LazyPdfViewer
+              fileUrl={currentDocument.url ?? getFileUrl(currentDocument.name)}
+              fileName={currentDocument.name}
+              onCloseAction={() => setShowPdfViewer(false)}
+              onExtractedDataAction={(data) => {
+                setExtractedPdfData(data);
+                console.log('Extracted PDF data:', data);
+              }}
+            />
+          )
+        }
 
         {/* Click outside to close dropdown */}
-        {activeDropdown && (
-          <div
-            className="fixed inset-0 z-0"
-            onClick={() => setActiveDropdown(null)}
-          ></div>
-        )}
+        {
+          activeDropdown && (
+            <div
+              className="fixed inset-0 z-0"
+              onClick={() => setActiveDropdown(null)}
+            ></div>
+          )
+        }
 
         {/* Click outside to close column settings */}
-        {showColumnSettings && (
-          <div
-            className="fixed inset-0 z-0"
-            onClick={() => setShowColumnSettings(false)}
-          ></div>
-        )}
-      </div>
-    </DashboardLayout>
+        {
+          showColumnSettings && (
+            <div
+              className="fixed inset-0 z-0"
+              onClick={() => setShowColumnSettings(false)}
+            ></div>
+          )
+        }
+      </div >
+    </DashboardLayout >
   );
 }

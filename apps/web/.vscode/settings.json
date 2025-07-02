@@ -4,11 +4,18 @@
     "Enphase",
     "Fronius",
     "Generac",
+    "msword",
+    "nosniff",
+    "officedocument",
+    "openxmlformats",
     "plansets",
     "Powerwall",
     "pulsecrm",
     "solaredge",
     "Sonnen",
-    "textnodes"
+    "spreadsheetml",
+    "textnodes",
+    "turbopack",
+    "wordprocessingml"
   ]
 }

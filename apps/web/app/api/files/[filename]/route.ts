@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } }
+  { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
-    const filename = params.filename;
+    const { filename: rawFilename } = await params;
+    const filename = decodeURIComponent(rawFilename);
 
-    if (!filename) {
-      return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
-    }
-
-    // Validate filename to prevent directory traversal attacks
+    // Security: Prevent directory traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
       return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
     }
@@ -26,40 +23,47 @@ export async function GET(
 
     // Check if file exists
     if (!existsSync(filePath)) {
-      return NextResponse.json({
-        error: 'File not found',
-        message: 'This file has not been uploaded to the server.'
-      }, { status: 404 });
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    try {
-      // Read the file
-      const fileBuffer = await readFile(filePath);
+    // Get file stats
+    const fileStats = await stat(filePath);
+    const fileBuffer = await readFile(filePath);
 
-      // Determine content type based on file extension
-      const contentType = getContentType(filename);
+    // Determine content type based on file extension
+    const ext = path.extname(filename).toLowerCase();
+    const contentTypeMap: { [key: string]: string } = {
+      '.pdf': 'application/pdf',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.csv': 'text/csv',
+      '.txt': 'text/plain',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    };
 
-      // Determine if file should be downloaded or displayed inline
-      const isDownload = request.nextUrl.searchParams.get('download') === 'true';
-      const disposition = isDownload ? 'attachment' : 'inline';
+    const contentType = contentTypeMap[ext] || 'application/octet-stream';
 
-      // Get original filename from the stored filename (remove timestamp and random ID)
-      const originalName = getOriginalFilename(filename);
+    // Create response with proper headers
+    const response = new NextResponse(new Uint8Array(fileBuffer), {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Content-Length': fileStats.size.toString(),
+        'Content-Disposition': `inline; filename="${filename}"`,
+        'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
 
-      // Return the file with appropriate headers
-      return new NextResponse(fileBuffer, {
-        headers: {
-          'Content-Type': contentType,
-          'Content-Disposition': `${disposition}; filename="${originalName}"`,
-          'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
-          'Content-Length': fileBuffer.length.toString(),
-        },
-      });
-
-    } catch (error) {
-      console.error(`Error reading file ${filename}:`, error);
-      return NextResponse.json({ error: 'Failed to read file' }, { status: 500 });
-    }
+    return response;
 
   } catch (error) {
     console.error('File serving error:', error);
@@ -67,35 +71,16 @@ export async function GET(
   }
 }
 
-function getContentType(filename: string): string {
-  const ext = path.extname(filename).toLowerCase();
-
-  const mimeTypes: { [key: string]: string } = {
-    '.pdf': 'application/pdf',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.csv': 'text/csv',
-    '.xls': 'application/vnd.ms-excel',
-    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    '.doc': 'application/msword',
-    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    '.txt': 'text/plain',
-  };
-
-  return mimeTypes[ext] || 'application/octet-stream';
-}
-
-function getOriginalFilename(storedFilename: string): string {
-  // Remove timestamp and random ID from stored filename
-  // Format: timestamp_randomId_originalName
-  const parts = storedFilename.split('_');
-  if (parts.length >= 3) {
-    return parts.slice(2).join('_'); // Join back in case original name had underscores
-  }
-  return storedFilename; // Fallback to stored filename
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
 
 

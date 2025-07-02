@@ -4,56 +4,119 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-  transpilePackages: [
-    "pdfjs-dist",
-  ],
+  // Transpile packages
+  transpilePackages: ['pdfjs-dist'],
+
+  // Build optimizations
+  swcMinify: true,
+
+  // TypeScript and ESLint configuration
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false, // Enable for production builds
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false, // Enable for production builds
   },
-  // Ensure native Node bindings (e.g. canvas.node) bundled by pdfjs-dist are ignored
-  webpack: (config, { webpack }) => {
-    // 1. Alias the optional native canvas dependency to a stub so webpack doesn't try to bundle it
+
+  // Webpack configuration
+  webpack: (config, { webpack, isServer }) => {
+    // Alias the optional native canvas dependency
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       canvas: false,
     };
 
-    // 2. Skip parsing .node binaries altogether
+    // Skip parsing .node binaries
     config.module.rules.push({
       test: /\.node$/,
-      type: "asset/resource",
+      type: 'asset/resource',
     });
 
-    // Ignore the optional `canvas` package entirely to prevent Webpack from walking into native bindings
+    // Ignore the optional `canvas` package
     config.plugins = config.plugins || [];
     config.plugins.push(new webpack.IgnorePlugin({ resourceRegExp: /^canvas$/ }));
 
+    // Optimize bundle size
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+
     return config;
   },
-  // Mark Node-specific core modules as empty so they don't break client bundles
-  experimental: {
-    esmExternals: "loose",
-  },
+
+  // Image optimization
   images: {
+    formats: ['image/webp', 'image/avif'],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '**',
       },
     ],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
-}
+
+  // Compression
+  compress: true,
+
+  // PoweredBy header
+  poweredByHeader: false,
+
+  // React strict mode
+  reactStrictMode: true,
+
+  // Experimental features
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
+
+  // Turbopack configuration (moved from experimental.turbo)
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
+
+  // Headers for security
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
+  },
+};
 
 /**
- * Use bundle analyzer only when ANALYZE env is set, avoiding top-level require.
+ * Use bundle analyzer only when ANALYZE env is set
  */
 const getConfig = () => {
   if (process.env.ANALYZE === 'true') {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: true });
     return withBundleAnalyzer(nextConfig);
   }
