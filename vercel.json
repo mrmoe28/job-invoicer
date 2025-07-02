@@ -1,28 +1,5 @@
 {
-  "version": 2,
-  "buildCommand": "cd apps/web && pnpm install && pnpm run build",
+  "buildCommand": "pnpm install && cd apps/web && pnpm run build",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "framework": "nextjs",
-  "functions": {
-    "apps/web/app/api/**": {
-      "maxDuration": 30
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/trpc/:path*",
-      "destination": "/api/trpc/:path*"
-    }
-  ],
-  "env": {
-    "PNPM_VERSION": "8.10.0",
-    "NODE_ENV": "production"
-  },
-  "regions": ["iad1"],
-  "build": {
-    "env": {
-      "NEXT_TELEMETRY_DISABLED": "1"
-    }
-  }
+  "installCommand": "pnpm install"
 }
