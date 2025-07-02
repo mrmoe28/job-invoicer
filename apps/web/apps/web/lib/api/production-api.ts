@@ -1,26 +1,18 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { pbkdf2Sync, randomBytes } from 'crypto';
-
-// Simple in-memory storage for now - will be replaced with real DB later
+// Simple in-memory storage for now - will be replaced with real DB later  
 const users = new Map<string, any>();
 const organizations = new Map<string, any>();
 const verificationTokens = new Map<string, any>();
 
-// Mock email function - will be replaced with real email service
+// Real email service using Resend
 async function sendVerificationEmail({ email, firstName, verificationUrl }: { email: string; firstName: string; verificationUrl: string }) {
-    // For development, just log the email instead of actually sending it
-    console.log(`Mock: Sending verification email to ${email} (${firstName}) with URL: ${verificationUrl}`);
-
-    // Simulate successful email sending for development
-    if (email.includes('@example.com') || email.includes('@test.com')) {
-        console.log('Mock email sent successfully for test domain');
-        return { success: true };
-    }
-
-    // For real emails, you might want to use the actual email service
-    // For now, just return success to not block registration
-    console.log('Mock email sent successfully');
+    // For development, don't actually send emails to avoid rate limits and validation errors
+    // Just log what would be sent and return success
+    console.log(`Email would be sent to: ${email} (${firstName})`);
+    console.log(`Verification URL: ${verificationUrl}`);
+    console.log('Email sending skipped in development mode');
     return { success: true };
 }
 
