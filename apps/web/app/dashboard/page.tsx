@@ -1,10 +1,9 @@
 'use client';
 
-import React from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardLayout from '../../components/layout/dashboard-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import DashboardLayout from '../../components/dashboard-layout';
 import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Icons } from '../../components/ui/icons';
 import { trpc } from '../../lib/trpc';
 
