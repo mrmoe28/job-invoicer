@@ -6,7 +6,7 @@ const users = [
     {
         id: "1",
         email: "test@example.com",
-        password: "$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj0kJFlzg.Ru", // "password"
+        password: "$2b$12$ESmerwiKOXGBV83vCJWly.yn/W6wkTyBDHSrllmRQKvFuOMPWDLTi", // "password"
         firstName: "Test",
         lastName: "User",
         organizationId: "org-1",
@@ -18,7 +18,10 @@ export async function POST(request: NextRequest) {
     try {
         const { email, password } = await request.json();
 
+        console.log('Login attempt:', { email, passwordLength: password?.length });
+
         if (!email || !password) {
+            console.log('Missing email or password');
             return NextResponse.json(
                 { error: "Email and password are required" },
                 { status: 400 }
@@ -29,21 +32,29 @@ export async function POST(request: NextRequest) {
         const user = users.find(u => u.email === email);
 
         if (!user) {
+            console.log('User not found for email:', email);
             return NextResponse.json(
                 { error: "Invalid email or password" },
                 { status: 401 }
             );
         }
+
+        console.log('User found, checking password...');
 
         // Check password
         const isValid = await compare(password, user.password);
 
+        console.log('Password validation result:', isValid);
+
         if (!isValid) {
+            console.log('Password validation failed');
             return NextResponse.json(
                 { error: "Invalid email or password" },
                 { status: 401 }
             );
         }
+
+        console.log('Login successful for user:', user.email);
 
         // Return user data (without password)
         return NextResponse.json({
