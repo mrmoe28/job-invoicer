@@ -7,6 +7,7 @@ module.exports = {
     './src/**/*.{js,ts,jsx,tsx,mdx}',
     '../../packages/ui/src/**/*.{js,ts,jsx,tsx}',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -66,10 +67,10 @@ module.exports = {
       },
       // Custom component utilities
       spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
-        '112': '28rem',
-        '128': '32rem',
+        18: '4.5rem',
+        88: '22rem',
+        112: '28rem',
+        128: '32rem',
       },
       // Animation improvements
       animation: {
@@ -100,15 +101,15 @@ module.exports = {
       },
       // Box shadows for depth
       boxShadow: {
-        'soft': '0 2px 4px rgba(0, 0, 0, 0.1)',
-        'medium': '0 4px 8px rgba(0, 0, 0, 0.12)',
-        'strong': '0 8px 16px rgba(0, 0, 0, 0.15)',
+        soft: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        medium: '0 4px 8px rgba(0, 0, 0, 0.12)',
+        strong: '0 8px 16px rgba(0, 0, 0, 0.15)',
         'glow-orange': '0 0 20px rgba(249, 115, 22, 0.4)',
         'glow-blue': '0 0 20px rgba(59, 130, 246, 0.4)',
       },
       // Border radius improvements
       borderRadius: {
-        'xl': '0.75rem',
+        xl: '0.75rem',
         '2xl': '1rem',
         '3xl': '1.5rem',
       },
@@ -123,7 +124,7 @@ module.exports = {
   },
   plugins: [
     // Custom plugin for common component patterns
-    function({ addComponents, theme }) {
+    function ({ addComponents, theme }) {
       addComponents({
         // Card component utility
         '.card': {
@@ -232,4 +233,4 @@ module.exports = {
       });
     },
   ],
-}
+};

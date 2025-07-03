@@ -80,7 +80,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   // Show loading only if we haven't checked auth yet
   if (isLoading || !authChecked) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-500 dark:text-gray-400">Loading...</p>
@@ -95,7 +95,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800">
       <TopNavigation user={{
         name: user.name || `${user.firstName} ${user.lastName}` || 'User',
         username: user.email,

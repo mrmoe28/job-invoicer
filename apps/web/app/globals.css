@@ -5,17 +5,26 @@
 /* Import PDF viewer styles */
 @import './pdf-styles.css';
 
-/* Ensure dark theme by default */
-html, body {
-  background-color: #111827; /* gray-900 */
-  color: #ffffff;
+/* Theme-aware base styles */
+html {
   margin: 0;
   padding: 0;
 }
 
 @layer base {
   body {
-    @apply bg-gray-900 text-white;
+    @apply bg-white text-gray-900 dark:bg-gray-800 dark:text-white;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Dark mode by default - add dark class to html element */
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
   }
 }
 /* React-PDF Styling Overrides */
@@ -112,7 +121,7 @@ html, body {
     max-width: 100% !important;
     width: 100% !important;
   }
-  
+
   .pdf-viewer-controls {
     flex-wrap: wrap;
     gap: 8px;
@@ -121,7 +130,8 @@ html, body {
 
 /* Animation for loading states */
 @keyframes pdfLoadingPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
