@@ -1,6 +1,5 @@
 'use client';
 
-import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -145,8 +144,11 @@ export default function TopNavigation({ user }: TopNavigationProps) {
   };
 
   const handleLogout = () => {
-    // Use NextAuth signOut instead of localStorage
-    signOut({ callbackUrl: '/auth' });
+    // Clear both session and user data for proper logout
+    localStorage.removeItem('pulse_session_active');
+    localStorage.removeItem('pulse_user');
+
+    router.push('/auth');
   };
 
   const handleNewJob = () => {

@@ -16,7 +16,6 @@ interface FormData {
   firstName: string;
   lastName: string;
   organizationName: string;
-  organizationSlug: string;
 }
 
 export default function SignupPage() {
@@ -29,7 +28,6 @@ export default function SignupPage() {
     firstName: '',
     lastName: '',
     organizationName: '',
-    organizationSlug: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -69,23 +67,9 @@ export default function SignupPage() {
     if (!formData.organizationName.trim()) {
       newErrors.organizationName = 'Organization name is required';
     }
-    if (!formData.organizationSlug.trim()) {
-      newErrors.organizationSlug = 'Organization slug is required';
-    } else if (!/^[a-z0-9-]+$/.test(formData.organizationSlug)) {
-      newErrors.organizationSlug = 'Slug must contain only lowercase letters, numbers, and hyphens';
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,7 +81,7 @@ export default function SignupPage() {
     setErrors({});
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/simple-auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,27 +92,16 @@ export default function SignupPage() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           organizationName: formData.organizationName,
-          organizationSlug: formData.organizationSlug,
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        // Registration successful
+      if (response.ok && data.success) {
+        // Registration successful - redirect to login with success message
         router.push('/auth?message=registration-success');
       } else {
-        // Handle registration errors
-        if (data.details) {
-          // Validation errors
-          const fieldErrors: Record<string, string> = {};
-          data.details.forEach((detail: any) => {
-            fieldErrors[detail.field] = detail.message;
-          });
-          setErrors(fieldErrors);
-        } else {
-          setErrors({ general: data.error || 'Registration failed' });
-        }
+        setErrors({ general: data.error || 'Registration failed' });
       }
     } catch (error) {
       setErrors({ general: 'An error occurred. Please try again.' });
@@ -139,12 +112,6 @@ export default function SignupPage() {
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Auto-generate slug when organization name changes
-    if (field === 'organizationName' && value) {
-      const slug = generateSlug(value);
-      setFormData(prev => ({ ...prev, organizationSlug: slug }));
-    }
 
     // Clear field-specific error when user starts typing
     if (errors[field]) {
@@ -268,46 +235,21 @@ export default function SignupPage() {
               {/* Organization Information */}
               <div className="border-t pt-6">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Organization Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="organizationName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Company Name
-                    </label>
-                    <Input
-                      id="organizationName"
-                      type="text"
-                      value={formData.organizationName}
-                      onChange={(e) => handleInputChange('organizationName', e.target.value)}
-                      placeholder="ABC Construction"
-                      className={errors.organizationName ? 'border-red-500' : ''}
-                    />
-                    {errors.organizationName && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.organizationName}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="organizationSlug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Workspace URL
-                    </label>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                        pulsecrm.com/
-                      </span>
-                      <Input
-                        id="organizationSlug"
-                        type="text"
-                        value={formData.organizationSlug}
-                        onChange={(e) => handleInputChange('organizationSlug', e.target.value)}
-                        placeholder="abc-construction"
-                        className={`rounded-l-none ${errors.organizationSlug ? 'border-red-500' : ''}`}
-                      />
-                    </div>
-                    {errors.organizationSlug && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.organizationSlug}</p>
-                    )}
-                    <p className="mt-1 text-sm text-gray-500">This will be your unique workspace URL</p>
-                  </div>
+                <div>
+                  <label htmlFor="organizationName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Company Name
+                  </label>
+                  <Input
+                    id="organizationName"
+                    type="text"
+                    value={formData.organizationName}
+                    onChange={(e) => handleInputChange('organizationName', e.target.value)}
+                    placeholder="ABC Construction"
+                    className={errors.organizationName ? 'border-red-500' : ''}
+                  />
+                  {errors.organizationName && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.organizationName}</p>
+                  )}
                 </div>
               </div>
 

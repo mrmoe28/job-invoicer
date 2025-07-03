@@ -5,11 +5,9 @@ import DashboardLayout from '../../components/dashboard-layout';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Icons } from '../../components/ui/icons';
-import { useAuthSession } from '../../lib/hooks/useAuthSession';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user } = useAuthSession();
 
   // Mock data for now (in production, this would come from API)
   const metrics = {
@@ -19,6 +17,7 @@ export default function DashboardPage() {
     verifiedUsers: 8,
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const jobsData: any[] = []; // Empty for now
 
   // Navigation handlers
@@ -147,7 +146,7 @@ export default function DashboardPage() {
             <CardContent>
               {jobsData.length > 0 ? (
                 <div className="space-y-3">
-                  {jobsData.slice(0, 3).map((job: any) => (
+                  {/* {jobsData.slice(0, 3).map((job: any) => (
                     <div key={job.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">
@@ -163,7 +162,7 @@ export default function DashboardPage() {
                         </span>
                       </div>
                     </div>
-                  ))}
+                  ))} */}
                 </div>
               ) : (
                 <div className="text-center py-6">

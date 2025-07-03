@@ -1,6 +1,5 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -19,12 +18,22 @@ function LoginForm() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Check if user is already logged in
+    const userData = localStorage.getItem('pulse_user');
+    const sessionActive = localStorage.getItem('pulse_session_active');
+
+    if (userData && sessionActive === 'true') {
+      console.log('User already logged in, redirecting to dashboard');
+      router.replace('/dashboard');
+      return;
+    }
+
     // Check for registration success message
     const message = searchParams.get('message');
     if (message === 'registration-success') {
       setSuccessMessage('Account created successfully! Please sign in with your new credentials.');
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,32 +41,34 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      const response = await fetch('/api/simple-auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (result?.error) {
-        setError('Invalid email or password. Please try again.');
-      } else if (result?.ok) {
-        router.push('/dashboard');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('Login successful, storing user data:', data.user);
+
+        // Store user data in localStorage
+        localStorage.setItem('pulse_user', JSON.stringify(data.user));
+        localStorage.setItem('pulse_session_active', 'true');
+
+        // Small delay to ensure localStorage is written
+        setTimeout(() => {
+          router.replace('/dashboard');
+        }, 100);
+      } else {
+        setError(data.error || 'Login failed. Please try again.');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('An error occurred. Please try again.');
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setIsLoading(true);
-
-    try {
-      await signIn('google', { callbackUrl: '/dashboard' });
-    } catch (error) {
-      setError('Google sign-in failed. Please try again.');
       setIsLoading(false);
     }
   };
@@ -167,26 +178,6 @@ function LoginForm() {
                     Sign in
                   </>
                 )}
-              </Button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-300 dark:border-gray-600" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">Or continue with</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGoogleSignIn}
-                disabled={isLoading}
-                className="w-full"
-              >
-                <Icons.Globe className="mr-2 h-4 w-4" />
-                Sign in with Google
               </Button>
             </form>
           </CardContent>
