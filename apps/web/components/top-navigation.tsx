@@ -1,5 +1,6 @@
 'use client';
 
+import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -144,11 +145,8 @@ export default function TopNavigation({ user }: TopNavigationProps) {
   };
 
   const handleLogout = () => {
-    // Clear both session and user data for proper logout
-    localStorage.removeItem('pulse_session_active');
-    localStorage.removeItem('pulse_user');
-
-    router.push('/auth');
+    // Use NextAuth signOut instead of localStorage
+    signOut({ callbackUrl: '/auth' });
   };
 
   const handleNewJob = () => {
@@ -208,8 +206,8 @@ export default function TopNavigation({ user }: TopNavigationProps) {
                   key={item.name}
                   href={item.href}
                   className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive
-                      ? 'bg-orange-500 text-white'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                    ? 'bg-orange-500 text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
                     }`}
                 >
                   <span className="mr-2">

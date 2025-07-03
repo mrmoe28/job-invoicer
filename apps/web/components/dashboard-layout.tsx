@@ -1,7 +1,7 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import TopNavigation from './top-navigation';
 
 interface DashboardLayoutProps {
@@ -11,51 +11,45 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
-  const [user, setUser] = useState<unknown>(null);
+  const { data: session, status } = useSession();
   const router = useRouter();
 
-  useEffect(() => {
-    const userData = localStorage.getItem('pulse_user');
-    const sessionActive = localStorage.getItem('pulse_session_active');
-
-    console.log('Dashboard auth check:', { userData: !!userData, sessionActive });
-
-    if (!userData || sessionActive !== 'true') {
-      console.log('No valid session, redirecting to auth');
-      router.push('/auth');
-      return;
-    }
-
-    try {
-      const user = JSON.parse(userData);
-      console.log('Dashboard user loaded:', { id: user.id, email: user.email });
-      setUser(user);
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      router.push('/auth');
-    }
-  }, [router]);
-
-  if (!user) {
+  // Handle loading state
+  if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
+  // Handle unauthenticated state
+  if (status === 'unauthenticated' || !session?.user) {
+    router.push('/auth');
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <TopNavigation user={user} />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <TopNavigation user={{
+        name: session.user.name || undefined,
+        username: session.user.email || undefined,
+        avatar: session.user.image || undefined,
+        role: 'User'
+      }} />
 
       <main className="p-6">
         {(title || subtitle) && (
           <div className="mb-6">
             {title && (
-              <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{title}</h1>
             )}
             {subtitle && (
-              <p className="text-gray-400">{subtitle}</p>
+              <p className="text-gray-500 dark:text-gray-400">{subtitle}</p>
             )}
           </div>
         )}

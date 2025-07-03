@@ -5,34 +5,26 @@ import DashboardLayout from '../../components/dashboard-layout';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Icons } from '../../components/ui/icons';
-import { trpc } from '../../lib/trpc';
+import { useAuthSession } from '../../lib/hooks/useAuthSession';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user } = useAuthSession();
 
-  // tRPC queries
-  const dashboardStats = trpc.getDashboardStats.useQuery();
-  const recentJobs = trpc.getJobs.useQuery({});
+  // Mock data for now (in production, this would come from API)
+  const metrics = {
+    totalContacts: 12,
+    activeJobs: 5,
+    completedJobs: 23,
+    verifiedUsers: 8,
+  };
+
+  const jobsData: any[] = []; // Empty for now
 
   // Navigation handlers
   const handleAddContact = () => router.push('/dashboard/contacts');
   const handleCreateJob = () => router.push('/dashboard/jobs');
   const handleCalendarClick = () => router.push('/dashboard/scheduling');
-
-  // Calculate metrics from real data
-  const metrics = dashboardStats.data ? {
-    totalContacts: dashboardStats.data.totalUsers,
-    activeJobs: dashboardStats.data.activeJobs,
-    completedJobs: dashboardStats.data.completedJobs,
-    verifiedUsers: dashboardStats.data.verifiedUsers,
-  } : {
-    totalContacts: 0,
-    activeJobs: 0,
-    completedJobs: 0,
-    verifiedUsers: 0,
-  };
-
-  const jobsData = recentJobs.data || [];
 
   return (
     <DashboardLayout
