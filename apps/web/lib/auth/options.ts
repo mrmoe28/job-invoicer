@@ -1,6 +1,23 @@
+import { compare } from "bcryptjs";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+
+// Import mock data (in production, this would be database calls)
+const mockUsers: any[] = [];
+const mockOrganizations: any[] = [];
+
+// Function to get updated mock data from registration API
+async function getMockData() {
+    try {
+        // In a real app, this would be database queries
+        // For now, we'll use the in-memory storage
+        return { users: mockUsers, organizations: mockOrganizations };
+    } catch (error) {
+        console.error("Error fetching mock data:", error);
+        return { users: [], organizations: [] };
+    }
+}
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -16,32 +33,38 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 try {
-                    // TODO: Replace with actual database lookup
-                    // For now, return a mock user for testing
-                    const mockUser = {
-                        id: "1",
-                        email: credentials.email,
-                        firstName: "Test",
-                        lastName: "User",
-                        passwordHash: "$2a$10$example.hash", // Replace with actual hash
-                        organizationId: "org-1"
-                    };
+                    // Get current mock data
+                    const { users } = await getMockData();
 
-                    // In production, you would:
-                    // 1. Look up user by email in your database
-                    // 2. Compare the password hash
-                    // 3. Return user data if valid
+                    // Look for user by email
+                    const user = users.find(u => u.email === credentials.email);
 
-                    if (credentials.email === "test@example.com" && credentials.password === "password") {
-                        return {
-                            id: mockUser.id,
-                            email: mockUser.email,
-                            name: `${mockUser.firstName} ${mockUser.lastName}`,
-                            organizationId: mockUser.organizationId,
-                        };
+                    if (!user) {
+                        // Check for test user (backwards compatibility)
+                        if (credentials.email === "test@example.com" && credentials.password === "password") {
+                            return {
+                                id: "test-user-1",
+                                email: credentials.email,
+                                name: "Test User",
+                                organizationId: "test-org-1",
+                            };
+                        }
+                        return null;
                     }
 
-                    return null;
+                    // Check password
+                    const isValid = await compare(credentials.password, user.passwordHash);
+
+                    if (!isValid) {
+                        return null;
+                    }
+
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: `${user.firstName} ${user.lastName}`,
+                        organizationId: user.organizationId,
+                    };
                 } catch (error) {
                     console.error("Auth error:", error);
                     return null;
@@ -85,4 +108,13 @@ export const authOptions: NextAuthOptions = {
             // TODO: Update database with last login timestamp
         },
     },
-}; 
+};
+
+// Export functions to sync mock data
+export function addMockUser(user: any) {
+    mockUsers.push(user);
+}
+
+export function addMockOrganization(org: any) {
+    mockOrganizations.push(org);
+} 

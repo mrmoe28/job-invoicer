@@ -1,343 +1,354 @@
 'use client';
 
-import { trpc } from '@/lib/trpc';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { Button } from '../../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Icons, LoadingIcon } from '../../../components/ui/icons';
+import { Input } from '../../../components/ui/input';
+import { isValidEmail } from '../../../lib/utils/index';
 
-interface SignupForm {
-  firstName: string;
-  lastName: string;
+interface FormData {
   email: string;
   password: string;
   confirmPassword: string;
+  firstName: string;
+  lastName: string;
   organizationName: string;
-  agreeToTerms: boolean;
+  organizationSlug: string;
 }
 
 export default function SignupPage() {
-  const [formData, setFormData] = useState<SignupForm>({
-    firstName: '',
-    lastName: '',
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
     confirmPassword: '',
+    firstName: '',
+    lastName: '',
     organizationName: '',
-    agreeToTerms: false,
+    organizationSlug: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1: Personal Info, 2: Organization Info
-  const router = useRouter();
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
 
-  // tRPC mutation hook
-  const signupMutation = trpc.register.useMutation({
-    onSuccess: (result: any) => {
-      console.log('Signup success result:', result);
+    // Email validation
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!isValidEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
 
-      if (result?.success && result?.user) {
-        const userToStore = {
-          id: result.user.id || 'temp-id',
-          email: result.user.email || '',
-          name: `${result.user.firstName || ''} ${result.user.lastName || ''}`.trim() || 'User',
-          role: 'Admin', // First user is admin
-          organizationId: result.user.organization?.id || '1',
-          organizationName: result.user.organization?.name || formData.organizationName,
-          organizationSlug: result.user.organization?.slug || 'org',
-          plan: 'pro', // Default plan
-        };
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
 
-        console.log('Storing user data:', userToStore);
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
 
-        // Store user session immediately - no email verification needed
-        localStorage.setItem('pulse_user', JSON.stringify(userToStore));
+    // Name validation
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
 
-        // Set session flag to indicate successful authentication
-        localStorage.setItem('pulse_session_active', 'true');
+    // Organization validation
+    if (!formData.organizationName.trim()) {
+      newErrors.organizationName = 'Organization name is required';
+    }
+    if (!formData.organizationSlug.trim()) {
+      newErrors.organizationSlug = 'Organization slug is required';
+    } else if (!/^[a-z0-9-]+$/.test(formData.organizationSlug)) {
+      newErrors.organizationSlug = 'Slug must contain only lowercase letters, numbers, and hyphens';
+    }
 
-        console.log('User data stored, redirecting to dashboard');
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-        // Redirect to dashboard immediately
-        router.push('/dashboard');
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          organizationName: formData.organizationName,
+          organizationSlug: formData.organizationSlug,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Registration successful
+        router.push('/auth?message=registration-success');
       } else {
-        console.log('Signup failed:', result);
-        setError('Registration failed. Please try again.');
+        // Handle registration errors
+        if (data.details) {
+          // Validation errors
+          const fieldErrors: Record<string, string> = {};
+          data.details.forEach((detail: any) => {
+            fieldErrors[detail.field] = detail.message;
+          });
+          setErrors(fieldErrors);
+        } else {
+          setErrors({ general: data.error || 'Registration failed' });
+        }
       }
-    },
-    onError: (error: { message?: string }) => {
-      setError(error.message || 'Something went wrong. Please try again.');
-    },
-  });
-
-  const validateStep1 = () => {
-    if (!formData.firstName.trim()) return 'First name is required';
-    if (!formData.lastName.trim()) return 'Last name is required';
-    if (!formData.email.trim()) return 'Email is required';
-    if (!/\S+@\S+\.\S+/.test(formData.email)) return 'Invalid email address';
-    if (formData.password.length < 6) return 'Password must be at least 6 characters';
-    if (formData.password !== formData.confirmPassword) return 'Passwords do not match';
-    return null;
-  };
-
-  const validateStep2 = () => {
-    if (!formData.organizationName.trim()) return 'Organization name is required';
-    if (!formData.agreeToTerms) return 'You must agree to the terms of service';
-    return null;
-  };
-
-  const handleNext = () => {
-    setError('');
-
-    if (step === 1) {
-      const error = validateStep1();
-      if (error) {
-        setError(error);
-        return;
-      }
-      setStep(2);
-    } else if (step === 2) {
-      const error = validateStep2();
-      if (error) {
-        setError(error);
-        return;
-      }
-      // Submit form directly
-      handleFormSubmit();
+    } catch (error) {
+      setErrors({ general: 'An error occurred. Please try again.' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleFormSubmit = async () => {
-    setError('');
-    signupMutation.mutate({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-      organizationName: formData.organizationName,
-    });
-  };
-
-  const handleBack = () => {
-    setError('');
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
-
-  const updateFormData = (field: keyof SignupForm, value: string | boolean) => {
+  const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Auto-generate slug when organization name changes
+    if (field === 'organizationName' && value) {
+      const slug = generateSlug(value);
+      setFormData(prev => ({ ...prev, organizationSlug: slug }));
+    }
+
+    // Clear field-specific error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-8">
       <div className="max-w-md w-full space-y-8">
         {/* Logo */}
         <div className="text-center">
           <div className="flex items-center justify-center mb-8">
-            <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center mr-3">
+            <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mr-3">
               <span className="text-white font-bold text-xl">P</span>
             </div>
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Pulse<span className="text-orange-500">CRM</span>
             </h1>
           </div>
-          <h2 className="text-xl text-gray-300 mb-2">Create your crew workspace</h2>
-          <p className="text-gray-400">Join thousands of construction teams using PulseCRM</p>
+          <h2 className="text-xl text-gray-700 dark:text-gray-300 mb-2">Create your workspace</h2>
+          <p className="text-gray-500 dark:text-gray-400">Start managing your construction projects</p>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="flex items-center justify-center space-x-4 mb-8">
-          {[1, 2].map((stepNumber) => (
-            <div key={stepNumber} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${step >= stepNumber
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-700 text-gray-400'
-                }`}>
-                {stepNumber}
-              </div>
-              {stepNumber < 2 && (
-                <div className={`w-8 h-1 ${step > stepNumber ? 'bg-orange-500' : 'bg-gray-700'
-                  }`} />
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="space-y-6">
-          {/* Step 1: Personal Information */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Personal Information</h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => updateFormData('firstName', e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    placeholder="John"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => updateFormData('lastName', e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => updateFormData('email', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                  placeholder="john@company.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => updateFormData('password', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                  placeholder="Minimum 6 characters"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={(e) => updateFormData('confirmPassword', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                  placeholder="Confirm your password"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Organization Information */}
-          {step === 2 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Organization Information</h3>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Organization Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.organizationName}
-                  onChange={(e) => updateFormData('organizationName', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                  placeholder="ABC Construction Company"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  This will be your workspace name that team members will see
-                </p>
-              </div>
-
-              <div className="flex items-start">
-                <input
-                  id="terms"
-                  type="checkbox"
-                  checked={formData.agreeToTerms}
-                  onChange={(e) => updateFormData('agreeToTerms', e.target.checked)}
-                  className="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-600 bg-gray-800 rounded mt-1"
-                />
-                <label htmlFor="terms" className="ml-2 text-sm text-gray-300">
-                  I agree to the{' '}
-                  <Link href="/terms" className="text-orange-500 hover:text-orange-400">
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link href="/privacy" className="text-orange-500 hover:text-orange-400">
-                    Privacy Policy
-                  </Link>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex gap-4">
-            {step > 1 && (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
-              >
-                Back
-              </button>
-            )}
-
-            {step < 2 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
-              >
-                Continue
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleNext}
-                disabled={signupMutation.isPending}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
-              >
-                {signupMutation.isPending ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Creating Account...
+        {/* Signup Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">Sign up for PulseCRM</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Personal Information */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      First Name
+                    </label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      placeholder="John"
+                      className={errors.firstName ? 'border-red-500' : ''}
+                    />
+                    {errors.firstName && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.firstName}</p>
+                    )}
                   </div>
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Last Name
+                    </label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      placeholder="Doe"
+                      className={errors.lastName ? 'border-red-500' : ''}
+                    />
+                    {errors.lastName && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.lastName}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Email Address
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="john@company.com"
+                    className={errors.email ? 'border-red-500' : ''}
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="At least 8 characters"
+                    className={errors.password ? 'border-red-500' : ''}
+                  />
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Confirm Password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    placeholder="Confirm your password"
+                    className={errors.confirmPassword ? 'border-red-500' : ''}
+                  />
+                  {errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Organization Information */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Organization Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="organizationName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Company Name
+                    </label>
+                    <Input
+                      id="organizationName"
+                      type="text"
+                      value={formData.organizationName}
+                      onChange={(e) => handleInputChange('organizationName', e.target.value)}
+                      placeholder="ABC Construction"
+                      className={errors.organizationName ? 'border-red-500' : ''}
+                    />
+                    {errors.organizationName && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.organizationName}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="organizationSlug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Workspace URL
+                    </label>
+                    <div className="flex">
+                      <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                        pulsecrm.com/
+                      </span>
+                      <Input
+                        id="organizationSlug"
+                        type="text"
+                        value={formData.organizationSlug}
+                        onChange={(e) => handleInputChange('organizationSlug', e.target.value)}
+                        placeholder="abc-construction"
+                        className={`rounded-l-none ${errors.organizationSlug ? 'border-red-500' : ''}`}
+                      />
+                    </div>
+                    {errors.organizationSlug && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.organizationSlug}</p>
+                    )}
+                    <p className="mt-1 text-sm text-gray-500">This will be your unique workspace URL</p>
+                  </div>
+                </div>
+              </div>
+
+              {errors.general && (
+                <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
+                  <div className="flex items-center">
+                    <Icons.AlertCircle size={16} className="mr-2" />
+                    {errors.general}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full"
+              >
+                {isLoading ? (
+                  <>
+                    <LoadingIcon className="mr-2 h-4 w-4" />
+                    Creating account...
+                  </>
                 ) : (
-                  'Create Account'
+                  <>
+                    <Icons.UserCheck size={16} className="mr-2" />
+                    Create account
+                  </>
                 )}
-              </button>
-            )}
-          </div>
-        </div>
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
         {/* Login Link */}
         <div className="text-center">
-          <p className="text-gray-400">
+          <p className="text-gray-600 dark:text-gray-400">
             Already have an account?{' '}
-            <Link href="/auth" className="text-orange-500 hover:text-orange-400 font-semibold">
+            <Link
+              href="/auth"
+              className="text-orange-600 hover:text-orange-500 dark:text-orange-400 dark:hover:text-orange-300 font-semibold"
+            >
               Sign in
             </Link>
           </p>
