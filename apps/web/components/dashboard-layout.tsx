@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import FeatureNotification from './notifications/FeatureNotification';
 import TopNavigation from './top-navigation';
 
 interface DashboardLayoutProps {
@@ -115,6 +116,9 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         )}
         {children}
       </main>
+
+      {/* Feature Notification Popup */}
+      <FeatureNotification />
     </div>
   );
 }

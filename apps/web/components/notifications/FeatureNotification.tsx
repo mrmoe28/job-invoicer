@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface FeatureUpdate {
   id: string;
@@ -14,6 +14,20 @@ interface FeatureUpdate {
 
 // Current feature updates - add new ones here when features are added
 const FEATURE_UPDATES: FeatureUpdate[] = [
+  {
+    id: 'update-2025-01-03-login-popup',
+    version: '1.4.0',
+    title: 'New Login Feature Notifications',
+    description: 'We\'ve added a smart notification system to keep you updated on new features!',
+    features: [
+      'Beautiful popup notifications appear when you log in',
+      'Smart tracking ensures you only see new updates once',
+      'Notifications include feature details and version info',
+      'Clean, modern design that matches the dashboard theme'
+    ],
+    date: 'January 3, 2025',
+    type: 'feature'
+  },
   {
     id: 'update-2024-12-30-fixes',
     version: '1.3.1',
@@ -49,7 +63,7 @@ const FEATURE_UPDATES: FeatureUpdate[] = [
     description: 'We\'ve added exciting new functionality to enhance your experience!',
     features: [
       'Fixed schedule saving with proper validation and loading states',
-      'Enhanced PDF document viewer with improved compatibility', 
+      'Enhanced PDF document viewer with improved compatibility',
       'Added profile image upload functionality with preview',
       'Improved error handling across all forms'
     ],
@@ -63,16 +77,40 @@ export default function FeatureNotification() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check for unseen notifications
-    const seenNotifications = JSON.parse(localStorage.getItem('seenNotifications') || '[]');
-    const unseenNotification = FEATURE_UPDATES.find(update => 
-      !seenNotifications.includes(update.id)
-    );
+    // Check for unseen notifications only after a fresh login
+    const checkForNotifications = () => {
+      const lastNotificationCheck = localStorage.getItem('lastNotificationCheck');
+      const currentSession = localStorage.getItem('pulse_session_active');
+      const currentTime = Date.now();
 
-    if (unseenNotification) {
-      setCurrentNotification(unseenNotification);
-      setIsVisible(true);
-    }
+      // Only show notifications if:
+      // 1. User has an active session
+      // 2. Either no previous check, or it's been more than 1 hour since last check
+      // 3. This prevents showing on every dashboard navigation
+      if (currentSession === 'true') {
+        const shouldCheckNotifications = !lastNotificationCheck ||
+          (currentTime - parseInt(lastNotificationCheck) > 3600000); // 1 hour
+
+        if (shouldCheckNotifications) {
+          const seenNotifications = JSON.parse(localStorage.getItem('seenNotifications') || '[]');
+          const unseenNotification = FEATURE_UPDATES.find(update =>
+            !seenNotifications.includes(update.id)
+          );
+
+          if (unseenNotification) {
+            setCurrentNotification(unseenNotification);
+            setIsVisible(true);
+          }
+
+          // Update last check time
+          localStorage.setItem('lastNotificationCheck', currentTime.toString());
+        }
+      }
+    };
+
+    // Small delay to ensure dashboard is fully loaded
+    const timeoutId = setTimeout(checkForNotifications, 1000);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const handleDismiss = () => {
@@ -81,7 +119,7 @@ export default function FeatureNotification() {
       const seenNotifications = JSON.parse(localStorage.getItem('seenNotifications') || '[]');
       seenNotifications.push(currentNotification.id);
       localStorage.setItem('seenNotifications', JSON.stringify(seenNotifications));
-      
+
       setIsVisible(false);
       setTimeout(() => setCurrentNotification(null), 300);
     }
@@ -119,18 +157,16 @@ export default function FeatureNotification() {
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className={`fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity duration-300 ${
-          isVisible ? 'opacity-100' : 'opacity-0'
-        }`}
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'
+          }`}
         onClick={handleDismiss}
       />
 
       {/* Notification Card */}
-      <div 
-        className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 transition-all duration-300 ${
-          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-        }`}
+      <div
+        className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 transition-all duration-300 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+          }`}
       >
         <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
           {/* Header */}
@@ -156,7 +192,7 @@ export default function FeatureNotification() {
           {/* Content */}
           <div className="p-6">
             <p className="text-gray-300 mb-4">{currentNotification.description}</p>
-            
+
             <div className="space-y-2">
               <h4 className="text-white font-medium text-sm">What's New:</h4>
               <ul className="space-y-2">
