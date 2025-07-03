@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUser, getAllUsers } from "../../../lib/database";
+import { createUser, getAllUsers } from "../../../lib/database-postgres";
 
 export async function GET(request: NextRequest) {
     try {
         const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+        const hasPostgres = !!process.env.POSTGRES_URL;
 
         console.log('Database test endpoint called');
         console.log('Environment:', {
             isVercel,
+            hasPostgres,
             nodeEnv: process.env.NODE_ENV,
             platform: process.platform
         });
@@ -18,6 +20,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             success: true,
             environment: isVercel ? 'Vercel' : 'Local',
+            databaseType: hasPostgres ? 'Postgres' : (isVercel ? 'Memory' : 'File'),
             userCount: users.length,
             users: users.map(u => ({ id: u.id, email: u.email, name: `${u.firstName} ${u.lastName}` })),
             timestamp: new Date().toISOString()

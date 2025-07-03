@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateUserPassword } from "../../../../lib/database";
+import { validateUserPassword } from "../../../../lib/database-postgres";
 
 export async function POST(request: NextRequest) {
     try {
