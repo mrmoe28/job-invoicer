@@ -27,10 +27,17 @@ interface Database {
     organizations: Organization[];
 }
 
+// Check if we're running on Vercel
+const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
 const DB_FILE_PATH = path.join(process.cwd(), 'data', 'database.json');
 
-// Ensure data directory exists
+// In-memory storage for Vercel (will reset on each deployment, but works for demo)
+let memoryDb: Database | null = null;
+
+// Ensure data directory exists (local only)
 async function ensureDataDir() {
+    if (isVercel) return; // Skip on Vercel
+
     const dataDir = path.dirname(DB_FILE_PATH);
     try {
         await fs.access(dataDir);
@@ -39,35 +46,61 @@ async function ensureDataDir() {
     }
 }
 
-// Initialize database with clean data (no demo users)
+// Initialize database with clean data
 async function initializeDatabase(): Promise<Database> {
     const defaultData: Database = {
         users: [],
         organizations: []
     };
 
-    await ensureDataDir();
-    await fs.writeFile(DB_FILE_PATH, JSON.stringify(defaultData, null, 2));
-    console.log('Database initialized with clean data');
+    if (isVercel) {
+        // On Vercel, use memory storage
+        memoryDb = defaultData;
+        console.log('Database initialized in memory (Vercel environment)');
+    } else {
+        // Local development, use file storage
+        await ensureDataDir();
+        await fs.writeFile(DB_FILE_PATH, JSON.stringify(defaultData, null, 2));
+        console.log('Database initialized with clean data (local file)');
+    }
+
     return defaultData;
 }
 
 // Read database
 async function readDatabase(): Promise<Database> {
-    try {
-        await ensureDataDir();
-        const data = await fs.readFile(DB_FILE_PATH, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.log('Database file not found, initializing clean database...');
-        return await initializeDatabase();
+    if (isVercel) {
+        // On Vercel, use memory storage
+        if (!memoryDb) {
+            console.log('Memory database not found, initializing...');
+            return await initializeDatabase();
+        }
+        return memoryDb;
+    } else {
+        // Local development, use file storage
+        try {
+            await ensureDataDir();
+            const data = await fs.readFile(DB_FILE_PATH, 'utf8');
+            return JSON.parse(data);
+        } catch (error) {
+            console.log('Database file not found, initializing clean database...');
+            return await initializeDatabase();
+        }
     }
 }
 
 // Write database
 async function writeDatabase(data: Database): Promise<void> {
-    await ensureDataDir();
-    await fs.writeFile(DB_FILE_PATH, JSON.stringify(data, null, 2));
+    if (isVercel) {
+        // On Vercel, update memory storage
+        memoryDb = data;
+        console.log('Database updated in memory');
+    } else {
+        // Local development, write to file
+        await ensureDataDir();
+        await fs.writeFile(DB_FILE_PATH, JSON.stringify(data, null, 2));
+        console.log('Database written to file');
+    }
 }
 
 // Generate unique ID
@@ -84,6 +117,8 @@ export async function createUser(userData: {
     organizationName: string;
     organizationSlug?: string;
 }): Promise<{ user: User; organization: Organization }> {
+    console.log(`Creating user in ${isVercel ? 'Vercel' : 'local'} environment`);
+
     const db = await readDatabase();
 
     // Check if user already exists
@@ -125,6 +160,8 @@ export async function createUser(userData: {
 
     await writeDatabase(db);
 
+    console.log(`User created successfully: ${user.email}`);
+
     // Return user without password
     const { password, ...userWithoutPassword } = user;
     return {
@@ -135,15 +172,25 @@ export async function createUser(userData: {
 
 export async function findUserByEmail(email: string): Promise<User | null> {
     const db = await readDatabase();
-    return db.users.find(u => u.email === email) || null;
+    const user = db.users.find(u => u.email === email);
+    console.log(`Finding user ${email}: ${user ? 'found' : 'not found'} in ${isVercel ? 'Vercel' : 'local'} environment`);
+    return user || null;
 }
 
 export async function validateUserPassword(email: string, password: string): Promise<User | null> {
     const user = await findUserByEmail(email);
-    if (!user) return null;
+    if (!user) {
+        console.log(`Password validation failed: user ${email} not found`);
+        return null;
+    }
 
     const isValid = await compare(password, user.password);
-    if (!isValid) return null;
+    if (!isValid) {
+        console.log(`Password validation failed: incorrect password for ${email}`);
+        return null;
+    }
+
+    console.log(`Password validation successful for ${email}`);
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
@@ -180,6 +227,6 @@ export async function getAllOrganizations(): Promise<Organization[]> {
 
 // Reset database (remove all users and organizations)
 export async function resetDatabase(): Promise<void> {
-    console.log('Resetting database - removing all users and organizations');
+    console.log(`Resetting database in ${isVercel ? 'Vercel' : 'local'} environment`);
     await initializeDatabase();
 } 
