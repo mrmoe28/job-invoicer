@@ -198,15 +198,7 @@ function LoginForm() {
           </CardContent>
         </Card>
 
-        {/* Test Credentials */}
-        <div className="bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg text-sm">
-          <div className="flex items-center mb-2">
-            <Icons.Info size={16} className="mr-2" />
-            <span className="font-medium">Test Credentials</span>
-          </div>
-          <p className="text-xs">Email: test@example.com</p>
-          <p className="text-xs">Password: password</p>
-        </div>
+
 
         {/* Signup Link */}
         <div className="text-center">

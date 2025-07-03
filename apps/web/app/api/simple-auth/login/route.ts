@@ -1,18 +1,5 @@
-import { compare } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
-
-// Simple in-memory user storage (in production, this would be a database)
-const users = [
-    {
-        id: "1",
-        email: "test@example.com",
-        password: "$2b$12$ESmerwiKOXGBV83vCJWly.yn/W6wkTyBDHSrllmRQKvFuOMPWDLTi", // "password"
-        firstName: "Test",
-        lastName: "User",
-        organizationId: "org-1",
-        organizationName: "Test Company"
-    }
-];
+import { validateUserPassword } from "../../../../lib/database";
 
 export async function POST(request: NextRequest) {
     try {
@@ -28,26 +15,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Find user by email
-        const user = users.find(u => u.email === email);
+        // Validate user credentials using database
+        const user = await validateUserPassword(email, password);
 
         if (!user) {
-            console.log('User not found for email:', email);
-            return NextResponse.json(
-                { error: "Invalid email or password" },
-                { status: 401 }
-            );
-        }
-
-        console.log('User found, checking password...');
-
-        // Check password
-        const isValid = await compare(password, user.password);
-
-        console.log('Password validation result:', isValid);
-
-        if (!isValid) {
-            console.log('Password validation failed');
+            console.log('Invalid credentials for email:', email);
             return NextResponse.json(
                 { error: "Invalid email or password" },
                 { status: 401 }
@@ -56,7 +28,7 @@ export async function POST(request: NextRequest) {
 
         console.log('Login successful for user:', user.email);
 
-        // Return user data (without password)
+        // Return user data (password already excluded by validateUserPassword)
         return NextResponse.json({
             success: true,
             user: {

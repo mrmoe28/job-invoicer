@@ -1,77 +1,86 @@
-import { hash } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { createUser } from "../../../../lib/database";
 
-// Simple in-memory storage (shared with login)
-const users: any[] = [];
-const organizations: any[] = [];
+const signupSchema = z.object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    organizationName: z.string().min(1, "Organization name is required"),
+    organizationSlug: z.string().optional()
+});
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password, firstName, lastName, organizationName } = await request.json();
+        const body = await request.json();
 
-        if (!email || !password || !firstName || !lastName || !organizationName) {
+        console.log('Signup attempt:', {
+            email: body.email,
+            firstName: body.firstName,
+            lastName: body.lastName,
+            organizationName: body.organizationName
+        });
+
+        // Validate input
+        const validationResult = signupSchema.safeParse(body);
+        if (!validationResult.success) {
+            console.log('Validation failed:', validationResult.error.errors);
             return NextResponse.json(
-                { error: "All fields are required" },
+                {
+                    error: "Validation failed",
+                    details: validationResult.error.errors
+                },
                 { status: 400 }
             );
         }
 
-        // Check if user already exists
-        const existingUser = users.find(u => u.email === email);
-        if (existingUser) {
-            return NextResponse.json(
-                { error: "User with this email already exists" },
-                { status: 400 }
-            );
-        }
+        const { email, password, firstName, lastName, organizationName, organizationSlug } = validationResult.data;
 
-        // Hash password
-        const passwordHash = await hash(password, 12);
-
-        // Create organization
-        const organizationId = `org-${Date.now()}`;
-        const organization = {
-            id: organizationId,
-            name: organizationName,
-            slug: organizationName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            plan: 'free',
-            createdAt: new Date(),
-        };
-        organizations.push(organization);
-
-        // Create user
-        const userId = `user-${Date.now()}`;
-        const user = {
-            id: userId,
+        // Create user and organization
+        const result = await createUser({
             email,
-            password: passwordHash,
+            password,
             firstName,
             lastName,
-            organizationId,
             organizationName,
-            role: 'owner',
-            createdAt: new Date(),
-        };
-        users.push(user);
+            organizationSlug
+        });
 
-        // Return success (without password)
+        console.log('User created successfully:', {
+            userId: result.user.id,
+            email: result.user.email,
+            organizationId: result.organization.id,
+            organizationName: result.organization.name
+        });
+
         return NextResponse.json({
             success: true,
             message: "Account created successfully",
             user: {
-                id: user.id,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                name: `${user.firstName} ${user.lastName}`,
-                organizationId: user.organizationId,
-                organizationName: user.organizationName,
-                role: user.role,
-            }
+                id: result.user.id,
+                email: result.user.email,
+                firstName: result.user.firstName,
+                lastName: result.user.lastName,
+                name: `${result.user.firstName} ${result.user.lastName}`,
+                organizationId: result.user.organizationId,
+                organizationName: result.user.organizationName,
+            },
+            organization: result.organization
         });
 
     } catch (error) {
         console.error("Signup error:", error);
+
+        if (error instanceof Error) {
+            if (error.message.includes('already exists')) {
+                return NextResponse.json(
+                    { error: "An account with this email already exists" },
+                    { status: 409 }
+                );
+            }
+        }
+
         return NextResponse.json(
             { error: "Internal server error" },
             { status: 500 }
