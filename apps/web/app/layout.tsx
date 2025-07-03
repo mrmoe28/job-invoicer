@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { ReactNode } from 'react'
 import { TrpcProvider } from '../providers'
+import { AuthProvider } from '../providers/auth-provider'
 import './globals.css'
 
 const inter = Inter({
@@ -65,9 +66,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} antialiased`}>
-        <TrpcProvider>
-          {children}
-        </TrpcProvider>
+        <AuthProvider>
+          <TrpcProvider>
+            {children}
+          </TrpcProvider>
+        </AuthProvider>
       </body>
     </html>
   )
