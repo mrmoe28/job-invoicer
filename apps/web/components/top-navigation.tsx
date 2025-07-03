@@ -148,6 +148,10 @@ export default function TopNavigation({ user }: TopNavigationProps) {
     localStorage.removeItem('pulse_session_active');
     localStorage.removeItem('pulse_user');
 
+    // Clear cookies as well
+    document.cookie = 'pulse_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'pulse_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+
     router.push('/auth');
   };
 

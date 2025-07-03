@@ -18,11 +18,22 @@ function LoginForm() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check if user is already logged in
+    // Check if user is already logged in (localStorage or cookies)
     const userData = localStorage.getItem('pulse_user');
     const sessionActive = localStorage.getItem('pulse_session_active');
 
-    if (userData && sessionActive === 'true') {
+    // Also check cookies as fallback
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return null;
+    };
+
+    const sessionCookie = getCookie('pulse_session_active');
+    const userCookie = getCookie('pulse_user');
+
+    if ((userData && sessionActive === 'true') || (sessionCookie === 'true' && userCookie)) {
       console.log('User already logged in, redirecting to dashboard');
       router.replace('/dashboard');
       return;
@@ -58,10 +69,14 @@ function LoginForm() {
         localStorage.setItem('pulse_user', JSON.stringify(data.user));
         localStorage.setItem('pulse_session_active', 'true');
 
-        // Small delay to ensure localStorage is written
-        setTimeout(() => {
-          router.replace('/dashboard');
-        }, 100);
+        // Set cookies for middleware validation
+        document.cookie = `pulse_session_active=true; path=/; max-age=2592000`; // 30 days
+        document.cookie = `pulse_user=${JSON.stringify(data.user)}; path=/; max-age=2592000`; // 30 days
+
+        console.log('Redirecting to dashboard...');
+
+        // Use window.location for a hard redirect to ensure it works
+        window.location.href = '/dashboard';
       } else {
         setError(data.error || 'Login failed. Please try again.');
       }
