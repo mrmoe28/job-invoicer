@@ -31,8 +31,8 @@ export function LoginForm() {
 
         if (!formData.password) {
             newErrors.password = 'Password is required';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
+        } else if (formData.password.length < 8) {
+            newErrors.password = 'Password must be at least 8 characters';
         }
 
         setErrors(newErrors);
@@ -224,14 +224,7 @@ export function LoginForm() {
                     </CardContent>
                 </Card>
 
-                {/* Test Credentials */}
-                <div className="text-center">
-                    <div className="bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg text-sm">
-                        <p className="font-semibold mb-1">Test Credentials:</p>
-                        <p>Email: test@example.com</p>
-                        <p>Password: password</p>
-                    </div>
-                </div>
+
 
                 {/* Signup Link */}
                 <div className="text-center">

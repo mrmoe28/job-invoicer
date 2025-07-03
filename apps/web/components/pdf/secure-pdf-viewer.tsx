@@ -1,34 +1,31 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCw, 
-  Download, 
-  Maximize2, 
-  ChevronLeft, 
-  ChevronRight, 
-  Search, 
-  BookOpen,
-  Share2,
-  FileText,
+import {
   AlertCircle,
-  Loader,
-  X,
-  Shield,
-  Eye,
-  Lock,
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
   Clock,
-  User,
-  Settings
+  Download,
+  Eye,
+  FileText,
+  Loader,
+  Maximize2,
+  RotateCw,
+  Search,
+  Share2,
+  Shield,
+  X,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '../../lib/utils';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {
-    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 }
 
 interface SecuritySettings {
@@ -65,7 +62,7 @@ interface SecurePDFViewerProps {
   showControls?: boolean;
   height?: string;
   security?: SecuritySettings;
-  onLoadSuccess?: (pdf: any) => void;
+  onLoadSuccess?: (pdf: unknown) => void;
   onLoadError?: (error: Error) => void;
   onSecurityViolation?: (violation: string) => void;
   onViewingComplete?: (session: ViewingSession) => void;
@@ -94,7 +91,6 @@ export default function SecurePDFViewer({
   className,
   onClose,
   showControls = true,
-  height = '800px',
   security = DEFAULT_SECURITY,
   onLoadSuccess,
   onLoadError,
@@ -289,6 +285,7 @@ export default function SecurePDFViewer({
           title: fileName || 'PDF Document',
           url: fileUrl,
         });
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
         navigator.clipboard.writeText(fileUrl);
         alert('PDF URL copied to clipboard');
@@ -299,15 +296,6 @@ export default function SecurePDFViewer({
     }
   }, [fileUrl, fileName, securityConfig.allowShare, onSecurityViolation]);
 
-  const printPDF = useCallback(() => {
-    if (!securityConfig.allowPrint) {
-      onSecurityViolation?.('Print attempt blocked');
-      alert('Printing is not permitted for this document');
-      return;
-    }
-
-    window.print();
-  }, [securityConfig.allowPrint, onSecurityViolation]);
 
   // Copy protection
   useEffect(() => {
@@ -444,11 +432,10 @@ export default function SecurePDFViewer({
         {/* Access Level */}
         <div>
           <h4 className="text-sm font-medium text-gray-300 mb-2">Access Level</h4>
-          <div className={`px-3 py-2 rounded text-sm ${
-            securityConfig.accessLevel === 'confidential' ? 'bg-red-900 text-red-300' :
-            securityConfig.accessLevel === 'restricted' ? 'bg-yellow-900 text-yellow-300' :
-            'bg-green-900 text-green-300'
-          }`}>
+          <div className={`px-3 py-2 rounded text-sm ${securityConfig.accessLevel === 'confidential' ? 'bg-red-900 text-red-300' :
+              securityConfig.accessLevel === 'restricted' ? 'bg-yellow-900 text-yellow-300' :
+                'bg-green-900 text-green-300'
+            }`}>
             {securityConfig.accessLevel?.toUpperCase()}
           </div>
         </div>
@@ -468,9 +455,8 @@ export default function SecurePDFViewer({
                   <Icon className="w-4 h-4 text-gray-400 mr-2" />
                   <span className="text-sm text-gray-300">{label}</span>
                 </div>
-                <div className={`w-2 h-2 rounded-full ${
-                  securityConfig[key as keyof SecuritySettings] ? 'bg-green-500' : 'bg-red-500'
-                }`} />
+                <div className={`w-2 h-2 rounded-full ${securityConfig[key as keyof SecuritySettings] ? 'bg-green-500' : 'bg-red-500'
+                  }`} />
               </div>
             ))}
           </div>
@@ -493,7 +479,7 @@ export default function SecurePDFViewer({
           <div>
             <h4 className="text-sm font-medium text-gray-300 mb-2">Watermark</h4>
             <div className="text-sm text-gray-400">
-              "{securityConfig.watermark.text}"
+              &quot;{securityConfig.watermark.text}&quot;
             </div>
           </div>
         )}
@@ -511,7 +497,7 @@ export default function SecurePDFViewer({
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={cn(
         'bg-gray-900 rounded-lg overflow-hidden flex flex-col',
@@ -539,10 +525,9 @@ export default function SecurePDFViewer({
                 <div className="flex items-center space-x-2 text-sm text-gray-400">
                   <span>{numPages} pages</span>
                   {securityConfig.accessLevel !== 'public' && (
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      securityConfig.accessLevel === 'confidential' ? 'bg-red-900 text-red-300' :
-                      'bg-yellow-900 text-yellow-300'
-                    }`}>
+                    <span className={`px-2 py-1 rounded text-xs ${securityConfig.accessLevel === 'confidential' ? 'bg-red-900 text-red-300' :
+                        'bg-yellow-900 text-yellow-300'
+                      }`}>
                       {securityConfig.accessLevel}
                     </span>
                   )}
@@ -582,13 +567,13 @@ export default function SecurePDFViewer({
               >
                 <Search className="w-4 h-4" />
               </button>
-              
+
               <button
                 onClick={() => setShowThumbnails(!showThumbnails)}
                 className={cn(
                   "p-2 rounded transition-colors",
-                  showThumbnails 
-                    ? "bg-orange-500 text-white" 
+                  showThumbnails
+                    ? "bg-orange-500 text-white"
                     : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                 )}
                 title="Toggle Thumbnails"
@@ -600,8 +585,8 @@ export default function SecurePDFViewer({
                 onClick={() => setShowSecurityPanel(!showSecurityPanel)}
                 className={cn(
                   "p-2 rounded transition-colors",
-                  showSecurityPanel 
-                    ? "bg-orange-500 text-white" 
+                  showSecurityPanel
+                    ? "bg-orange-500 text-white"
                     : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                 )}
                 title="Security Panel"
@@ -662,7 +647,7 @@ export default function SecurePDFViewer({
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="number"
@@ -693,11 +678,11 @@ export default function SecurePDFViewer({
               >
                 <ZoomOut className="w-4 h-4" />
               </button>
-              
+
               <span className="text-sm text-gray-300 min-w-[60px] text-center">
                 {Math.round(scale * 100)}%
               </span>
-              
+
               <button
                 onClick={zoomIn}
                 disabled={loading}
@@ -749,8 +734,8 @@ export default function SecurePDFViewer({
                   onClick={() => goToPage(page)}
                   className={cn(
                     "relative cursor-pointer rounded border-2 transition-all",
-                    page === pageNumber 
-                      ? "border-orange-500 bg-orange-500/10" 
+                    page === pageNumber
+                      ? "border-orange-500 bg-orange-500/10"
                       : "border-gray-700 hover:border-gray-600"
                   )}
                 >
@@ -800,8 +785,8 @@ export default function SecurePDFViewer({
                 <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading PDF</h3>
                 <p className="text-gray-600 mb-4">{error}</p>
-                <button 
-                  onClick={() => window.location.reload()} 
+                <button
+                  onClick={() => window.location.reload()}
                   className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
                 >
                   Retry

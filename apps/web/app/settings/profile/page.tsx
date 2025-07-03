@@ -248,6 +248,7 @@ export default function ProfilePage() {
               {/* Current Avatar */}
               <div className="relative">
                 {previewImage || profile.profileImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={previewImage || profile.profileImage}
                     alt="Profile"
@@ -323,6 +324,7 @@ export default function ProfilePage() {
               {/* Current Company Logo */}
               <div className="relative">
                 {previewCompanyLogo || profile.companyLogo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={previewCompanyLogo || profile.companyLogo}
                     alt="Company Logo"

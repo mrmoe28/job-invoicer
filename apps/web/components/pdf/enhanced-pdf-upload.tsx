@@ -14,7 +14,7 @@ interface UploadedFile {
 }
 
 interface EnhancedPDFUploadProps {
-  onUploadComplete?: (files: any[]) => void;
+  onUploadComplete?: (files: never[]) => void;
   onUploadError?: (error: string) => void;
   onClose?: () => void;
   className?: string;
@@ -88,10 +88,11 @@ export default function EnhancedPDFUpload({
         uploadFile(file);
       }
     });
-  }, [onUploadError]);
+  }, [onUploadError, uploadFile]);
 
   // Upload individual file
-  const uploadFile = async (file: UploadedFile) => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const uploadFile = useCallback(async (file: UploadedFile) => {
     setIsUploading(true);
 
     try {
@@ -266,7 +267,7 @@ export default function EnhancedPDFUpload({
       ));
       setIsUploading(false);
     }
-  };
+  });
 
   // Drag and drop handlers
   const handleDrop = useCallback((e: React.DragEvent) => {

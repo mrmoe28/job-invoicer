@@ -4,10 +4,10 @@ import { createUser } from "../../../../lib/database";
 
 const signupSchema = z.object({
     email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    organizationName: z.string().min(1, "Organization name is required"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    firstName: z.string().min(1, "First name is required").refine(val => val.trim().length > 0, "First name is required"),
+    lastName: z.string().min(1, "Last name is required").refine(val => val.trim().length > 0, "Last name is required"),
+    organizationName: z.string().min(1, "Organization name is required").refine(val => val.trim().length > 0, "Organization name is required"),
     organizationSlug: z.string().optional()
 });
 

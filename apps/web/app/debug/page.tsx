@@ -26,31 +26,7 @@ export default function DebugPage() {
         window.location.reload();
     };
 
-    const testLogin = async () => {
-        try {
-            const response = await fetch('/api/simple-auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: 'test@example.com',
-                    password: 'password'
-                }),
-            });
 
-            const data = await response.json();
-            console.log('Test login response:', data);
-
-            if (data.success) {
-                localStorage.setItem('pulse_user', JSON.stringify(data.user));
-                localStorage.setItem('pulse_session_active', 'true');
-                window.location.reload();
-            }
-        } catch (error) {
-            console.error('Test login error:', error);
-        }
-    };
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -76,9 +52,6 @@ export default function DebugPage() {
                         <CardContent className="space-y-4">
                             <Button onClick={clearStorage} variant="outline">
                                 Clear LocalStorage
-                            </Button>
-                            <Button onClick={testLogin}>
-                                Test Login (test@example.com)
                             </Button>
                             <Button onClick={() => window.location.href = '/auth'} variant="outline">
                                 Go to Login

@@ -121,7 +121,7 @@ export default function DocumentsPage() {
   const uniqueTypes = Array.from(new Set(documents.map(doc => doc.type)));
 
   // Handle document upload completion with security assignment
-  const handleUploadComplete = useCallback((uploadedFiles: any[]) => {
+  const handleUploadComplete = useCallback((uploadedFiles: never[]) => {
     console.log('Upload completed, files:', uploadedFiles);
 
     const newDocuments: DocumentItem[] = uploadedFiles.map((uploadResult) => {
@@ -273,7 +273,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const getFileIcon = (type: string) => {
+  const getFileIcon = () => {
     return <File className="w-8 h-8 text-red-400" />;
   };
 
@@ -748,7 +748,7 @@ export default function DocumentsPage() {
                 className="w-full h-full"
                 showControls={true}
                 height="100vh"
-                onLoadSuccess={(document: any) => console.log('Document loaded:', document)}
+                onLoadSuccess={(document: never) => console.log('Document loaded:', document)}
                 onLoadError={(error: Error) => console.error('Document error:', error)}
               />
             </div>

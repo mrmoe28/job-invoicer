@@ -39,35 +39,16 @@ async function ensureDataDir() {
     }
 }
 
-// Initialize database with default data
+// Initialize database with clean data (no demo users)
 async function initializeDatabase(): Promise<Database> {
     const defaultData: Database = {
-        users: [
-            {
-                id: "1",
-                email: "test@example.com",
-                password: "$2b$12$ESmerwiKOXGBV83vCJWly.yn/W6wkTyBDHSrllmRQKvFuOMPWDLTi", // "password"
-                firstName: "Test",
-                lastName: "User",
-                organizationId: "org-1",
-                organizationName: "Test Company",
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            }
-        ],
-        organizations: [
-            {
-                id: "org-1",
-                name: "Test Company",
-                slug: "test-company",
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            }
-        ]
+        users: [],
+        organizations: []
     };
 
     await ensureDataDir();
     await fs.writeFile(DB_FILE_PATH, JSON.stringify(defaultData, null, 2));
+    console.log('Database initialized with clean data');
     return defaultData;
 }
 
@@ -78,7 +59,7 @@ async function readDatabase(): Promise<Database> {
         const data = await fs.readFile(DB_FILE_PATH, 'utf8');
         return JSON.parse(data);
     } catch (error) {
-        console.log('Database file not found, initializing...');
+        console.log('Database file not found, initializing clean database...');
         return await initializeDatabase();
     }
 }
@@ -195,4 +176,10 @@ export async function findOrganizationById(id: string): Promise<Organization | n
 export async function getAllOrganizations(): Promise<Organization[]> {
     const db = await readDatabase();
     return db.organizations;
+}
+
+// Reset database (remove all users and organizations)
+export async function resetDatabase(): Promise<void> {
+    console.log('Resetting database - removing all users and organizations');
+    await initializeDatabase();
 } 
