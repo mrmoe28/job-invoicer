@@ -182,13 +182,26 @@ export function CustomersPage() {
     };
   }) => {
     try {
+      // Ensure we have at least a name before proceeding
+      const fullName = `${customerData.firstName} ${customerData.lastName}`.trim();
+      if (!fullName || !customerData.firstName) {
+        alert('Please provide at least a first name for the customer');
+        throw new Error('Name is required');
+      }
+
+      // Email is required by the API
+      if (!customerData.email || !customerData.email.trim()) {
+        alert('Please provide an email address for the customer');
+        throw new Error('Email is required');
+      }
+
       const customerPayload = {
-        name: `${customerData.firstName} ${customerData.lastName}`.trim(),
-        email: customerData.email,
-        phone: customerData.mobile || customerData.phone,
-        company: customerData.additionalInfo?.company || '',
-        address: customerData.additionalInfo?.address || '',
-        contactPerson: `${customerData.firstName} ${customerData.lastName}`.trim(),
+        name: fullName,
+        email: customerData.email.trim(),
+        phone: customerData.mobile || customerData.phone || null,
+        company: customerData.additionalInfo?.company || null,
+        address: customerData.additionalInfo?.address || null,
+        contactPerson: fullName,
         customerType: customerData.customerType,
         notifyByEmail: customerData.notifyByEmail,
         notifyBySmsText: customerData.notifyBySmsText

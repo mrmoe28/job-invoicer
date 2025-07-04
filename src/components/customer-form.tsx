@@ -49,7 +49,24 @@ export function CustomerForm({ isOpen, onClose, onSave, customer }: CustomerForm
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.firstName.trim()) return;
+    
+    // Validate required fields
+    if (!formData.firstName.trim()) {
+      alert('Please provide a first name');
+      return;
+    }
+    
+    if (!formData.email.trim()) {
+      alert('Please provide an email address');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      alert('Please provide a valid email address');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -143,12 +160,15 @@ export function CustomerForm({ isOpen, onClose, onSave, customer }: CustomerForm
 
           {/* Contact Email */}
           <div>
-            <Label className="text-sm font-medium text-gray-900 mb-3 block">Contact Email</Label>
+            <Label className="text-sm font-medium text-gray-900 mb-3 block">
+              Contact Email <span className="text-red-500">*</span>
+            </Label>
             <Input
               type="email"
               placeholder="Email address"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
               className="border-gray-300"
             />
           </div>
@@ -270,7 +290,7 @@ export function CustomerForm({ isOpen, onClose, onSave, customer }: CustomerForm
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !formData.firstName.trim()}
+              disabled={isLoading || !formData.firstName.trim() || !formData.email.trim()}
               className="bg-green-600 hover:bg-green-700"
             >
               {isLoading ? 'Saving...' : 'Save'}
