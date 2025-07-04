@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 // GET /api/appointments/[id] - Get a specific appointment
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
@@ -16,10 +16,12 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const [appointment] = await db
       .select()
       .from(appointments)
-      .where(eq(appointments.id, params.id))
+      .where(eq(appointments.id, id))
       .limit(1);
 
     if (!appointment) {
@@ -41,7 +43,7 @@ export async function GET(
 // PUT /api/appointments/[id] - Update a specific appointment
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
@@ -50,6 +52,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const updateData = await req.json();
 
     // If customerId is provided, fetch customer details
@@ -73,7 +76,7 @@ export async function PUT(
     const [updatedAppointment] = await db
       .update(appointments)
       .set(dataToUpdate)
-      .where(eq(appointments.id, params.id))
+      .where(eq(appointments.id, id))
       .returning();
 
     if (!updatedAppointment) {
@@ -93,7 +96,7 @@ export async function PUT(
 // PATCH /api/appointments/[id] - Partially update an appointment
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
@@ -102,6 +105,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     
     // For status updates only
@@ -112,7 +116,7 @@ export async function PATCH(
           status: body.status,
           updatedAt: new Date()
         })
-        .where(eq(appointments.id, params.id))
+        .where(eq(appointments.id, id))
         .returning();
 
       if (!updatedAppointment) {
@@ -133,7 +137,7 @@ export async function PATCH(
           photoUrl: body.photoUrl,
           updatedAt: new Date()
         })
-        .where(eq(appointments.id, params.id))
+        .where(eq(appointments.id, id))
         .returning();
 
       if (!updatedAppointment) {
@@ -156,7 +160,7 @@ export async function PATCH(
 // DELETE /api/appointments/[id] - Delete a specific appointment
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
@@ -165,11 +169,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Verify the appointment exists and belongs to the user
     const [appointment] = await db
       .select()
       .from(appointments)
-      .where(eq(appointments.id, params.id))
+      .where(eq(appointments.id, id))
       .limit(1);
 
     if (!appointment) {
@@ -182,7 +188,7 @@ export async function DELETE(
 
     await db
       .delete(appointments)
-      .where(eq(appointments.id, params.id));
+      .where(eq(appointments.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 // GET /api/leads/[id] - Get a specific lead
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
@@ -16,10 +16,12 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const [lead] = await db
       .select()
       .from(leads)
-      .where(eq(leads.id, params.id))
+      .where(eq(leads.id, id))
       .limit(1);
 
     if (!lead) {
@@ -43,7 +45,7 @@ export async function GET(
 // PUT /api/leads/[id] - Update a specific lead
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
@@ -52,6 +54,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const updateData = await req.json();
 
     // Prepare update data
@@ -70,7 +73,7 @@ export async function PUT(
     const [updatedLead] = await db
       .update(leads)
       .set(dataToUpdate)
-      .where(eq(leads.id, params.id))
+      .where(eq(leads.id, id))
       .returning();
 
     if (!updatedLead) {
@@ -94,7 +97,7 @@ export async function PUT(
 // PATCH /api/leads/[id] - Partially update a lead
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
@@ -103,6 +106,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     
     // For status updates
@@ -121,7 +125,7 @@ export async function PATCH(
       const [updatedLead] = await db
         .update(leads)
         .set(updateData)
-        .where(eq(leads.id, params.id))
+        .where(eq(leads.id, id))
         .returning();
 
       if (!updatedLead) {
@@ -143,7 +147,7 @@ export async function PATCH(
       const [lead] = await db
         .select()
         .from(leads)
-        .where(eq(leads.id, params.id))
+        .where(eq(leads.id, id))
         .limit(1);
 
       if (!lead) {
@@ -157,7 +161,7 @@ export async function PATCH(
           status: 'Converted',
           updatedAt: new Date()
         })
-        .where(eq(leads.id, params.id));
+        .where(eq(leads.id, id));
 
       return NextResponse.json({ 
         success: true, 
@@ -182,7 +186,7 @@ export async function PATCH(
 // DELETE /api/leads/[id] - Delete a specific lead
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
@@ -191,9 +195,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     await db
       .delete(leads)
-      .where(eq(leads.id, params.id));
+      .where(eq(leads.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

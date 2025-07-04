@@ -1,114 +1,122 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendInvoiceEmail } from '@/lib/email-service';
-import { PrismaClient } from '@prisma/client';
+import { getAuthenticatedUser } from '@/lib/stack-auth-helpers';
+import { db } from '@/lib/drizzle-db';
+import { invoices, customers } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
-const prisma = new PrismaClient();
-
-// Helper function to get authenticated user
-async function getAuthenticatedUser() {
-  try {
-    // For now, we'll use the admin user as fallback
-    // In a real app, you'd get this from the session/token
-    const adminUser = await prisma.user.findFirst({
-      where: { email: 'admin@ekosolar.com' }
-    });
-    
-    if (!adminUser) {
-      throw new Error('Admin user not found');
-    }
-    
-    return adminUser;
-  } catch (error) {
-    console.error('Error getting authenticated user:', error);
-    throw error;
-  }
-}
-
+// POST /api/invoices/[id]/send-email - Send invoice email
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
-    const { id } = await params;
     
-    // Handle empty request body gracefully
-    let recipientEmail, subject, message;
-    try {
-      const body = await req.json();
-      recipientEmail = body.recipientEmail;
-      subject = body.subject;
-      message = body.message;
-    } catch {
-      // If JSON parsing fails, use default values
-      recipientEmail = null;
-      subject = null;
-      message = null;
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get invoice from database
-    const invoice = await prisma.invoice.findFirst({
-      where: {
-        id: id,
-        userId: user.id
-      },
-      include: {
-        customer: true
-      }
-    });
+    const { id: invoiceId } = await params;
+    const body = await req.json();
+    
+    const { 
+      recipientEmail, 
+      recipientName, 
+      subject, 
+      message,
+      ccEmails = [],
+      includeAttachment = true 
+    } = body;
+
+    // Validate required fields
+    if (!recipientEmail) {
+      return NextResponse.json(
+        { error: 'Recipient email is required' },
+        { status: 400 }
+      );
+    }
+
+    // Get invoice details
+    const [invoice] = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.id, invoiceId))
+      .limit(1);
 
     if (!invoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Invoice not found' },
+        { status: 404 }
+      );
     }
 
-    const customerEmail = recipientEmail || invoice.customer?.email;
-    if (!customerEmail) {
-      return NextResponse.json({ 
-        error: 'Customer email not found' 
-      }, { status: 400 });
+    // Verify the invoice belongs to the authenticated user
+    if (invoice.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized to send this invoice' },
+        { status: 403 }
+      );
+    }
+
+    // Get customer details if available
+    let customerDetails = null;
+    if (invoice.customerId) {
+      const [customer] = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.id, invoice.customerId))
+        .limit(1);
+      customerDetails = customer;
     }
 
     // Prepare email data
     const emailData = {
       invoiceId: invoice.invoiceId,
-      customerName: invoice.customer?.name || invoice.customerName,
-      customerEmail: customerEmail,
-      amount: invoice.amount,
-      companyName: 'EKO SOLAR',
-      subject: subject || `Invoice ${invoice.invoiceId} from EKO SOLAR`,
-      message: message || `Dear ${invoice.customer?.name || invoice.customerName},\n\nPlease find attached your invoice ${invoice.invoiceId} for $${invoice.amount}.\n\nThank you for your business!\n\nBest regards,\nEKO SOLAR Team`
+      recipientEmail,
+      recipientName: recipientName || customerDetails?.name || 'Customer',
+      subject: subject || `Invoice ${invoice.invoiceId} from Your Company`,
+      message: message || `Please find attached invoice ${invoice.invoiceId} for the amount of $${invoice.amount.toFixed(2)}.`,
+      ccEmails,
+      includeAttachment,
+      invoiceData: {
+        ...invoice,
+        customerDetails
+      }
     };
 
-    // Send email
+    // Send the email
     const result = await sendInvoiceEmail(emailData);
 
-    if (result.success) {
-      // Update invoice status to 'Sent' if it was 'Draft'
-      if (invoice.status === 'Draft') {
-        await prisma.invoice.update({
-          where: { id: invoice.id },
-          data: { status: 'Sent' }
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Invoice email sent successfully',
-        messageId: result.messageId
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        error: result.error || 'Failed to send email'
-      }, { status: 500 });
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to send email' },
+        { status: 500 }
+      );
     }
 
+    // Update invoice status if needed
+    if (invoice.status === 'Draft') {
+      await db
+        .update(invoices)
+        .set({
+          status: 'Pending',
+          updatedAt: new Date()
+        })
+        .where(eq(invoices.id, invoiceId));
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Invoice email sent successfully',
+      messageId: result.messageId
+    });
+
   } catch (error) {
-    console.error('Email sending error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to send invoice email' 
-    }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
+    console.error('Error sending invoice email:', error);
+    return NextResponse.json(
+      { error: 'Failed to send invoice email' },
+      { status: 500 }
+    );
   }
-} 
+}
