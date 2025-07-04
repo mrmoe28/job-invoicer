@@ -1,57 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/stack-auth-helpers';
+import { db } from '@/lib/drizzle-db';
+import { payments, invoices } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
-// Helper function to get authenticated user
-async function getAuthenticatedUser() {
-  try {
-    // Try to find admin user first as fallback
-    const adminUser = await prisma.user.findFirst({
-      where: {
-        email: 'admin@ekosolar.com'
-      }
-    });
-
-    if (adminUser) {
-      return adminUser;
-    }
-
-    // If no admin user exists, create one
-    const newAdminUser = await prisma.user.create({
-      data: {
-        id: 'cmcdpr0a100008c0rt6vuo0l6',
-        email: 'admin@ekosolar.com',
-        password: 'hashed_password_placeholder',
-        name: 'Admin User',
-        company: 'EKO SOLAR',
-        role: 'admin',
-        isVerified: true
-      }
-    });
-
-    return newAdminUser;
-  } catch (error) {
-    console.error('Error getting authenticated user:', error);
-    throw new Error('Authentication failed');
-  }
-}
-
+// GET /api/payments/[id] - Get a specific payment
 export async function GET(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
 
-    const payment = await prisma.payment.findFirst({
-      where: {
-        id,
-        userId: user.id
-      },
-      include: {
-        customer: true
-      }
-    });
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, id))
+      .limit(1);
 
     if (!payment) {
       return NextResponse.json(
@@ -60,132 +31,204 @@ export async function GET(
       );
     }
 
+    // Verify the payment belongs to the user
+    if (payment.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({ payment });
   } catch (error) {
     console.error('Error fetching payment:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch payment' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
+// PUT /api/payments/[id] - Update a payment
 export async function PUT(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const body = await req.json();
+    const updateData = await request.json();
 
-    const {
-      invoiceId,
-      invoiceNumber,
-      customerName,
-      amount,
-      status,
-      paymentDate,
-      paymentMethod,
-      stripePaymentId,
-      description,
-      customerId
-    } = body;
+    const dataToUpdate = {
+      ...updateData,
+      updatedAt: new Date()
+    };
 
-    // Validation
-    if (!customerName || !amount) {
-      return NextResponse.json(
-        { error: 'Customer name and amount are required' },
-        { status: 400 }
-      );
-    }
+    const [updatedPayment] = await db
+      .update(payments)
+      .set(dataToUpdate)
+      .where(eq(payments.id, id))
+      .returning();
 
-    if (typeof amount !== 'number' || amount <= 0) {
-      return NextResponse.json(
-        { error: 'Amount must be a positive number' },
-        { status: 400 }
-      );
-    }
-
-    // Check if payment exists and belongs to user
-    const existingPayment = await prisma.payment.findFirst({
-      where: {
-        id,
-        userId: user.id
-      }
-    });
-
-    if (!existingPayment) {
+    if (!updatedPayment) {
       return NextResponse.json(
         { error: 'Payment not found' },
         { status: 404 }
       );
     }
 
-    // Update the payment
-    const payment = await prisma.payment.update({
-      where: { id },
-      data: {
-        invoiceId,
-        invoiceNumber,
-        customerName,
-        amount,
-        status,
-        paymentDate: paymentDate ? new Date(paymentDate) : null,
-        paymentMethod,
-        stripePaymentId,
-        description,
-        customerId
-      },
-      include: {
-        customer: true
-      }
-    });
+    // Update invoice status if payment status changed to Paid
+    if (updateData.status === 'Paid' && updatedPayment.invoiceId) {
+      await db
+        .update(invoices)
+        .set({
+          status: 'Paid',
+          updatedAt: new Date()
+        })
+        .where(eq(invoices.id, updatedPayment.invoiceId));
+    }
 
-    return NextResponse.json({ payment });
+    return NextResponse.json({ 
+      success: true, 
+      payment: updatedPayment 
+    });
   } catch (error) {
     console.error('Error updating payment:', error);
     return NextResponse.json(
-      { error: 'Failed to update payment' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
+// DELETE /api/payments/[id] - Delete a payment
 export async function DELETE(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
 
-    // Check if payment exists and belongs to user
-    const existingPayment = await prisma.payment.findFirst({
-      where: {
-        id,
-        userId: user.id
-      }
-    });
+    // Verify the payment exists and belongs to the user
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, id))
+      .limit(1);
 
-    if (!existingPayment) {
+    if (!payment) {
       return NextResponse.json(
         { error: 'Payment not found' },
         { status: 404 }
       );
     }
 
-    // Delete the payment
-    await prisma.payment.delete({
-      where: { id }
-    });
+    if (payment.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
 
-    return NextResponse.json({ message: 'Payment deleted successfully' });
+    // If payment is linked to an invoice, update invoice status
+    if (payment.invoiceId && payment.status === 'Paid') {
+      await db
+        .update(invoices)
+        .set({
+          status: 'Pending',
+          updatedAt: new Date()
+        })
+        .where(eq(invoices.id, payment.invoiceId));
+    }
+
+    await db
+      .delete(payments)
+      .where(eq(payments.id, id));
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Payment deleted successfully' 
+    });
   } catch (error) {
     console.error('Error deleting payment:', error);
     return NextResponse.json(
-      { error: 'Failed to delete payment' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
+}
+
+// PATCH /api/payments/[id] - Record payment
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const { action, ...data } = await request.json();
+
+    if (action === 'record-payment') {
+      const [updatedPayment] = await db
+        .update(payments)
+        .set({
+          status: 'Paid',
+          paymentDate: new Date(),
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(payments.id, id))
+        .returning();
+
+      if (!updatedPayment) {
+        return NextResponse.json(
+          { error: 'Payment not found' },
+          { status: 404 }
+        );
+      }
+
+      // Update associated invoice
+      if (updatedPayment.invoiceId) {
+        await db
+          .update(invoices)
+          .set({
+            status: 'Paid',
+            updatedAt: new Date()
+          })
+          .where(eq(invoices.id, updatedPayment.invoiceId));
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        payment: updatedPayment 
+      });
+    }
+
+    return NextResponse.json(
+      { error: 'Invalid action' },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

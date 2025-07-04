@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// Helper function to get authenticated user
-async function getAuthenticatedUser() {
-  try {
-    // For now, we'll use the admin user as fallback
-    // In a real app, you'd get this from the session/token
-    const adminUser = await prisma.user.findFirst({
-      where: { email: 'admin@ekosolar.com' }
-    });
-    
-    if (!adminUser) {
-      throw new Error('Admin user not found');
-    }
-    
-    return adminUser;
-  } catch (error) {
-    console.error('Error getting authenticated user:', error);
-    throw error;
-  }
-}
+import { getAuthenticatedUser } from '@/lib/stack-auth-helpers';
+import { db } from '@/lib/drizzle-db';
+import { invoices, customers } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 // GET /api/invoices/[id] - Get invoice by ID
 export async function GET(
@@ -30,17 +11,18 @@ export async function GET(
 ) {
   try {
     const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
     
-    const invoice = await prisma.invoice.findFirst({
-      where: {
-        id: id,
-        userId: user.id
-      },
-      include: {
-        customer: true
-      }
-    });
+    const [invoice] = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.id, id))
+      .limit(1);
     
     if (!invoice) {
       return NextResponse.json(
@@ -49,116 +31,94 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(invoice);
+    // Verify the invoice belongs to the user
+    if (invoice.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
+    // Get customer details if available
+    let customerDetails = null;
+    if (invoice.customerId) {
+      const [customer] = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.id, invoice.customerId))
+        .limit(1);
+      customerDetails = customer;
+    }
+
+    return NextResponse.json({
+      ...invoice,
+      customer: customerDetails
+    });
   } catch (error) {
     console.error('Error fetching invoice:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch invoice' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
-// PUT /api/invoices/[id] - Update invoice  
+// PUT /api/invoices/[id] - Update invoice
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const data = await request.json();
+    const updateData = await request.json();
     
-    // Check if invoice exists and belongs to user
-    const existingInvoice = await prisma.invoice.findFirst({
-      where: {
-        id: id,
-        userId: user.id
+    // If customerId is provided, get customer details
+    if (updateData.customerId) {
+      const [customer] = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.id, updateData.customerId))
+        .limit(1);
+      
+      if (customer) {
+        updateData.customerName = customer.name;
       }
-    });
-    
-    if (!existingInvoice) {
+    }
+
+    const dataToUpdate = {
+      ...updateData,
+      updatedAt: new Date()
+    };
+
+    const [updatedInvoice] = await db
+      .update(invoices)
+      .set(dataToUpdate)
+      .where(eq(invoices.id, id))
+      .returning();
+
+    if (!updatedInvoice) {
       return NextResponse.json(
         { error: 'Invoice not found' },
         { status: 404 }
       );
     }
 
-    // Update invoice with provided data
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id: id },
-      data: {
-        customerName: data.customerName || existingInvoice.customerName,
-        amount: data.amount !== undefined ? data.amount : existingInvoice.amount,
-        status: data.status || existingInvoice.status,
-        description: data.description !== undefined ? data.description : existingInvoice.description,
-        updatedAt: new Date()
-      },
-      include: {
-        customer: true
-      }
+    return NextResponse.json({ 
+      success: true, 
+      invoice: updatedInvoice 
     });
-
-    return NextResponse.json(updatedInvoice);
   } catch (error) {
     console.error('Error updating invoice:', error);
     return NextResponse.json(
-      { error: 'Failed to update invoice' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-// PATCH /api/invoices/[id] - Update invoice status only
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await getAuthenticatedUser();
-    const { id } = await params;
-    const { status } = await request.json();
-    
-    // Check if invoice exists and belongs to user
-    const existingInvoice = await prisma.invoice.findFirst({
-      where: {
-        id: id,
-        userId: user.id
-      }
-    });
-    
-    if (!existingInvoice) {
-      return NextResponse.json(
-        { error: 'Invoice not found' },
-        { status: 404 }
-      );
-    }
-
-    // Update only the status
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id: id },
-      data: {
-        status: status,
-        updatedAt: new Date()
-      },
-      include: {
-        customer: true
-      }
-    });
-
-    return NextResponse.json(updatedInvoice);
-  } catch (error) {
-    console.error('Error updating invoice status:', error);
-    return NextResponse.json(
-      { error: 'Failed to update invoice status' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -169,36 +129,98 @@ export async function DELETE(
 ) {
   try {
     const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
     
-    // Check if invoice exists and belongs to user
-    const existingInvoice = await prisma.invoice.findFirst({
-      where: {
-        id: id,
-        userId: user.id
-      }
-    });
-    
-    if (!existingInvoice) {
+    // Verify the invoice exists and belongs to the user
+    const [invoice] = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.id, id))
+      .limit(1);
+
+    if (!invoice) {
       return NextResponse.json(
         { error: 'Invoice not found' },
         { status: 404 }
       );
     }
 
-    // Delete the invoice
-    await prisma.invoice.delete({
-      where: { id: id }
-    });
+    if (invoice.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
 
-    return NextResponse.json({ message: 'Invoice deleted successfully' });
+    await db
+      .delete(invoices)
+      .where(eq(invoices.id, id));
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Invoice deleted successfully' 
+    });
   } catch (error) {
     console.error('Error deleting invoice:', error);
     return NextResponse.json(
-      { error: 'Failed to delete invoice' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
-} 
+}
+
+// PATCH /api/invoices/[id] - Update invoice status
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const { status } = await request.json();
+    
+    if (!status) {
+      return NextResponse.json(
+        { error: 'Status is required' },
+        { status: 400 }
+      );
+    }
+
+    const [updatedInvoice] = await db
+      .update(invoices)
+      .set({
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(invoices.id, id))
+      .returning();
+
+    if (!updatedInvoice) {
+      return NextResponse.json(
+        { error: 'Invoice not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      invoice: updatedInvoice 
+    });
+  } catch (error) {
+    console.error('Error updating invoice status:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
