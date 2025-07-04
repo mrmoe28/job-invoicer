@@ -9,7 +9,7 @@ import { nanoid } from 'nanoid';
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -20,17 +20,17 @@ export async function GET(request: NextRequest) {
 
     // Build where conditions
     const conditions = [eq(invoices.userId, user.id)];
-    
+
     if (status && status !== 'All') {
       conditions.push(eq(invoices.status, status));
     }
-    
+
     if (search) {
       conditions.push(
         or(
           like(invoices.customerName, `%${search}%`),
           like(invoices.invoiceId, `%${search}%`)
-        )
+        )!
       );
     }
 
@@ -51,19 +51,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    
+
     // Generate invoice ID
     const invoiceCount = await db
       .select({ count: sql`count(*)` })
       .from(invoices)
       .where(eq(invoices.userId, user.id));
-    
+
     const count = Number(invoiceCount[0]?.count || 0);
     const invoiceId = `INV-${String(count + 1).padStart(4, '0')}`;
 
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         .from(customers)
         .where(eq(customers.id, body.customerId))
         .limit(1);
-      
+
       if (customer) {
         customerName = customer.name;
       }
@@ -99,9 +99,9 @@ export async function POST(request: NextRequest) {
       .values(newInvoice)
       .returning();
 
-    return NextResponse.json({ 
-      success: true, 
-      invoice: createdInvoice 
+    return NextResponse.json({
+      success: true,
+      invoice: createdInvoice
     });
   } catch (error) {
     console.error('Error creating invoice:', error);
@@ -113,13 +113,13 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id, ...updateData } = await request.json();
-    
+
     if (!id) {
       return NextResponse.json({ error: 'Invoice ID is required' }, { status: 400 });
     }
@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest) {
         .from(customers)
         .where(eq(customers.id, updateData.customerId))
         .limit(1);
-      
+
       if (customer) {
         updateData.customerName = customer.name;
       }
@@ -152,9 +152,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      invoice: updatedInvoice 
+    return NextResponse.json({
+      success: true,
+      invoice: updatedInvoice
     });
   } catch (error) {
     console.error('Error updating invoice:', error);
@@ -166,14 +166,14 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
       return NextResponse.json({ error: 'Invoice ID is required' }, { status: 400 });
     }

@@ -11,7 +11,7 @@ const isStackAuthConfigured =
   process.env.STACK_SECRET_SERVER_KEY &&
   process.env.STACK_SECRET_SERVER_KEY !== 'YOUR_NEON_AUTH_SECRET_KEY';
 
-let stackServerApp: StackServerApp | null = null;
+let stackServerApp: StackServerApp;
 
 // Only initialize Stack Auth on server side and when properly configured
 if (isStackAuthConfigured) {
@@ -21,10 +21,17 @@ if (isStackAuthConfigured) {
     });
   } catch (error) {
     console.error('Failed to initialize Stack Auth:', error);
-    stackServerApp = null;
+    // Create a minimal fallback to prevent type errors
+    stackServerApp = new StackServerApp({
+      tokenStore: "nextjs-cookie",
+    });
   }
 } else {
-  console.warn('Stack Auth not configured. Authentication features will be disabled.');
+  console.warn('Stack Auth not configured. Using default configuration.');
+  // Create a default configuration to prevent null errors
+  stackServerApp = new StackServerApp({
+    tokenStore: "nextjs-cookie",
+  });
 }
 
 // Helper function to check if Stack Auth is available

@@ -28,7 +28,7 @@ interface SigningSession {
 export default function SigningPage() {
   const params = useParams();
   const token = params.token as string;
-  
+
   const [session, setSession] = useState<SigningSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +36,6 @@ export default function SigningPage() {
   const [showPlacement, setShowPlacement] = useState(false);
   const [currentSignature, setCurrentSignature] = useState<string>('');
   const [signed, setSigned] = useState(false);
-
-  useEffect(() => {
-    fetchSigningSession();
-  }, [token]);
 
   const fetchSigningSession = async () => {
     try {
@@ -58,6 +54,10 @@ export default function SigningPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSigningSession();
+  }, [token]);
 
   if (loading) {
     return (
@@ -104,7 +104,7 @@ export default function SigningPage() {
             <FileText className="h-12 w-12 text-blue-600 mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign Document</h1>
             <p className="text-gray-600">
-              Hello {session.signer.name}, you've been requested to sign the following document:
+              Hello {session.signer.name}, you&apos;ve been requested to sign the following document:
             </p>
           </div>
 

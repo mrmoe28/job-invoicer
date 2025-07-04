@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/stack-auth-helpers';
 import { db } from '@/lib/drizzle-db';
-import { payments, invoices, customers } from '@/lib/schema';
+import { payments, invoices } from '@/lib/schema';
 import { eq, desc, and, or, like } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
@@ -9,7 +9,7 @@ import { nanoid } from 'nanoid';
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -20,17 +20,17 @@ export async function GET(request: NextRequest) {
 
     // Build where conditions
     const conditions = [eq(payments.userId, user.id)];
-    
+
     if (status) {
       conditions.push(eq(payments.status, status));
     }
-    
+
     if (search) {
       conditions.push(
         or(
           like(payments.customerName, `%${search}%`),
           like(payments.invoiceNumber, `%${search}%`)
-        )
+        )!
       );
     }
 
@@ -51,13 +51,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    
+
     // If invoiceId is provided, update the invoice status
     if (body.invoiceId) {
       const [invoice] = await db
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         .from(invoices)
         .where(eq(invoices.id, body.invoiceId))
         .limit(1);
-      
+
       if (invoice) {
         // Update invoice status to Paid
         await db
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
             updatedAt: new Date()
           })
           .where(eq(invoices.id, body.invoiceId));
-        
+
         // Set invoice number and customer name from invoice
         body.invoiceNumber = invoice.invoiceId;
         body.customerName = invoice.customerName;
@@ -97,9 +97,9 @@ export async function POST(request: NextRequest) {
       .values(newPayment)
       .returning();
 
-    return NextResponse.json({ 
-      success: true, 
-      payment: createdPayment 
+    return NextResponse.json({
+      success: true,
+      payment: createdPayment
     });
   } catch (error) {
     console.error('Error creating payment:', error);

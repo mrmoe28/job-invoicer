@@ -11,7 +11,7 @@ export async function GET(
 ) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -49,7 +49,7 @@ export async function PUT(
 ) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -66,7 +66,7 @@ export async function PUT(
     };
 
     // Remove undefined values
-    Object.keys(dataToUpdate).forEach(key => 
+    Object.keys(dataToUpdate).forEach(key =>
       dataToUpdate[key] === undefined && delete dataToUpdate[key]
     );
 
@@ -80,8 +80,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       lead: {
         ...updatedLead,
         tags: JSON.parse(updatedLead.tags),
@@ -101,17 +101,25 @@ export async function PATCH(
 ) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const body = await req.json();
-    
+
     // For status updates
     if (body.status !== undefined || body.score !== undefined || body.estimatedValue !== undefined || body.probability !== undefined) {
-      const updateData: any = {
+      const updateData: {
+        updatedAt: Date;
+        status?: string;
+        score?: number;
+        estimatedValue?: number;
+        probability?: number;
+        notes?: string;
+        nextFollowUp?: string;
+      } = {
         updatedAt: new Date()
       };
 
@@ -132,8 +140,8 @@ export async function PATCH(
         return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
       }
 
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         lead: {
           ...updatedLead,
           tags: JSON.parse(updatedLead.tags),
@@ -163,8 +171,8 @@ export async function PATCH(
         })
         .where(eq(leads.id, id));
 
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         message: 'Lead converted to customer',
         customerData: {
           name: lead.name,
@@ -190,7 +198,7 @@ export async function DELETE(
 ) {
   try {
     const user = await getAuthenticatedUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

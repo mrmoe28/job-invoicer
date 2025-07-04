@@ -12,7 +12,7 @@ const uploadDir = path.join(process.cwd(), 'public/uploads');
 // Temporary user ID until proper auth is implemented
 const TEMP_USER_ID = 'temp-user-123';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Fetch all documents for now (until auth is implemented)
     const documentsList = await db
@@ -48,28 +48,28 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    
+
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided' },
         { status: 400 }
       );
     }
-    
+
     // Ensure upload directory exists
     if (!existsSync(uploadDir)) {
       await mkdir(uploadDir, { recursive: true });
     }
-    
+
     // Create unique filename
     const filename = `${Date.now()}-${file.name}`;
     const filepath = path.join(uploadDir, filename);
-    
+
     // Convert file to buffer and save
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     await writeFile(filepath, buffer);
-    
+
     // Create document record in database
     const [newDocument] = await db
       .insert(documents)
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         }
       })
       .returning();
-    
+
     return NextResponse.json({
       document: {
         id: newDocument.id,

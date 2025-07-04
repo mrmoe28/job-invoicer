@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/drizzle-db';
 import { signers, documents, signatureFields } from '@/lib/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
@@ -108,7 +108,7 @@ export async function POST(
     }
 
     // Create signature field
-    const [signatureField] = await db
+    await db
       .insert(signatureFields)
       .values({
         documentId: signer.documentId,
@@ -121,8 +121,7 @@ export async function POST(
         type: 'signature',
         value: signatureData,
         required: true
-      })
-      .returning();
+      });
 
     // Update signer status
     await db

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, real, integer, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, real, integer, jsonb } from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
 
 export const users = pgTable('users', {
@@ -12,11 +12,11 @@ export const users = pgTable('users', {
   isVerified: boolean('is_verified').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  
+
   // Password reset functionality
   resetToken: text('reset_token'),
   resetTokenExpiry: timestamp('reset_token_expiry'),
-  
+
   // Profile data
   firstName: text('first_name'),
   lastName: text('last_name'),
@@ -38,7 +38,7 @@ export const customers = pgTable('customers', {
   notifyBySmsText: boolean('notify_by_sms_text').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  
+
   // Foreign keys
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 });
@@ -52,7 +52,7 @@ export const invoices = pgTable('invoices', {
   status: text('status').notNull().default('Pending'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  
+
   // Foreign keys
   userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
   customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
@@ -74,7 +74,7 @@ export const appointments = pgTable('appointments', {
   photoUrl: text('photo_url'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  
+
   // Foreign keys
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
@@ -93,7 +93,7 @@ export const payments = pgTable('payments', {
   description: text('description'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  
+
   // Foreign keys
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
@@ -120,7 +120,7 @@ export const leads = pgTable('leads', {
   priority: text('priority').notNull().default('Medium'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  
+
   // Foreign keys
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/drizzle-db';
-import { documents, signatureFields, signers } from '@/lib/schema';
+import { documents, signatureFields } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { PDFDocument } from 'pdf-lib';
 import { readFile } from 'fs/promises';
@@ -73,7 +73,7 @@ export async function GET(
     const signedPdfBytes = await pdfDoc.save();
 
     // Return the signed PDF as a download
-    return new NextResponse(signedPdfBytes, {
+    return new NextResponse(Buffer.from(signedPdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${document.name.replace('.pdf', '')}-signed.pdf"`,
