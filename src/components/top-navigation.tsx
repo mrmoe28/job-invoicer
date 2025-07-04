@@ -29,7 +29,7 @@ import {
 
 interface TopNavigationProps {
   activeTab: string;
-  onTabChange: (tab: string) => void;
+  onTabChangeAction: (tab: string) => void;
 }
 
 const navigationItems = [
@@ -44,7 +44,7 @@ const navigationItems = [
   { id: 'more', label: 'More', icon: MoreHorizontal, hasDropdown: true },
 ];
 
-export function TopNavigation({ activeTab, onTabChange }: TopNavigationProps) {
+export function TopNavigation({ activeTab, onTabChangeAction }: TopNavigationProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -70,7 +70,6 @@ export function TopNavigation({ activeTab, onTabChange }: TopNavigationProps) {
   const handleLogout = () => {
     setIsLoggingOut(true);
     setShowProfileMenu(false);
-
     // Use Stack Auth handler for logout
     router.push('/handler/sign-out');
   };
@@ -113,7 +112,7 @@ export function TopNavigation({ activeTab, onTabChange }: TopNavigationProps) {
         {/* Logo and Brand */}
         <div className="flex items-center gap-6">
           <button
-            onClick={() => onTabChange('home')}
+            onClick={() => onTabChangeAction('home')}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
           >
             <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
@@ -139,7 +138,7 @@ export function TopNavigation({ activeTab, onTabChange }: TopNavigationProps) {
                         ? "text-blue-600 bg-blue-50 hover:bg-blue-50"
                         : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                     )}
-                    onClick={() => onTabChange(item.id)}
+                    onClick={() => onTabChangeAction(item.id)}
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}

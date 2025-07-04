@@ -32,34 +32,50 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if user is authenticated by looking for Stack Auth session cookie
-  const hasStackAuthSession = request.cookies.has('stack-auth-session') ||
-    request.cookies.has('stack-session') ||
-    request.headers.get('authorization');
-
-  // Handle protected routes
-  if (protectedRoutes.some(route => pathname.startsWith(route))) {
-    if (!hasStackAuthSession) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('returnUrl', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-
-  // Handle auth routes (redirect to dashboard if already authenticated)
-  if (authRoutes.some(route => pathname === route)) {
-    if (hasStackAuthSession) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-  }
-
-  // Allow public routes
-  if (publicRoutes.some(route => pathname === route || pathname.startsWith(route))) {
+  // Check if it's an API route - always allow
+  if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
-  // For any other routes, allow them to pass through
-  return NextResponse.next();
+  // Check if it's a static file or Next.js internal route
+  if (pathname.startsWith('/_next/') || pathname.startsWith('/static/') || pathname.includes('.')) {
+    return NextResponse.next();
+  }
+
+  try {
+    // Check if user is authenticated by looking for Stack Auth session cookie
+    const hasStackAuthSession = request.cookies.has('stack-auth-session') ||
+      request.cookies.has('stack-session') ||
+      request.headers.get('authorization');
+
+    // Handle protected routes
+    if (protectedRoutes.some(route => pathname.startsWith(route))) {
+      if (!hasStackAuthSession) {
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('returnUrl', pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+    }
+
+    // Handle auth routes (redirect to dashboard if already authenticated)
+    if (authRoutes.some(route => pathname === route)) {
+      if (hasStackAuthSession) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
+
+    // Allow public routes
+    if (publicRoutes.some(route => pathname === route || pathname.startsWith(route))) {
+      return NextResponse.next();
+    }
+
+    // For any other routes, allow them to pass through
+    return NextResponse.next();
+  } catch (error) {
+    console.error('Middleware error:', error);
+    // On error, allow the request to continue
+    return NextResponse.next();
+  }
 }
 
 export const config = {
@@ -71,7 +87,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder files
+     * - file extensions (js, css, ico, png, jpg, etc.)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|public|.*\\.).*)',
   ],
 }; 

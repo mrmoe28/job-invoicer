@@ -102,7 +102,7 @@ function DashboardContent() {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Top Navigation */}
-      <TopNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      <TopNavigation activeTab={activeTab} onTabChangeAction={handleTabChange} />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Navigation */}
