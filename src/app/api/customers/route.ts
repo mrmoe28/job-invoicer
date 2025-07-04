@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '@/lib/stack-auth-helpers';
 import { drizzleDb as db } from '@/lib/db';
 import { customers } from '@/lib/schema';
 import { nanoid } from 'nanoid';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 // GET /api/customers - Get all customers
 export async function GET() {
@@ -31,14 +31,20 @@ export async function GET() {
 // POST /api/customers - Create a new customer
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔍 Customer creation request received');
+    
     // Get authenticated user from Stack Auth
     const user = await getAuthenticatedUser();
+    console.log('🔍 Authenticated user:', user);
 
     if (!user) {
+      console.log('❌ No authenticated user found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
+    console.log('📋 Request body:', body);
+    
     const {
       name,
       email,
@@ -52,7 +58,25 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!name || !email) {
+      console.log('❌ Validation failed: Missing name or email');
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
+    }
+
+    // Check if customer with this email already exists
+    const existingCustomer = await db
+      .select()
+      .from(customers)
+      .where(and(
+        eq(customers.email, email),
+        eq(customers.userId, user.id)
+      ));
+
+    if (existingCustomer.length > 0) {
+      console.log('❌ Customer with email already exists:', email);
+      return NextResponse.json({ 
+        error: `A customer with email "${email}" already exists`, 
+        existingCustomer: existingCustomer[0] 
+      }, { status: 409 });
     }
 
     // Create new customer
@@ -72,15 +96,25 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date()
     };
 
+    console.log('💾 Creating customer with data:', newCustomer);
+
     const [customer] = await db
       .insert(customers)
       .values(newCustomer)
       .returning();
 
+    console.log('✅ Customer created successfully:', customer);
+
     return NextResponse.json(customer, { status: 201 });
   } catch (error) {
-    console.error('Error creating customer:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ Error creating customer:', error);
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    return NextResponse.json({ 
+      error: 'Failed to create customer. Please try again.',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 

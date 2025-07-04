@@ -1,121 +1,117 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendInvoiceEmail } from '@/lib/email-service';
-import { PrismaClient } from '@prisma/client';
-import { verifyToken } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/stack-auth-helpers';
+import { db } from '@/lib/drizzle-db';
+import { invoices, customers } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
-const prisma = new PrismaClient();
-
-// Helper function to get authenticated user
-async function getAuthenticatedUser(req: NextRequest) {
-    const token = req.cookies.get('auth-token')?.value;
-
-    let userId = null;
-
-    if (token) {
-        const decoded = verifyToken(token);
-        if (decoded) {
-            const user = await prisma.user.findUnique({
-                where: { id: decoded.userId }
-            });
-            if (user) {
-                userId = user.id;
-            }
-        }
-    }
-
-    if (!userId) {
-        const defaultUser = await prisma.user.findFirst({
-            where: { email: 'admin@ekosolar.com' }
-        });
-
-        if (!defaultUser) {
-            throw new Error('No default admin user found.');
-        }
-
-        userId = defaultUser.id;
-    }
-
-    return userId;
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
     try {
-        // const userId = await getAuthenticatedUser(request); // TODO: Enable when email history is implemented
-        const body = await request.json();
+        const user = await getAuthenticatedUser();
+        
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        const {
-            to,
-            // cc, // TODO: Enable when implementing CC/BCC support
-            // bcc, // TODO: Enable when implementing CC/BCC support
-            subject,
-            content,
-            // templateId, // TODO: Enable when implementing template support
-            scheduleAt,
-            isScheduled
+        const body = await req.json();
+        const { 
+            invoiceId, 
+            recipientEmail, 
+            recipientName, 
+            subject, 
+            message,
+            ccEmails = [],
+            includeAttachment = true 
         } = body;
 
         // Validate required fields
-        if (!to || !subject || !content) {
+        if (!invoiceId || !recipientEmail) {
             return NextResponse.json(
-                { error: 'Missing required fields: to, subject, content' },
+                { error: 'Invoice ID and recipient email are required' },
                 { status: 400 }
             );
         }
 
-        // If scheduled, store in database for later processing
-        if (isScheduled && scheduleAt) {
-            // TODO: Store scheduled email in database (requires schema update)
-            // For now, return success for scheduled emails
-            return NextResponse.json({
-                success: true,
-                message: 'Email scheduled successfully (demo mode)',
-                scheduledId: 'scheduled-' + Date.now()
-            });
+        // Get invoice details
+        const [invoice] = await db
+            .select()
+            .from(invoices)
+            .where(eq(invoices.id, invoiceId))
+            .limit(1);
+
+        if (!invoice) {
+            return NextResponse.json(
+                { error: 'Invoice not found' },
+                { status: 404 }
+            );
         }
 
-        // Send email immediately
-        try {
-            // For now, we'll use the existing invoice email service
-            // In a real app, you'd have a more generic email service
-            const result = await sendInvoiceEmail({
-                invoiceId: 'EMAIL-' + Date.now(),
-                customerName: to.split('@')[0],
-                customerEmail: to,
-                amount: 0,
-                companyName: 'Your Company'
-            });
-
-            if (result.success) {
-                // TODO: Store email history in database (requires schema update)
-                console.log('Email sent successfully:', { to, subject, messageId: result.messageId });
-
-                return NextResponse.json({
-                    success: true,
-                    message: 'Email sent successfully',
-                    messageId: result.messageId
-                });
-            } else {
-                throw new Error(result.error || 'Failed to send email');
-            }
-        } catch (emailError) {
-            console.error('Error sending email:', emailError);
-
-            // TODO: Store failed email history in database (requires schema update)
-            console.log('Email failed:', { to, subject, error: emailError });
-
+        // Verify the invoice belongs to the authenticated user
+        if (invoice.userId !== user.id) {
             return NextResponse.json(
-                { error: 'Failed to send email' },
+                { error: 'Unauthorized to send this invoice' },
+                { status: 403 }
+            );
+        }
+
+        // Get customer details if available
+        let customerDetails = null;
+        if (invoice.customerId) {
+            const [customer] = await db
+                .select()
+                .from(customers)
+                .where(eq(customers.id, invoice.customerId))
+                .limit(1);
+            customerDetails = customer;
+        }
+
+        // Prepare email data
+        const emailData = {
+            invoiceId: invoice.invoiceId,
+            recipientEmail,
+            recipientName: recipientName || customerDetails?.name || 'Customer',
+            subject: subject || `Invoice ${invoice.invoiceId} from Your Company`,
+            message: message || `Please find attached invoice ${invoice.invoiceId} for the amount of $${invoice.amount.toFixed(2)}.`,
+            ccEmails,
+            includeAttachment,
+            invoiceData: {
+                ...invoice,
+                customerDetails
+            }
+        };
+
+        // Send the email
+        const result = await sendInvoiceEmail(emailData);
+
+        if (!result.success) {
+            return NextResponse.json(
+                { error: result.error || 'Failed to send email' },
                 { status: 500 }
             );
         }
 
+        // Update invoice status if needed
+        if (invoice.status === 'Draft') {
+            await db
+                .update(invoices)
+                .set({
+                    status: 'Pending',
+                    updatedAt: new Date()
+                })
+                .where(eq(invoices.id, invoiceId));
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Invoice email sent successfully',
+            messageId: result.messageId
+        });
+
     } catch (error) {
-        console.error('Send email error:', error);
+        console.error('Error sending invoice email:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Failed to send invoice email' },
             { status: 500 }
         );
-    } finally {
-        await prisma.$disconnect();
     }
-} 
+}

@@ -1,212 +1,203 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// Helper function to get authenticated user
-async function getAuthenticatedUser() {
-  try {
-    // For now, we'll use the admin user as fallback
-    // In a real app, you'd get this from the session/token
-    const adminUser = await prisma.user.findFirst({
-      where: { email: 'admin@ekosolar.com' }
-    });
-    
-    if (!adminUser) {
-      throw new Error('Admin user not found');
-    }
-    
-    return adminUser;
-  } catch (error) {
-    console.error('Error getting authenticated user:', error);
-    throw error;
-  }
-}
+import { getAuthenticatedUser } from '@/lib/stack-auth-helpers';
+import { db } from '@/lib/drizzle-db';
+import { leads } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 // GET /api/leads/[id] - Get a specific lead
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
     const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const lead = await prisma.lead.findFirst({
-      where: {
-        id: id,
-        userId: user.id
-      }
-    });
+    const [lead] = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.id, params.id))
+      .limit(1);
 
     if (!lead) {
-      return NextResponse.json(
-        { error: 'Lead not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
     // Parse JSON fields
-    const leadWithParsedFields = {
+    const formattedLead = {
       ...lead,
-      tags: JSON.parse(lead.tags || '[]'),
-      interests: JSON.parse(lead.interests || '[]')
+      tags: JSON.parse(lead.tags),
+      interests: JSON.parse(lead.interests)
     };
 
-    return NextResponse.json(leadWithParsedFields);
+    return NextResponse.json({ lead: formattedLead });
   } catch (error) {
     console.error('Error fetching lead:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch lead' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// PUT /api/leads/[id] - Update a lead
+// PUT /api/leads/[id] - Update a specific lead
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
     const user = await getAuthenticatedUser();
-    const body = await request.json();
-
-    // Check if lead exists and belongs to user
-    const existingLead = await prisma.lead.findFirst({
-      where: {
-        id: id,
-        userId: user.id
-      }
-    });
-
-    if (!existingLead) {
-      return NextResponse.json(
-        { error: 'Lead not found' },
-        { status: 404 }
-      );
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Validate required fields
-    if (!body.name || !body.email) {
-      return NextResponse.json(
-        { error: 'Name and email are required' },
-        { status: 400 }
-      );
-    }
+    const updateData = await req.json();
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
-
-    // Check if another lead with this email already exists (excluding current lead)
-    const duplicateLead = await prisma.lead.findFirst({
-      where: {
-        email: body.email.toLowerCase(),
-        userId: user.id,
-        NOT: {
-          id: id
-        }
-      }
-    });
-
-    if (duplicateLead) {
-      return NextResponse.json(
-        { error: 'A lead with this email already exists' },
-        { status: 409 }
-      );
-    }
-
-    const updatedLead = await prisma.lead.update({
-      where: { id: id },
-      data: {
-        name: body.name.trim(),
-        email: body.email.toLowerCase().trim(),
-        phone: body.phone?.trim() || null,
-        company: body.company?.trim() || null,
-        location: body.location?.trim() || null,
-        source: body.source || existingLead.source,
-        status: body.status || existingLead.status,
-        score: body.score !== undefined ? body.score : existingLead.score,
-        estimatedValue: body.estimatedValue !== undefined ? body.estimatedValue : existingLead.estimatedValue,
-        probability: body.probability !== undefined ? body.probability : existingLead.probability,
-        assignedTo: body.assignedTo?.trim() || existingLead.assignedTo,
-        lastContact: body.lastContact || existingLead.lastContact,
-        nextFollowUp: body.nextFollowUp || existingLead.nextFollowUp,
-        notes: body.notes?.trim() || existingLead.notes,
-        tags: JSON.stringify(body.tags || []),
-        interests: JSON.stringify(body.interests || []),
-        priority: body.priority || existingLead.priority,
-        updatedAt: new Date()
-      }
-    });
-
-    // Parse JSON fields for response
-    const leadWithParsedFields = {
-      ...updatedLead,
-      tags: JSON.parse(updatedLead.tags || '[]'),
-      interests: JSON.parse(updatedLead.interests || '[]')
+    // Prepare update data
+    const dataToUpdate = {
+      ...updateData,
+      updatedAt: new Date(),
+      tags: updateData.tags ? JSON.stringify(updateData.tags) : undefined,
+      interests: updateData.interests ? JSON.stringify(updateData.interests) : undefined
     };
 
-    return NextResponse.json(leadWithParsedFields);
-  } catch (error) {
-    console.error('Update lead error:', error);
-    return NextResponse.json(
-      { error: 'Failed to update lead' },
-      { status: 500 }
+    // Remove undefined values
+    Object.keys(dataToUpdate).forEach(key => 
+      dataToUpdate[key] === undefined && delete dataToUpdate[key]
     );
-  } finally {
-    await prisma.$disconnect();
+
+    const [updatedLead] = await db
+      .update(leads)
+      .set(dataToUpdate)
+      .where(eq(leads.id, params.id))
+      .returning();
+
+    if (!updatedLead) {
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      lead: {
+        ...updatedLead,
+        tags: JSON.parse(updatedLead.tags),
+        interests: JSON.parse(updatedLead.interests)
+      }
+    });
+  } catch (error) {
+    console.error('Error updating lead:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// DELETE /api/leads/[id] - Delete a lead
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+// PATCH /api/leads/[id] - Partially update a lead
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
     const user = await getAuthenticatedUser();
-
-    // Check if lead exists and belongs to user
-    const existingLead = await prisma.lead.findFirst({
-      where: {
-        id: id,
-        userId: user.id
-      }
-    });
-
-    if (!existingLead) {
-      return NextResponse.json(
-        { error: 'Lead not found' },
-        { status: 404 }
-      );
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await prisma.lead.delete({
-      where: { id: id }
-    });
+    const body = await req.json();
+    
+    // For status updates
+    if (body.status !== undefined || body.score !== undefined || body.estimatedValue !== undefined || body.probability !== undefined) {
+      const updateData: any = {
+        updatedAt: new Date()
+      };
 
-    return NextResponse.json(
-      { message: 'Lead deleted successfully' },
-      { status: 200 }
-    );
+      if (body.status !== undefined) updateData.status = body.status;
+      if (body.score !== undefined) updateData.score = body.score;
+      if (body.estimatedValue !== undefined) updateData.estimatedValue = body.estimatedValue;
+      if (body.probability !== undefined) updateData.probability = body.probability;
+      if (body.notes !== undefined) updateData.notes = body.notes;
+      if (body.nextFollowUp !== undefined) updateData.nextFollowUp = body.nextFollowUp;
+
+      const [updatedLead] = await db
+        .update(leads)
+        .set(updateData)
+        .where(eq(leads.id, params.id))
+        .returning();
+
+      if (!updatedLead) {
+        return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        lead: {
+          ...updatedLead,
+          tags: JSON.parse(updatedLead.tags),
+          interests: JSON.parse(updatedLead.interests)
+        }
+      });
+    }
+
+    // For converting to customer
+    if (body.convertToCustomer) {
+      const [lead] = await db
+        .select()
+        .from(leads)
+        .where(eq(leads.id, params.id))
+        .limit(1);
+
+      if (!lead) {
+        return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+      }
+
+      // Update lead status to converted
+      await db
+        .update(leads)
+        .set({
+          status: 'Converted',
+          updatedAt: new Date()
+        })
+        .where(eq(leads.id, params.id));
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Lead converted to customer',
+        customerData: {
+          name: lead.name,
+          email: lead.email,
+          phone: lead.phone,
+          company: lead.company,
+          address: lead.location
+        }
+      });
+    }
+
+    return NextResponse.json({ error: 'Invalid update operation' }, { status: 400 });
   } catch (error) {
-    console.error('Delete lead error:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete lead' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    console.error('Error updating lead:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}
+
+// DELETE /api/leads/[id] - Delete a specific lead
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getAuthenticatedUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await db
+      .delete(leads)
+      .where(eq(leads.id, params.id));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting lead:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
