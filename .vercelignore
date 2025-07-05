@@ -49,10 +49,21 @@ ehthumbs.db
 
 # Documentation and development files
 *.md
-README.md
-CHANGELOG.md
+README*
+CHANGELOG*
 docs/
 constructflow.code-workspace
+
+# Test files
+test-*.js
+test-*.html
+*-test.js
+*-test.html
+*.test.js
+*.test.ts
+reset-password.js
+simple-server.js
+login-test-standalone.html
 
 # Docker and deployment files
 docker/
@@ -66,9 +77,10 @@ nginx.conf
 *.tsbuildinfo
 .vercel
 
-# Uploads and user data
+# Uploads and user data (if exists)
 uploads/
 backups/
+data/
 
 # Development tools
 .husky/
@@ -77,3 +89,7 @@ backups/
 bun.lock
 docker.sh
 init-repo.sh
+
+# Git
+.git/
+.gitignore
