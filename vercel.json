@@ -1,7 +1,8 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "cd apps/web && pnpm install && pnpm run build",
+  "buildCommand": "pnpm turbo build --filter=@pulsecrm/web",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "framework": null,
   "outputDirectory": "apps/web/.next",
-  "installCommand": "pnpm install",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD .",
   "regions": ["iad1"]
 }

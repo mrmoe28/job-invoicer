@@ -4,7 +4,7 @@
   "private": true,
   "description": "Modern React-based CRM dashboard for crew management with intelligent interfaces and advanced collaboration tools",
   "engines": {
-    "node": ">=18.17.0",
+    "node": ">=18.18.0",
     "pnpm": ">=8.0.0"
   },
   "packageManager": "pnpm@8.10.0",
