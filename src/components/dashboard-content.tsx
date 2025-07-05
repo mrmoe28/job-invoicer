@@ -23,6 +23,7 @@ import {
   CheckCircle,
   AlertTriangle
 } from 'lucide-react';
+import { Customer, Invoice, Payment, Lead, Appointment } from '@/lib/types';
 
 // Dynamically import react-grid-layout to avoid SSR issues
 const GridLayout = dynamic(() => import('react-grid-layout'), { ssr: false });
@@ -176,11 +177,11 @@ export function DashboardContent() {
 
   // Real data states
   const [dashboardData, setDashboardData] = useState<{
-    customers: any[];
-    invoices: any[];
-    payments: any[];
-    leads: any[];
-    appointments: any[];
+    customers: Customer[];
+    invoices: Invoice[];
+    payments: Payment[];
+    leads: Lead[];
+    appointments: Appointment[];
     loading: boolean;
     error: string | null;
   }>({
@@ -323,7 +324,7 @@ export function DashboardContent() {
     });
 
     // Add recent payments
-    safePayments.slice(0, 1).forEach((payment: any) => {
+    safePayments.slice(0, 1).forEach((payment: Payment) => {
       activities.push({
         id: `payment-${payment.id}`,
         type: 'payment',
@@ -336,12 +337,12 @@ export function DashboardContent() {
     });
 
     // Add recent appointments
-    safeAppointments.slice(0, 1).forEach((appointment: any) => {
+    safeAppointments.slice(0, 1).forEach((appointment: Appointment) => {
       activities.push({
         id: `appointment-${appointment.id}`,
         type: 'appointment',
         title: 'Appointment Scheduled',
-        description: appointment.description || 'Site inspection',
+        description: appointment.notes || 'Site inspection',
         time: new Date(appointment.createdAt).toLocaleDateString(),
         color: 'bg-orange-50',
         icon: 'orange'

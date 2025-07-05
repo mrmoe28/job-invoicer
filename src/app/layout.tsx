@@ -4,7 +4,6 @@ import { stackServerApp, isStackAuthAvailable } from "../stack";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
-// import { AuthProvider } from "@/lib/auth-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +30,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Check if Stack Auth is configured
   const stackAuthEnabled = isStackAuthAvailable();
 
   return (
@@ -48,7 +46,6 @@ export default function RootLayout({
             </StackTheme>
           </StackProvider>
         ) : (
-          // Fallback when Stack Auth is not configured
           <ToastProvider>
             {children}
           </ToastProvider>

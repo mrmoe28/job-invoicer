@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency, formatDate, createStripeCheckoutSession } from '@/lib/invoice-utils';
-import { 
-  CreditCard, 
+import {
+  CreditCard,
   ExternalLink,
   CheckCircle,
   Clock,
@@ -56,9 +56,9 @@ function PaymentStatusBadge({ status }: { status: Payment['status'] }) {
     Failed: { icon: XCircle, color: 'bg-red-100 text-red-800' },
     Refunded: { icon: XCircle, color: 'bg-gray-100 text-gray-800' }
   };
-  
+
   const { icon: Icon, color } = variants[status];
-  
+
   return (
     <Badge className={`${color} flex items-center gap-1`}>
       <Icon className="h-3 w-3" />
@@ -83,7 +83,7 @@ export function PaymentsPage() {
   });
 
   // Fetch payments from API
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/payments');
@@ -108,15 +108,15 @@ export function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]);
 
   useEffect(() => {
     fetchPayments();
-  }, []);
+  }, [fetchPayments]);
 
   const handleProcessPayment = async (payment: Payment) => {
     if (payment.status !== 'Pending') return;
-    
+
     setLoading(true);
     try {
       const result = await createStripeCheckoutSession(
@@ -129,7 +129,7 @@ export function PaymentsPage() {
         window.location.href = result.sessionUrl;
       } else {
         console.error('Payment error:', result.error);
-        
+
         // Handle specific Stripe configuration error
         if (result.error.includes('not configured')) {
           alert('Payment processing is currently being set up. Please contact support for assistance with payments.');
@@ -221,7 +221,7 @@ export function PaymentsPage() {
       if (response.ok) {
         const data = await response.json();
         setPayments(prev => [data.payment, ...prev]);
-        
+
         addToast({
           type: 'success',
           title: 'Payment Added',
@@ -315,7 +315,7 @@ export function PaymentsPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -329,7 +329,7 @@ export function PaymentsPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -341,7 +341,7 @@ export function PaymentsPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -428,7 +428,7 @@ export function PaymentsPage() {
               ))}
             </TableBody>
           </Table>
-          
+
           {payments.length === 0 && !loading && (
             <div className="text-center py-8 text-muted-foreground">
               <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />

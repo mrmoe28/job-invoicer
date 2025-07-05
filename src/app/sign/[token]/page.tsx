@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { FileText, CheckCircle, AlertCircle } from 'lucide-react';
@@ -37,7 +37,7 @@ export default function SigningPage() {
   const [currentSignature, setCurrentSignature] = useState<string>('');
   const [signed, setSigned] = useState(false);
 
-  const fetchSigningSession = async () => {
+  const fetchSigningSession = useCallback(async () => {
     try {
       const response = await fetch(`/api/sign/${token}`);
       if (response.ok) {
@@ -53,11 +53,11 @@ export default function SigningPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchSigningSession();
-  }, [token]);
+  }, [token, fetchSigningSession]);
 
   if (loading) {
     return (

@@ -92,4 +92,67 @@ export interface Company {
   phone: string;
   license?: string;
   ein?: string;
+}
+
+export interface Payment {
+  id: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  customerName: string;
+  amount: number;
+  status: string;
+  paymentDate?: string;
+  paymentMethod?: string;
+  stripePaymentId?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  customerId?: string;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  location?: string;
+  source: string;
+  status: string;
+  score: number;
+  estimatedValue: number;
+  probability: number;
+  assignedTo?: string;
+  createdDate: string;
+  lastContact?: string;
+  nextFollowUp?: string;
+  notes?: string;
+  tags: string;
+  interests: string;
+  priority: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+}
+
+export interface Appointment {
+  id: string;
+  title: string;
+  customer: string;
+  customerEmail?: string;
+  type: string;
+  date: string;
+  time: string;
+  duration?: string;
+  location?: string;
+  status: string;
+  priority: string;
+  notes?: string;
+  estimatedValue?: number;
+  photoUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  customerId?: string;
 } 

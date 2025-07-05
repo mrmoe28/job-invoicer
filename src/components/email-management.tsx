@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,19 +26,12 @@ import {
     Trash2,
     Eye,
     Copy,
-    Clock,
-    Users,
     TrendingUp,
-    Calendar,
     Settings,
-    Template,
-    List,
     BarChart3,
     FileText,
     Search,
-    Filter,
     Download,
-    Upload,
     Zap
 } from 'lucide-react';
 
@@ -100,7 +92,6 @@ export function EmailManagement() {
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
-    const [editingCampaign, setEditingCampaign] = useState<EmailCampaign | null>(null);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -417,7 +408,7 @@ export function EmailManagement() {
                     <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-orange-100 rounded-lg">
-                                <Template className="h-5 w-5 text-orange-600" />
+                                <FileText className="h-5 w-5 text-orange-600" />
                             </div>
                             <div>
                                 <p className="text-sm text-gray-600">Templates</p>

@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -19,7 +18,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Customer } from '@/lib/types';
@@ -41,31 +39,29 @@ import {
 import { CustomerForm } from '@/components/customer-form';
 
 interface CustomerFormData {
-  name: string;
+  id?: string;
+  firstName: string;
+  lastName: string;
   email: string;
+  mobile: string;
   phone: string;
-  address: string;
-  company: string;
-  contactPerson: string;
+  customerType: 'residential' | 'commercial';
+  notifyByEmail: boolean;
+  notifyBySmsText: boolean;
+  additionalInfo: {
+    company?: string;
+    address?: string;
+    notes?: string;
+  };
 }
 
 export function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerFormData | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<CustomerFormData>({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    company: '',
-    contactPerson: ''
-  });
-  const [formLoading, setFormLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [csvUploadOpen, setCsvUploadOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -99,40 +95,6 @@ export function CustomersPage() {
     (customer.company && customer.company.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      company: '',
-      contactPerson: ''
-    });
-    setEditingCustomer(null);
-  };
-
-  const handleOpenDialog = (customer?: Customer) => {
-    if (customer) {
-      setEditingCustomer(customer);
-      setFormData({
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone || '',
-        address: customer.address || '',
-        company: customer.company || '',
-        contactPerson: customer.contactPerson || ''
-      });
-    } else {
-      resetForm();
-    }
-    setIsDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    resetForm();
-  };
-
   const handleViewCustomer = (customer: Customer) => {
     setViewingCustomer(customer);
     setIsViewDialogOpen(true);
@@ -141,6 +103,7 @@ export function CustomersPage() {
   const handleOpenForm = (customer?: Customer) => {
     if (customer) {
       setEditingCustomer({
+        id: customer.id,
         customerType: customer.company ? 'commercial' : 'residential',
         firstName: customer.name?.split(' ')[0] || '',
         lastName: customer.name?.split(' ').slice(1).join(' ') || '',
@@ -166,21 +129,7 @@ export function CustomersPage() {
     setEditingCustomer(null);
   };
 
-  const handleSaveCustomer = async (customerData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    mobile: string;
-    phone: string;
-    customerType: string;
-    notifyByEmail: boolean;
-    notifyBySmsText: boolean;
-    additionalInfo?: {
-      company?: string;
-      address?: string;
-      notes?: string;
-    };
-  }) => {
+  const handleSaveCustomer = async (customerData: CustomerFormData) => {
     try {
       // Ensure we have at least a name before proceeding
       const fullName = `${customerData.firstName} ${customerData.lastName}`.trim();
@@ -199,8 +148,8 @@ export function CustomersPage() {
         name: fullName,
         email: customerData.email.trim(),
         phone: customerData.mobile || customerData.phone || null,
-        company: customerData.additionalInfo?.company || null,
-        address: customerData.additionalInfo?.address || null,
+        company: customerData.additionalInfo.company || null,
+        address: customerData.additionalInfo.address || null,
         contactPerson: fullName,
         customerType: customerData.customerType,
         notifyByEmail: customerData.notifyByEmail,
@@ -210,8 +159,8 @@ export function CustomersPage() {
       console.log('💾 Saving customer:', customerPayload);
 
       let response;
-      if (editingCustomer) {
-        response = await fetch(`/api/customers/${editingCustomer.id}`, {
+      if (customerData.id) {
+        response = await fetch(`/api/customers/${customerData.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(customerPayload),

@@ -80,12 +80,13 @@ export default function AddSignersModal({
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full"
+              aria-label="Close modal"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
           <p className="text-gray-600 mt-2">
-            Add people who need to sign "{documentName}"
+            Add people who need to sign &quot;{documentName}&quot;
           </p>
         </div>
 
@@ -115,6 +116,7 @@ export default function AddSignersModal({
                   <button
                     onClick={() => removeSigner(index)}
                     className="p-2 text-red-500 hover:bg-red-50 rounded"
+                    aria-label="Remove signer"
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>
