@@ -1,69 +1,80 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { trpc } from '@/lib/trpc';
 
-function ResetPasswordForm() {
-  const [password, setPassword] = useState('');
+export default function ResetPasswordPage() {
+  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const router = useRouter();
+  
   const searchParams = useSearchParams();
+  const router = useRouter();
+  
   const token = searchParams.get('token');
+  const email = searchParams.get('email');
 
   useEffect(() => {
-    if (!token) {
-      setError('Invalid or missing reset token. Please request a new password reset.');
+    // Validate that we have both token and email
+    if (!token || !email) {
+      setError('Invalid reset link. Please request a new password reset.');
     }
-  }, [token]);
-
-  // tRPC mutation hook for reset password
-  const resetPasswordMutation = trpc.resetPassword.useMutation({
-    onSuccess: (result) => {
-      if (result.success) {
-        setIsSuccess(true);
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          router.push('/auth');
-        }, 3000);
-      }
-    },
-    onError: (error) => {
-      setError(error.message || 'Something went wrong. Please try again.');
-    },
-  });
+  }, [token, email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!password.trim()) {
-      setError('Password is required');
+    // Validation
+    if (!newPassword || !confirmPassword) {
+      setError('Please fill in all fields');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long');
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (!token) {
-      setError('Invalid reset token. Please request a new password reset.');
-      return;
-    }
+    setIsLoading(true);
 
-    resetPasswordMutation.mutate({
-      token,
-      newPassword: password,
-    });
+    try {
+      const response = await fetch('/api/simple-auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          token, 
+          email, 
+          newPassword 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setIsSuccess(true);
+        // Redirect to login after 3 seconds
+        setTimeout(() => {
+          router.push('/auth?message=password-reset-success');
+        }, 3000);
+      } else {
+        setError(data.error || 'Failed to reset password. Please try again.');
+      }
+    } catch (error) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Show success message
@@ -89,30 +100,19 @@ function ResetPasswordForm() {
               </svg>
             </div>
 
-            <h2 className="text-2xl font-bold text-white mb-4">Password Reset Successful!</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Password Reset Successfully!</h2>
             <p className="text-gray-300 mb-6">
-              Your password has been updated successfully. You can now sign in with your new password.
+              Your password has been changed. Redirecting you to login...
             </p>
 
-            <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-400">
-                Redirecting to sign in page in 3 seconds...
-              </p>
-            </div>
-
-            <Link
-              href="/auth"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 inline-block"
-            >
-              Sign In Now
-            </Link>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
           </div>
         </div>
       </div>
     );
   }
 
-  // Show the reset password form
+  // Show reset form
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
@@ -126,28 +126,39 @@ function ResetPasswordForm() {
               Pulse<span className="text-orange-500">CRM</span>
             </h1>
           </div>
-          <h2 className="text-xl text-gray-300 mb-2">Reset your password</h2>
+          <h2 className="text-xl text-gray-300 mb-2">Reset Your Password</h2>
           <p className="text-gray-400">Enter your new password below</p>
         </div>
 
         {/* Reset Password Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+              Email Address
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email || ''}
+              disabled
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-300 mb-2">
               New Password
             </label>
             <input
-              id="password"
+              id="newPassword"
               type="password"
               required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-              placeholder="Enter your new password"
+              placeholder="Enter new password (min. 8 characters)"
+              disabled={!token || !email}
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Password must be at least 6 characters long
-            </p>
           </div>
 
           <div>
@@ -162,6 +173,7 @@ function ResetPasswordForm() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               placeholder="Confirm your new password"
+              disabled={!token || !email}
             />
           </div>
 
@@ -173,10 +185,10 @@ function ResetPasswordForm() {
 
           <button
             type="submit"
-            disabled={resetPasswordMutation.isPending || !token}
+            disabled={isLoading || !token || !email}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
           >
-            {resetPasswordMutation.isPending ? (
+            {isLoading ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                 Resetting Password...
@@ -189,26 +201,11 @@ function ResetPasswordForm() {
 
         {/* Back to login link */}
         <div className="text-center">
-          <p className="text-gray-400">
-            Remember your password?{' '}
-            <Link href="/auth" className="text-orange-500 hover:text-orange-400 font-semibold">
-              Back to Sign In
-            </Link>
-          </p>
+          <Link href="/auth" className="text-orange-500 hover:text-orange-400 font-semibold">
+            Back to Sign In
+          </Link>
         </div>
       </div>
     </div>
-  );
-}
-
-export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-      </div>
-    }>
-      <ResetPasswordForm />
-    </Suspense>
   );
 }

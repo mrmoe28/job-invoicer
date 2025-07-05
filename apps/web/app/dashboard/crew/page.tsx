@@ -269,7 +269,7 @@ export default function CrewPage() {
     <DashboardLayout title="Crew Management">
       <div className="space-y-6">
         {/* Tab Navigation */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
           <div className="flex border-b border-gray-700">
             <button
               onClick={() => handleTabChange('crew')}
@@ -354,7 +354,7 @@ export default function CrewPage() {
 
         {/* Crew Section */}
         {activeTab === 'crew' && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
             <div className="p-6 border-b border-gray-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-white">Crew Members</h3>
@@ -731,7 +731,7 @@ export default function CrewPage() {
 
         {/* Advanced Filters Panel */}
         {showFilters && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Advanced Filters</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -781,7 +781,7 @@ export default function CrewPage() {
         {/* Add Crew Member Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold text-white mb-4">Add New Crew Member</h3>
 
               <div className="space-y-4">
@@ -938,7 +938,7 @@ export default function CrewPage() {
         {/* Add Contractor Modal */}
         {showAddModal && activeTab === 'contractors' && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-white mb-4">Add New Contractor</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

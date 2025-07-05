@@ -296,6 +296,68 @@ export async function validateUserPassword(email: string, password: string): Pro
     return userWithoutPassword as User;
 }
 
+export async function updateUserPassword(email: string, newPassword: string): Promise<boolean> {
+    console.log(`Updating password for ${email} using ${hasPostgres ? 'Postgres' : 'file/memory'} database`);
+
+    try {
+        // Hash the new password
+        const hashedPassword = await hash(newPassword, 12);
+        const now = new Date().toISOString();
+
+        if (hasPostgres) {
+            // Use Postgres
+            try {
+                await initializePostgresTables();
+
+                const result = await sql`
+                    UPDATE users 
+                    SET password = ${hashedPassword}, updated_at = ${now}
+                    WHERE email = ${email}
+                `;
+
+                if (result.rowCount === 0) {
+                    console.log(`User ${email} not found in Postgres`);
+                    return false;
+                }
+
+                console.log(`Password updated successfully in Postgres for ${email}`);
+                return true;
+            } catch (error) {
+                console.error('Postgres error updating password:', error);
+                return false;
+            }
+        } else {
+            // Use file/memory fallback
+            const db = isVercel ?
+                (memoryDb || { users: [], organizations: [] }) :
+                await readFileDatabase();
+
+            const userIndex = db.users.findIndex(u => u.email === email);
+            if (userIndex === -1) {
+                console.log(`User ${email} not found in ${isVercel ? 'memory' : 'file'}`);
+                return false;
+            }
+
+            // Update password
+            db.users[userIndex].password = hashedPassword;
+            db.users[userIndex].updatedAt = now;
+
+            if (isVercel) {
+                memoryDb = db;
+                console.log('Password updated in memory');
+            } else {
+                await writeFileDatabase(db);
+                console.log('Password updated in file');
+            }
+
+            return true;
+        }
+    } catch (error) {
+        console.error('Error updating password:', error);
+        return false;
+    }
+}
+
 export async function getAllUsers(): Promise<User[]> {
     console.log(`Getting all users using ${hasPostgres ? 'Postgres' : 'file/memory'} database`);
 

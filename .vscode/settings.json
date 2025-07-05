@@ -41,5 +41,5 @@
   },
   "eslint.workingDirectories": ["apps/web", "packages/api", "packages/db", "packages/ui"],
   "typescript.preferences.importModuleSpecifier": "relative",
-  "cSpell.words": ["navpanes", "nosniff", "turbopack"]
+  "cSpell.words": ["navpanes", "nosniff", "signup", "turbopack"]
 }

@@ -85,7 +85,7 @@ export default function SettingsPage() {
     <DashboardLayout title="Settings" subtitle="Manage system configuration and administrative options">
       <div className="space-y-8">
         {/* Quick Actions */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6">
           <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {quickActions.map((action, index) => (
@@ -101,7 +101,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Administrative Sections */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6">
           <h2 className="text-xl font-semibold text-white mb-6">Administrative Settings</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {settingsSections.map((section, index) => (
@@ -145,7 +145,7 @@ export default function SettingsPage() {
         </div>
 
         {/* System Information */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6">
           <h2 className="text-xl font-semibold text-white mb-4">System Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
@@ -168,7 +168,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6">
           <h2 className="text-xl font-semibold text-white mb-4">Recent Administrative Activity</h2>
           <div className="space-y-3">
             {[

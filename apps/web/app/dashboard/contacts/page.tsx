@@ -404,7 +404,7 @@ export default function ContactsPage() {
           </div>
         </div>
 
-        <div className="bg-gray-800 border border-gray-700 rounded-xl">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
           <div className="p-6 border-b border-gray-700">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold text-white">Contacts</h3>
@@ -748,7 +748,7 @@ export default function ContactsPage() {
         </div>
 
         {showFilters && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Advanced Filters</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -795,7 +795,7 @@ export default function ContactsPage() {
 
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-white">{editContact ? 'Edit Contact' : 'Add Contact'}</h3>
                 <button
@@ -834,7 +834,7 @@ export default function ContactsPage() {
 
         {viewContact && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-white">Contact Details</h3>
                 <button
@@ -871,7 +871,7 @@ export default function ContactsPage() {
         {/* CSV Import Modal */}
         {showCSVModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-white">Import Contacts from CSV</h3>
                 <button

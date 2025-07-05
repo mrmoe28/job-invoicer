@@ -237,7 +237,7 @@ function SchedulingContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Calendar */}
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white mb-2">Calendar</h3>
               <p className="text-gray-400 text-sm">Select a date to view schedules</p>
@@ -362,7 +362,7 @@ function SchedulingContent() {
           </div>
 
           {/* Schedule Details */}
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white mb-2">
                 Schedules for {getFormattedDate(selectedDate)}
@@ -430,7 +430,7 @@ function SchedulingContent() {
         {/* Add Schedule Modal */}
         {showAddScheduleModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold text-white mb-4">Create New Schedule</h3>
 
               {/* Error/Success Messages */}

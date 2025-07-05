@@ -15,6 +15,22 @@ interface FeatureUpdate {
 // Current feature updates - add new ones here when features are added
 const FEATURE_UPDATES: FeatureUpdate[] = [
   {
+    id: 'update-2025-01-03-ui-theme-improvements',
+    version: '1.5.0',
+    title: 'Beautiful UI & Theme Improvements',
+    description: 'We\'ve completely redesigned the interface with stunning light/dark themes and enhanced visual appeal!',
+    features: [
+      '🎨 Beautiful light mode with perfect color contrast and readability',
+      '🌙 Enhanced dark mode with softer grays for better eye comfort',
+      '✨ Smooth animations and hover effects throughout the interface',
+      '💎 Gradient buttons and improved visual hierarchy for better UX',
+      '🔄 Seamless theme switching with instant visual feedback',
+      '📱 Responsive design optimized for all device sizes'
+    ],
+    date: 'January 3, 2025',
+    type: 'feature'
+  },
+  {
     id: 'update-2025-01-03-login-popup',
     version: '1.4.0',
     title: 'New Login Feature Notifications',
@@ -168,19 +184,19 @@ export default function FeatureNotification() {
         className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 transition-all duration-300 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
           }`}
       >
-        <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden backdrop-blur-sm">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-orange-50 to-blue-50 dark:from-gray-800 dark:to-gray-700">
             <div className="flex items-center space-x-3">
               {getIconForType(currentNotification.type)}
               <div>
-                <h3 className="text-lg font-semibold text-white">{currentNotification.title}</h3>
-                <p className="text-sm text-gray-400">Version {currentNotification.version}</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{currentNotification.title}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Version {currentNotification.version}</p>
               </div>
             </div>
             <button
               onClick={handleDismiss}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"
               title="Dismiss notification"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,25 +207,25 @@ export default function FeatureNotification() {
 
           {/* Content */}
           <div className="p-6">
-            <p className="text-gray-300 mb-4">{currentNotification.description}</p>
+            <p className="text-gray-700 dark:text-gray-300 mb-4">{currentNotification.description}</p>
 
-            <div className="space-y-2">
-              <h4 className="text-white font-medium text-sm">What's New:</h4>
+            <div className="space-y-3">
+              <h4 className="text-gray-900 dark:text-white font-medium text-sm">What's New:</h4>
               <ul className="space-y-2">
                 {currentNotification.features.map((feature, index) => (
-                  <li key={index} className="flex items-start space-x-2 text-sm">
-                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-300">{feature}</span>
+                  <li key={index} className="flex items-start space-x-3 text-sm">
+                    <div className="w-2 h-2 bg-gradient-to-r from-orange-400 to-orange-500 rounded-full mt-2 flex-shrink-0 shadow-sm"></div>
+                    <span className="text-gray-700 dark:text-gray-300">{feature}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div className="mt-6 flex items-center justify-between">
-              <span className="text-xs text-gray-500">{currentNotification.date}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{currentNotification.date}</span>
               <button
                 onClick={handleDismiss}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Got it!
               </button>

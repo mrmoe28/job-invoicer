@@ -2,28 +2,18 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { trpc } from '@/lib/trpc';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
-
-  // tRPC mutation hook for forgot password
-  const forgotPasswordMutation = trpc.forgotPassword.useMutation({
-    onSuccess: (result: { success: boolean }) => {
-      if (result.success) {
-        setIsSubmitted(true);
-      }
-    },
-    onError: (error: { message?: string }) => {
-      setError(error.message || 'Something went wrong. Please try again.');
-    },
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [resetLink, setResetLink] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setResetLink('');
 
     if (!email.trim()) {
       setError('Email address is required');
@@ -35,7 +25,33 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    forgotPasswordMutation.mutate({ email });
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/simple-auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setIsSubmitted(true);
+        // In development, show the reset link
+        if (data.developmentLink) {
+          setResetLink(data.developmentLink);
+        }
+      } else {
+        setError(data.error || 'Something went wrong. Please try again.');
+      }
+    } catch (error) {
+      setError('Failed to send reset instructions. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Show success message after email is sent
@@ -66,6 +82,26 @@ export default function ForgotPasswordPage() {
               We&apos;ve sent password reset instructions to <strong className="text-white">{email}</strong>
             </p>
 
+            {/* Development mode: Show reset link */}
+            {resetLink && (
+              <div className="bg-yellow-900 border border-yellow-700 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-300 mb-2">
+                  <strong>Development Mode - Reset Link:</strong>
+                </p>
+                <a
+                  href={resetLink}
+                  className="text-xs text-yellow-400 hover:text-yellow-300 break-all underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {resetLink}
+                </a>
+                <p className="text-xs text-yellow-300 mt-2">
+                  This link is only shown in development mode. In production, it would be sent via email.
+                </p>
+              </div>
+            )}
+
             <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 mb-6">
               <p className="text-sm text-gray-300 mb-2">
                 <strong>Next steps:</strong>
@@ -85,7 +121,11 @@ export default function ForgotPasswordPage() {
                 Back to Sign In
               </Link>
               <button
-                onClick={() => setIsSubmitted(false)}
+                onClick={() => {
+                  setIsSubmitted(false);
+                  setEmail('');
+                  setResetLink('');
+                }}
                 className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
               >
                 Try Another Email
@@ -140,10 +180,10 @@ export default function ForgotPasswordPage() {
 
           <button
             type="submit"
-            disabled={forgotPasswordMutation.isPending}
+            disabled={isLoading}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
           >
-            {forgotPasswordMutation.isPending ? (
+            {isLoading ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                 Sending Instructions...

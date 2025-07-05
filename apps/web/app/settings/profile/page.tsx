@@ -37,6 +37,15 @@ export default function ProfilePage() {
   const [selectedCompanyLogoFile, setSelectedCompanyLogoFile] = useState<File | null>(null);
   const companyLogoInputRef = useRef<HTMLInputElement>(null);
 
+  // Password change states
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
   // Load user data from localStorage on component mount
   useEffect(() => {
     const userData = localStorage.getItem('pulse_user');
@@ -158,6 +167,72 @@ export default function ProfilePage() {
     // Clear messages when user starts typing
     if (successMessage) setSuccessMessage('');
     if (error) setError('');
+  };
+
+  const handlePasswordChange = (field: keyof typeof passwordData, value: string) => {
+    setPasswordData(prev => ({ ...prev, [field]: value }));
+    // Clear messages when user starts typing
+    if (passwordError) setPasswordError('');
+    if (passwordSuccess) setPasswordSuccess('');
+  };
+
+  const handlePasswordSave = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setPasswordError('All password fields are required');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/simple-auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: profile.email,
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setPasswordSuccess('Password changed successfully!');
+        // Clear password fields
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setPasswordSuccess(''), 3000);
+      } else {
+        setPasswordError(data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      setPasswordError('Failed to change password. Please try again.');
+      console.error('Password change error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -454,6 +529,75 @@ export default function ProfilePage() {
                   onChange={(e) => handleInputChange('companyName', e.target.value)}
                   className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Password Change */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl">
+          <div className="p-6 border-b border-gray-700">
+            <h3 className="text-lg font-semibold text-white">Change Password</h3>
+          </div>
+          <div className="p-6">
+            {/* Password Success/Error Messages */}
+            {passwordSuccess && (
+              <div className="mb-4 bg-green-900 border border-green-700 text-green-300 px-4 py-3 rounded-lg">
+                {passwordSuccess}
+              </div>
+            )}
+            {passwordError && (
+              <div className="mb-4 bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded-lg">
+                {passwordError}
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Current Password</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Enter your current password"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Enter your new password (min. 8 characters)"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Confirm your new password"
+                />
+              </div>
+              <div>
+                <button
+                  onClick={handlePasswordSave}
+                  disabled={isLoading}
+                  className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Changing Password...
+                    </div>
+                  ) : (
+                    'Change Password'
+                  )}
+                </button>
               </div>
             </div>
           </div>

@@ -409,7 +409,7 @@ export default function JobsPage() {
                         <div className="text-gray-400 text-sm">No jobs</div>
                       )}
                       {jobs.filter((job) => job.status === status).map((job) => (
-                        <div key={job.id} className="bg-gray-800 rounded-lg p-4 mb-4 shadow flex flex-col justify-between">
+                        <div key={job.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
                           <div>
                             <div className="text-white font-semibold mb-1">{job.title}</div>
                             <div className="text-gray-300 text-xs mb-1">Assigned To: {job.assignedTo}</div>

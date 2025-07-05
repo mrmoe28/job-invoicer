@@ -66,7 +66,7 @@ After creating the database, Vercel will automatically add these environment var
 
 Once deployed, test the database by visiting:
 
-```
+```url
 https://your-vercel-app.vercel.app/api/test-db
 ```
 
