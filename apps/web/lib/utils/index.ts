@@ -171,4 +171,7 @@ export function deepClone<T>(obj: T): T {
         return clonedObj;
     }
     return obj;
-} 
+}
+
+// Re-export document utilities
+export * from './document-utils'; 

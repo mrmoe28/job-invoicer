@@ -1,71 +1,147 @@
-        await fetch(`/api/upload?id=${doc.id}`, { method: 'DELETE' });
-      }
-      
-      setDocuments(prev => prev.filter(d => d.id !== doc.id));
-    } catch (error) {
-      console.error('Delete error:', error);
-      alert('Failed to delete document');
+'use client';
+
+import React, { useState } from 'react';
+import { FileText, Upload, Download, Trash2, Search, Filter, FolderPlus, Eye } from 'lucide-react';
+import { useToast } from '@/components/Toast';
+import DocumentViewer from '@/components/DocumentViewer';
+
+interface Document {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  file?: File; // Store the actual File object for local files
+  uploadDate: Date;
+  category?: string;
+  status?: 'draft' | 'pending_signature' | 'signed' | 'completed';
+}
+
+// Document categories
+const DOCUMENT_CATEGORIES = {
+  contracts: { id: 'contracts', name: 'Contracts', icon: '📄' },
+  invoices: { id: 'invoices', name: 'Invoices', icon: '🧾' },
+  permits: { id: 'permits', name: 'Permits', icon: '📋' },
+  blueprints: { id: 'blueprints', name: 'Blueprints', icon: '📐' },
+  safety: { id: 'safety', name: 'Safety Docs', icon: '⛑️' },
+} as const;
+
+// Helper functions
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function getCategoryColor(categoryId?: string): string {
+  const colors = {
+    contracts: 'border-blue-500 text-blue-400',
+    invoices: 'border-green-500 text-green-400',
+    permits: 'border-purple-500 text-purple-400',
+    blueprints: 'border-cyan-500 text-cyan-400',
+    safety: 'border-red-500 text-red-400',
+  };
+  return colors[categoryId as keyof typeof colors] || 'border-gray-500 text-gray-400';
+}
+
+export default function DocumentsPage() {
+  const { addToast, ToastContainer } = useToast();
+  const [documents, setDocuments] = useState<Document[]>([
+    {
+      id: '1',
+      name: 'Service Agreement - Smith Project.pdf',
+      type: 'application/pdf',
+      size: 2458624,
+      url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+      uploadDate: new Date('2024-01-15'),
+      category: 'contracts',
+      status: 'signed'
+    },
+    {
+      id: '2',
+      name: 'Building Permit - 123 Main St.pdf',
+      type: 'application/pdf',
+      size: 1234567,
+      url: 'https://pdfobject.com/pdf/sample.pdf',
+      uploadDate: new Date('2024-01-10'),
+      category: 'permits',
+      status: 'completed'
     }
-  };
+  ]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [showUpload, setShowUpload] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
 
-  const handleViewPdf = (doc: Document) => {
-    if (doc.type === 'application/pdf' || doc.name.endsWith('.pdf')) {
-      setSelectedPdf(doc);
-    }
-  };
-
-  const handleSignDocument = (doc: Document) => {
-    setDocumentToSign(doc);
-  };
-
-  const handleSignatureComplete = (signatures: any[]) => {
-    if (!documentToSign) return;
-
-    // Update document status
-    setDocuments(prev => prev.map(doc => 
-      doc.id === documentToSign.id
-        ? { ...doc, status: 'signed', signatures }
-        : doc
-    ));
-
-    setDocumentToSign(null);
-    alert('Document signed successfully!');
-  };
-
-  const handleTemplateComplete = async (values: Record<string, any>, content: string) => {
-    try {
-      // Create a blob from the content
-      const blob = new Blob([content], { type: 'text/plain' });
-      const file = new File([blob], `${selectedTemplate.name}_${Date.now()}.txt`, { type: 'text/plain' });
-      
-      // Upload the generated contract
-      await handleUpload(file);
-      
-      // Update the document with template metadata
-      setDocuments(prev => {
-        const newDoc = prev[0]; // Just uploaded
-        return [
-          { ...newDoc, category: 'contracts', subcategory: selectedTemplate.name },
-          ...prev.slice(1)
-        ];
+  const handleFileSelect = (files: FileList | null) => {
+    if (files && files.length > 0) {
+      let successCount = 0;
+      Array.from(files).forEach(file => {
+        // Validate file type
+        const validTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+        const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+        
+        if (!validTypes.includes(fileExtension)) {
+          addToast(`Invalid file type: ${file.name}`, 'error');
+          return;
+        }
+        
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          addToast(`File too large: ${file.name} (max 10MB)`, 'error');
+          return;
+        }
+        
+        console.log('File selected:', file.name, file.size);
+        // Add file to documents list
+        const newDoc: Document = {
+          id: Date.now().toString() + Math.random(),
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          url: URL.createObjectURL(file),
+          file: file, // Store the File object
+          uploadDate: new Date(),
+          category: 'contracts', // Default category
+          status: 'draft'
+        };
+        setDocuments(prev => [...prev, newDoc]);
+        successCount++;
       });
-
-      setSelectedTemplate(null);
-      setShowTemplates(false);
-    } catch (error) {
-      console.error('Template save error:', error);
-      alert('Failed to save contract');
+      
+      if (successCount > 0) {
+        addToast(`Successfully uploaded ${successCount} file${successCount > 1 ? 's' : ''}`, 'success');
+        setShowUpload(false);
+      }
     }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
+
+  const handleDelete = (doc: Document) => {
+    if (!confirm(`Are you sure you want to delete ${doc.name}?`)) return;
+    setDocuments(prev => prev.filter(d => d.id !== doc.id));
+    addToast(`Deleted ${doc.name}`, 'success');
   };
 
   const getFileIcon = (doc: Document) => {
-    const isPdf = doc.type === 'application/pdf' || doc.name.endsWith('.pdf');
-    const isWord = doc.type.includes('word') || doc.name.match(/\.(doc|docx)$/);
-    const isExcel = doc.type.includes('excel') || doc.name.match(/\.(xls|xlsx)$/);
-    
-    if (isPdf) return <FileText className="w-5 h-5 text-red-500" />;
-    if (isWord) return <FileText className="w-5 h-5 text-blue-500" />;
-    if (isExcel) return <FileText className="w-5 h-5 text-green-500" />;
     return <FileText className="w-5 h-5 text-gray-500" />;
   };
 
@@ -117,13 +193,6 @@
           <h1 className="text-2xl font-bold text-white">Documents</h1>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowTemplates(!showTemplates)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-            >
-              <FolderPlus className="w-4 h-4" />
-              New from Template
-            </button>
-            <button
               onClick={() => setShowUpload(!showUpload)}
               className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
             >
@@ -133,34 +202,6 @@
           </div>
         </div>
 
-        {/* Templates Section */}
-        {showTemplates && (
-          <div className="mb-6 bg-gray-800 rounded-lg border border-gray-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Contract Templates</h2>
-              <button
-                onClick={() => setShowTemplates(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {CONTRACT_TEMPLATES.map(template => (
-                <button
-                  key={template.id}
-                  onClick={() => setSelectedTemplate(template)}
-                  className="p-4 bg-gray-900 hover:bg-gray-700 border border-gray-700 rounded-lg text-left transition-colors"
-                >
-                  <FileText className="w-8 h-8 text-orange-500 mb-2" />
-                  <h3 className="font-medium text-white">{template.name}</h3>
-                  <p className="text-sm text-gray-400 mt-1">{template.description}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Upload Section */}
         {showUpload && (
           <div className="mb-6 bg-gray-800 rounded-lg border border-gray-700 p-6">
@@ -168,16 +209,40 @@
               <h2 className="text-lg font-semibold text-white">Upload New Document</h2>
               <button
                 onClick={() => setShowUpload(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white text-2xl"
               >
                 ×
               </button>
             </div>
-            <FileUpload
-              onUpload={handleUpload}
-              accept=".pdf,.doc,.docx,.xls,.xlsx"
-              maxSize={10}
-            />
+            <div 
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                isDragging 
+                  ? 'border-orange-500 bg-orange-500/10' 
+                  : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/50'
+              }`}
+              onClick={() => document.getElementById('file-upload')?.click()}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-orange-500' : 'text-gray-400'}`} />
+              <p className={`mb-2 ${isDragging ? 'text-orange-500' : 'text-gray-400'}`}>
+                {isDragging ? 'Drop files here...' : 'Drag and drop files here or click to browse'}
+              </p>
+              <p className="text-sm text-gray-500">Supported formats: PDF, DOC, DOCX, XLS, XLSX</p>
+              <input
+                id="file-upload"
+                type="file"
+                className="hidden"
+                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                multiple
+                onChange={(e) => {
+                  handleFileSelect(e.target.files);
+                  // Reset the input
+                  e.target.value = '';
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -214,7 +279,7 @@
 
         {/* Document Categories Overview */}
         <div className="mb-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-          {Object.values(DOCUMENT_CATEGORIES).slice(0, 5).map(category => {
+          {Object.values(DOCUMENT_CATEGORIES).map(category => {
             const count = documents.filter(doc => doc.category === category.id).length;
             return (
               <button
@@ -226,7 +291,7 @@
                     : 'bg-gray-800 border-gray-700 hover:bg-gray-700'
                 }`}
               >
-                <div className="text-2xl mb-2">{getCategoryIcon(category.id)}</div>
+                <div className="text-2xl mb-2">{category.icon}</div>
                 <div className="text-sm font-medium text-white">{category.name}</div>
                 <div className="text-xs text-gray-400 mt-1">{count} documents</div>
               </button>
@@ -255,9 +320,6 @@
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Upload Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Storage
-                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
@@ -266,14 +328,18 @@
               <tbody className="divide-y divide-gray-700">
                 {filteredDocuments.map((doc) => {
                   const category = Object.values(DOCUMENT_CATEGORIES).find(cat => cat.id === doc.category);
-                  const isPdf = doc.type === 'application/pdf' || doc.name.endsWith('.pdf');
                   
                   return (
                     <tr key={doc.id} className="hover:bg-gray-700/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {getFileIcon(doc)}
-                          <span className="ml-3 text-white">{doc.name}</span>
+                          <button
+                            onClick={() => setViewingDocument(doc)}
+                            className="ml-3 text-white hover:text-orange-500 text-left transition-colors"
+                          >
+                            {doc.name}
+                          </button>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -290,35 +356,15 @@
                       <td className="px-6 py-4 whitespace-nowrap text-gray-300">
                         {new Date(doc.uploadDate).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-xs text-gray-400">
-                          {doc.provider === 's3' && '☁️ S3'}
-                          {doc.provider === 'cloudinary' && '☁️ Cloudinary'}
-                          {(!doc.provider || doc.provider === 'local') && '💾 Local'}
-                        </span>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
-                          {isPdf && (
-                            <>
-                              <button
-                                onClick={() => handleViewPdf(doc)}
-                                className="p-2 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
-                                title="View PDF"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              {doc.status !== 'signed' && (
-                                <button
-                                  onClick={() => handleSignDocument(doc)}
-                                  className="p-2 text-gray-400 hover:text-orange-500 hover:bg-gray-600 rounded transition-colors"
-                                  title="Sign Document"
-                                >
-                                  <FileSignature className="w-4 h-4" />
-                                </button>
-                              )}
-                            </>
-                          )}
+                          <button
+                            onClick={() => setViewingDocument(doc)}
+                            className="p-2 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                            title="View"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                           <a
                             href={doc.url}
                             download
@@ -356,34 +402,16 @@
           )}
         </div>
       </div>
-
-      {/* PDF Viewer Modal */}
-      {selectedPdf && (
-        <PDFViewer
-          url={selectedPdf.url}
-          title={selectedPdf.name}
-          onClose={() => setSelectedPdf(null)}
+      
+      {/* Document Viewer */}
+      {viewingDocument && (
+        <DocumentViewer
+          document={viewingDocument}
+          onClose={() => setViewingDocument(null)}
         />
       )}
-
-      {/* Document Signer Modal */}
-      {documentToSign && (
-        <DocumentSigner
-          url={documentToSign.url}
-          title={documentToSign.name}
-          onComplete={handleSignatureComplete}
-          onClose={() => setDocumentToSign(null)}
-        />
-      )}
-
-      {/* Contract Template Editor */}
-      {selectedTemplate && (
-        <ContractTemplateEditor
-          template={selectedTemplate}
-          onSave={handleTemplateComplete}
-          onClose={() => setSelectedTemplate(null)}
-        />
-      )}
+      
+      <ToastContainer />
     </div>
   );
 }

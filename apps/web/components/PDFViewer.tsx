@@ -1,164 +1,193 @@
 'use client';
 
-import { useState } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, X } from 'lucide-react';
-
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+import React, { useState, useEffect } from 'react';
+import { X, Download, ExternalLink, FileText, Loader } from 'lucide-react';
 
 interface PDFViewerProps {
-  url: string;
-  onClose?: () => void;
-  title?: string;
+  document: {
+    id: string;
+    name: string;
+    url: string;
+    file?: File;
+  };
+  onClose: () => void;
 }
 
-export default function PDFViewer({ url, onClose, title }: PDFViewerProps) {
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
-  const [loading, setLoading] = useState(true);
+export default function PDFViewer({ document, onClose }: PDFViewerProps) {
+  const [pdfUrl, setPdfUrl] = useState<string>(document.url);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-    setLoading(false);
-    setError(null);
-  }
+  useEffect(() => {
+    // Convert File to base64 data URL if we have a File object
+    if (document.file && document.url.startsWith('blob:')) {
+      setIsLoading(true);
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setPdfUrl(e.target.result as string);
+          setIsLoading(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        setError('Failed to read file');
+        setIsLoading(false);
+      };
+      
+      reader.readAsDataURL(document.file);
+    } else if (document.url.startsWith('http://') || document.url.startsWith('https://')) {
+      // For remote URLs, use our proxy API to avoid CORS issues
+      setPdfUrl(`/api/documents?url=${encodeURIComponent(document.url)}`);
+    }
+  }, [document.file, document.url]);
 
-  function onDocumentLoadError(error: Error) {
-    console.error('PDF load error:', error);
-    setError('Failed to load PDF. Please try again.');
-    setLoading(false);
-  }
-
-  const changePage = (offset: number) => {
-    setPageNumber(prevPageNumber => {
-      const newPageNumber = prevPageNumber + offset;
-      return Math.max(1, Math.min(newPageNumber, numPages));
-    });
+  const downloadFile = async () => {
+    try {
+      // If we have a data URL, convert it back to blob for download
+      if (pdfUrl.startsWith('data:')) {
+        const response = await fetch(pdfUrl);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = document.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        // For regular URLs
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = document.name;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error('Download failed:', err);
+      // Fallback: open in new tab
+      window.open(pdfUrl, '_blank');
+    }
   };
 
-  const changeZoom = (delta: number) => {
-    setScale(prevScale => {
-      const newScale = prevScale + delta;
-      return Math.max(0.5, Math.min(newScale, 3.0));
-    });
+  const openInNewTab = () => {
+    window.open(pdfUrl, '_blank');
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
-        <h3 className="text-white font-medium">
-          {title || 'PDF Viewer'}
-        </h3>
-        <div className="flex items-center gap-4">
-          {/* Zoom Controls */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => changeZoom(-0.1)}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-              disabled={scale <= 0.5}
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <span className="text-gray-400 text-sm min-w-[60px] text-center">
-              {Math.round(scale * 100)}%
-            </span>
-            <button
-              onClick={() => changeZoom(0.1)}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-              disabled={scale >= 3.0}
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Download */}
-          <a
-            href={url}
-            download
+      <div className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center space-x-3">
+          <FileText className="h-5 w-5 text-gray-400" />
+          <h3 className="text-lg font-semibold text-white truncate max-w-md">
+            {document.name}
+          </h3>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          {/* Open in New Tab */}
+          <button
+            onClick={openInNewTab}
             className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+            title="Open in New Tab"
           >
-            <Download className="w-4 h-4" />
-          </a>
-
-          {/* Close */}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+            <ExternalLink className="h-5 w-5" />
+          </button>
+          
+          {/* Download Button */}
+          <button
+            onClick={downloadFile}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+            title="Download"
+          >
+            <Download className="h-5 w-5" />
+          </button>
+          
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+            title="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
       {/* PDF Content */}
-      <div className="flex-1 overflow-auto flex items-center justify-center p-4">
-        {loading && (
-          <div className="text-white">Loading PDF...</div>
-        )}
-        
-        {error && (
-          <div className="text-red-500 text-center">
-            <p>{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-            >
-              Retry
-            </button>
+      <div className="flex-1 overflow-hidden bg-gray-800 flex items-center justify-center">
+        {isLoading ? (
+          <div className="text-center">
+            <Loader className="h-12 w-12 text-orange-500 animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Loading PDF...</p>
           </div>
+        ) : error ? (
+          <div className="text-center p-8">
+            <FileText className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+            <p className="text-red-400 mb-6">{error}</p>
+            <div className="space-y-3 max-w-sm mx-auto">
+              <button
+                onClick={downloadFile}
+                className="block w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+              >
+                <Download className="h-5 w-5 inline mr-2" />
+                Download PDF
+              </button>
+              <button
+                onClick={openInNewTab}
+                className="block w-full px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                <ExternalLink className="h-5 w-5 inline mr-2" />
+                Try Opening in Browser
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Main PDF viewer using embed/object tags for better compatibility */}
+            <object
+              data={pdfUrl}
+              type="application/pdf"
+              className="w-full h-full"
+              aria-label={document.name}
+            >
+              <embed
+                src={pdfUrl}
+                type="application/pdf"
+                className="w-full h-full"
+              />
+              {/* Fallback for browsers that don't support inline PDF */}
+              <div className="text-center p-8">
+                <FileText className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400 mb-6">
+                  Your browser cannot display this PDF inline.
+                </p>
+                <div className="space-y-3 max-w-sm mx-auto">
+                  <button
+                    onClick={downloadFile}
+                    className="block w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                  >
+                    <Download className="h-5 w-5 inline mr-2" />
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={openInNewTab}
+                    className="block w-full px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    <ExternalLink className="h-5 w-5 inline mr-2" />
+                    Open in New Tab
+                  </button>
+                </div>
+              </div>
+            </object>
+          </>
         )}
-
-        <Document
-          file={url}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          loading={null}
-          className="max-w-full"
-        >
-          {!loading && !error && (
-            <Page 
-              pageNumber={pageNumber} 
-              scale={scale}
-              className="shadow-2xl"
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-            />
-          )}
-        </Document>
       </div>
-
-      {/* Footer with Navigation */}
-      {!loading && !error && numPages > 0 && (
-        <div className="bg-gray-900 border-t border-gray-700 px-4 py-3 flex items-center justify-center gap-4">
-          <button
-            onClick={() => changePage(-1)}
-            disabled={pageNumber <= 1}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          
-          <span className="text-gray-400 text-sm">
-            Page {pageNumber} of {numPages}
-          </span>
-          
-          <button
-            onClick={() => changePage(1)}
-            disabled={pageNumber >= numPages}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }
