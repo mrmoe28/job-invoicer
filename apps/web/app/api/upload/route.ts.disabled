@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StorageService } from '@/lib/storage';
+// import { StorageService } from '@/lib/storage'; // TODO: Add storage dependencies when needed
 
 // Configure upload settings
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
