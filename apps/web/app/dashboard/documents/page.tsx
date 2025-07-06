@@ -68,7 +68,7 @@ export default function DocumentsPage() {
       url: 'https://pdfobject.com/pdf/sample.pdf',
       uploadDate: new Date('2024-01-10'),
       category: 'permits',
-      status: 'completed'
+      status: 'draft'
     }
   ]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -367,7 +367,7 @@ export default function DocumentsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {doc.type === 'application/pdf' && doc.status !== 'signed' && (
+                          {doc.type === 'application/pdf' && doc.status !== 'signed' && doc.status !== 'completed' && (
                             <button
                               onClick={() => setSigningDocument(doc)}
                               className="p-2 text-gray-400 hover:text-orange-500 hover:bg-gray-600 rounded transition-colors"
