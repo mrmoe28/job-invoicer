@@ -2,14 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, CheckCircle, AlertCircle, Download, X, PenTool, Upload, Type, Move } from 'lucide-react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import dynamic from 'next/dynamic';
 import Draggable from 'react-draggable';
 import { useToast } from './Toast';
+
+// Dynamic import for react-pdf to avoid SSR issues
+const Document = dynamic(() => import('react-pdf').then(mod => mod.Document), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div></div>
+});
+
+const Page = dynamic(() => import('react-pdf').then(mod => mod.Page), { 
+  ssr: false 
+});
+
+// Import CSS files
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-
-// Set worker for react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface DocumentSignerProps {
   document: {
@@ -62,6 +71,17 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
   const [placedSignatures, setPlacedSignatures] = useState<PlacedSignature[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [pdfReady, setPdfReady] = useState(false);
+
+  // Initialize PDF.js worker
+  useEffect(() => {
+    const setupWorker = async () => {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+      setPdfReady(true);
+    };
+    setupWorker();
+  }, []);
 
   // Load saved signatures from localStorage
   useEffect(() => {
@@ -250,6 +270,14 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
     }
   };
 
+  if (!pdfReady) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
+        <div className="text-white">Loading PDF viewer...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex">
       {/* Document Preview */}
@@ -277,18 +305,20 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
         
         <div className="flex-1 bg-gray-800 p-4 overflow-auto">
           <div className="relative mx-auto" style={{ width: 'fit-content' }}>
-            <Document
-              file={pdfUrl}
-              onLoadSuccess={onDocumentLoadSuccess}
-              className="shadow-lg"
-            >
-              <Page 
-                pageNumber={currentPage} 
-                onLoadSuccess={onPageLoadSuccess}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-              />
-            </Document>
+            {pdfUrl && (
+              <Document
+                file={pdfUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                className="shadow-lg"
+              >
+                <Page 
+                  pageNumber={currentPage} 
+                  onLoadSuccess={onPageLoadSuccess}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                />
+              </Document>
+            )}
             
             {/* Render placed signatures for current page */}
             {placedSignatures
