@@ -1,20 +1,28 @@
-# 🛠️ Vercel pnpm Version Fix
+# 🛠️ Vercel pnpm Version Fix - UPDATED
 
 ## Issue
-Vercel deployment was failing with:
+Vercel deployment was failing with two different errors:
+
+1. First error (pnpm version):
 ```
 ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment (bad pnpm and/or Node.js version)
 Expected version: >=8.0.0
 Got: 6.35.1
 ```
 
+2. Second error (ERR_INVALID_THIS):
+```
+WARN GET https://registry.npmjs.org/@types%2Fnode error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ERR_PNPM_META_FETCH_FAIL GET https://registry.npmjs.org/[package]: Value of "this" must be of type URLSearchParams
+```
+
 ## Solution Applied
 
-### 1. Updated `vercel.json`
+### 1. Updated `vercel.json` with Corepack
 ```json
 {
   "root": "apps/web",
-  "installCommand": "npm install -g pnpm@8.10.0 && pnpm install",
+  "installCommand": "corepack enable && corepack prepare pnpm@8.10.0 --activate && pnpm install",
   "buildCommand": "pnpm build",
   "devCommand": "pnpm dev",
   "functions": {
@@ -25,22 +33,45 @@ Got: 6.35.1
 }
 ```
 
-### 2. Modified `package.json`
+### 2. Add Environment Variable in Vercel Dashboard
+**IMPORTANT**: You must add this environment variable in your Vercel project settings:
+- Key: `ENABLE_EXPERIMENTAL_COREPACK`
+- Value: `1`
+
+### 3. Modified `package.json`
 - Removed strict pnpm version requirement from engines field
 - Kept Node.js version requirement (>=18.18.0)
 - This prevents the engine check from failing while still using pnpm
 
-### 3. Created `.nvmrc`
+### 4. Created `.nvmrc`
 - Added Node.js version 18.18.0 specification
 - Ensures correct Node.js version is used
 
 ## Why This Works
 
-1. **Custom Install Command**: We explicitly install pnpm 8.10.0 before running pnpm install
-2. **No Engine Check**: Removing pnpm from engines prevents the version check failure
-3. **packageManager Field**: Still specifies pnpm@8.10.0 for local development consistency
+1. **Corepack**: Uses Node.js's built-in package manager management tool
+2. **ENABLE_EXPERIMENTAL_COREPACK**: Enables Corepack support in Vercel
+3. **Explicit Version**: `corepack prepare pnpm@8.10.0 --activate` ensures the exact version is used
+4. **No Engine Check**: Removing pnpm from engines prevents version check failures
+5. **Compatibility**: This approach fixes the Node.js 20 URLSearchParams compatibility issue
 
-## Alternative Solutions (if needed)
+## Steps to Deploy
+
+1. **Add Environment Variable in Vercel**:
+   - Go to your Vercel project dashboard
+   - Navigate to Settings → Environment Variables
+   - Add: `ENABLE_EXPERIMENTAL_COREPACK = 1`
+
+2. **Commit and Push Changes**:
+   ```bash
+   git add vercel.json package.json .nvmrc VERCEL_PNPM_FIX.md
+   git commit -m "Fix Vercel pnpm ERR_INVALID_THIS error with corepack"
+   git push origin main
+   ```
+
+3. **Vercel will automatically redeploy**
+
+## Alternative Solutions (if the above doesn't work)
 
 ### Option 1: Use npm instead
 Update `vercel.json`:
@@ -52,26 +83,31 @@ Update `vercel.json`:
 }
 ```
 
-### Option 2: Use Vercel's Built-in pnpm
-Add to environment variables in Vercel:
+### Option 2: Downgrade Node.js version
+Update `.nvmrc` to use Node 18 instead of 20:
 ```
-ENABLE_EXPERIMENTAL_COREPACK=1
+18.17.0
 ```
 
-## Next Steps
-
-1. Commit these changes:
-   ```bash
-   git add vercel.json package.json .nvmrc VERCEL_PNPM_FIX.md
-   git commit -m "Fix Vercel pnpm version compatibility"
-   git push origin main
-   ```
-
-2. The deployment should now succeed on Vercel
+### Option 3: Use Yarn
+Update `vercel.json`:
+```json
+{
+  "root": "apps/web",
+  "installCommand": "yarn install",
+  "buildCommand": "yarn build"
+}
+```
 
 ## Verification
 
 After deployment, check:
-- Build logs show pnpm 8.10.0 being installed
-- Dependencies install successfully
-- Build completes without engine errors
+- Build logs show corepack being enabled
+- pnpm 8.10.0 is activated successfully
+- Dependencies install without ERR_INVALID_THIS errors
+- Build completes successfully
+
+## References
+- https://github.com/pnpm/pnpm/issues/6424
+- https://jelaniharris.com/blog/fixing-errinvalidthis-error-on-vercel-using-pnpm/
+- https://vercel.com/guides/corepack-errors-github-actions

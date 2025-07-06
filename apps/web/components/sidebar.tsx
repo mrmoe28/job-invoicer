@@ -103,7 +103,7 @@ export default function Sidebar({ isOpen, onCloseAction }: SidebarProps) {
                 <h1 className="text-xl font-bold text-gray-900">
                   Pulse<span className="text-blue-600">CRM</span>
                 </h1>
-                <p className="text-xs text-gray-500">Crew Workspace</p>
+                <p className="text-xs text-gray-500">Contractor Workspace</p>
               </div>
             </div>
           </div>

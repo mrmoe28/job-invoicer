@@ -47,7 +47,7 @@ const navigationItems = [
   { name: 'Contractors', href: '/dashboard/contacts', icon: Icons.contacts },
   { name: 'Tasks', href: '/dashboard/tasks', icon: Icons.tasks },
   { name: 'Jobs', href: '/dashboard/jobs', icon: Icons.jobs },
-  { name: 'Crew', href: '/dashboard/crew', icon: Icons.crew },
+  { name: 'Contractors', href: '/dashboard/contractors', icon: Icons.crew },
   { name: 'Documents', href: '/dashboard/documents', icon: Icons.documents },
   { name: 'Scheduling', href: '/dashboard/scheduling', icon: Icons.scheduling },
 ];
@@ -75,7 +75,7 @@ export default function TopNavigation({ user }: TopNavigationProps) {
   const [notifications, setNotifications] = useState([
     { id: 1, text: 'New job assigned to you', read: false },
     { id: 2, text: 'Document approved', read: false },
-    { id: 3, text: 'Crew member added', read: false },
+    { id: 3, text: 'Contractor added', read: false },
   ]);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
