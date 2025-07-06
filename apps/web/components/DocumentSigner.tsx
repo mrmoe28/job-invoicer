@@ -44,7 +44,7 @@ const SIGNATURE_FONTS = [
   { name: 'Roboto Slab', value: 'Roboto Slab, serif' }
 ];
 
-export default function DocumentSigner({ document, onClose, onSign }: DocumentSignerProps) {
+export default function DocumentSigner({ document: pdfDocument, onClose, onSign }: DocumentSignerProps) {
   const { addToast } = useToast();
   const [signatureMode, setSignatureMode] = useState<'type' | 'upload'>('type');
   const [typedName, setTypedName] = useState('');
@@ -60,7 +60,7 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
 
   // Load saved signatures from localStorage
   useEffect(() => {
-    const savedSignatures = localStorage.getItem(`signatures_${document.id}`);
+    const savedSignatures = localStorage.getItem(`signatures_${pdfDocument.id}`);
     if (savedSignatures) {
       try {
         setPlacedSignatures(JSON.parse(savedSignatures));
@@ -68,18 +68,18 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
         console.error('Error loading saved signatures:', e);
       }
     }
-  }, [document.id]);
+  }, [pdfDocument.id]);
 
   // Handle PDF URL - create blob URL if file is provided
   useEffect(() => {
-    if (document.file) {
-      const url = URL.createObjectURL(document.file);
+    if (pdfDocument.file) {
+      const url = URL.createObjectURL(pdfDocument.file);
       setPdfUrl(url);
       return () => URL.revokeObjectURL(url);
     } else {
-      setPdfUrl(document.url);
+      setPdfUrl(pdfDocument.url);
     }
-  }, [document.file, document.url]);
+  }, [pdfDocument.file, pdfDocument.url]);
 
   // Add Google Fonts
   useEffect(() => {
@@ -158,7 +158,7 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
     setPlacedSignatures(updatedSignatures);
     
     // Save to localStorage
-    localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updatedSignatures));
+    localStorage.setItem(`signatures_${pdfDocument.id}`, JSON.stringify(updatedSignatures));
     addToast('Signature added! You can drag it to position.', 'success');
   };
 
@@ -167,13 +167,13 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
       sig.id === id ? { ...sig, x, y } : sig
     );
     setPlacedSignatures(updated);
-    localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updated));
+    localStorage.setItem(`signatures_${pdfDocument.id}`, JSON.stringify(updated));
   };
 
   const removeSignature = (id: string) => {
     const updated = placedSignatures.filter(sig => sig.id !== id);
     setPlacedSignatures(updated);
-    localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updated));
+    localStorage.setItem(`signatures_${pdfDocument.id}`, JSON.stringify(updated));
   };
 
   const handleMouseDown = (e: React.MouseEvent, signature: PlacedSignature) => {
@@ -220,13 +220,13 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
 
       // Send to API
       const formData = new FormData();
-      if (document.file) {
-        formData.append('pdf', document.file);
+      if (pdfDocument.file) {
+        formData.append('pdf', pdfDocument.file);
       } else {
         try {
-          const response = await fetch(document.url);
+          const response = await fetch(pdfDocument.url);
           const blob = await response.blob();
-          formData.append('pdf', blob, document.name);
+          formData.append('pdf', blob, pdfDocument.name);
         } catch (error) {
           console.error('Error fetching PDF:', error);
           addToast('Error loading PDF file', 'error');
@@ -235,7 +235,7 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
         }
       }
       formData.append('signatures', JSON.stringify(signatureData));
-      formData.append('documentName', document.name);
+      formData.append('documentName', pdfDocument.name);
 
       const apiResponse = await fetch('/api/send-signed-pdf', {
         method: 'POST',
@@ -249,11 +249,11 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
       const result = await apiResponse.json();
       
       if (onSign) {
-        onSign(document.id, signatureData);
+        onSign(pdfDocument.id, signatureData);
       }
 
       // Clear saved signatures
-      localStorage.removeItem(`signatures_${document.id}`);
+      localStorage.removeItem(`signatures_${pdfDocument.id}`);
 
       addToast('Document signed and sent successfully!', 'success');
       setTimeout(onClose, 1500);
@@ -272,7 +272,7 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
         <div className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FileText className="h-5 w-5 text-gray-400" />
-            <h3 className="text-lg font-semibold text-white">{document.name}</h3>
+            <h3 className="text-lg font-semibold text-white">{pdfDocument.name}</h3>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-400">
