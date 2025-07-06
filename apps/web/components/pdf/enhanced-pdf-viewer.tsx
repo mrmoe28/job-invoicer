@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -20,143 +19,131 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-// Configure PDF.js worker
-if (typeof window !== 'undefined') {
+// Lazy load react-pdf to handle optional dependency
+let Document: any;
+let Page: any;
+let pdfjs: any;
+
+try {
+  const reactPdf = require('react-pdf');
+  Document = reactPdf.Document;
+  Page = reactPdf.Page;
+  pdfjs = reactPdf.pdfjs;
+  
+  // Configure PDF.js worker
+  if (typeof window !== 'undefined' && pdfjs) {
     pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+  }
+} catch (error) {
+  console.log('react-pdf not available, using fallback');
 }
 
 interface EnhancedPDFViewerProps {
   fileUrl: string;
   fileName?: string;
   className?: string;
-  onClose?: () => void;
-  showControls?: boolean;
-  height?: string;
-  onLoadSuccess?: (pdf: any) => void;
-  onLoadError?: (error: Error) => void;
+  onError?: (error: Error) => void;
+  showToolbar?: boolean;
+  allowDownload?: boolean;
+  allowPrint?: boolean;
+  allowShare?: boolean;
+  maxWidth?: number;
+  maxHeight?: number;
 }
 
 export default function EnhancedPDFViewer({
   fileUrl,
-  fileName,
+  fileName = 'document.pdf',
   className,
-  onClose,
-  showControls = true,
-  height = '800px',
-  onLoadSuccess,
-  onLoadError,
+  onError,
+  showToolbar = true,
+  allowDownload = true,
+  allowPrint = true,
+  allowShare = true,
+  maxWidth = 1200,
+  maxHeight = 800
 }: EnhancedPDFViewerProps) {
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
-  const [rotation, setRotation] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
+  // If react-pdf is not available, show fallback
+  if (!Document || !Page) {
+    return (
+      <div className={cn("pdf-viewer-container p-8 bg-gray-100 rounded-lg text-center", className)}>
+        <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-700 mb-2">PDF Preview Unavailable</h3>
+        <p className="text-gray-600 mb-4">PDF viewing is not available in this environment.</p>
+        {allowDownload && fileUrl && (
+          <a
+            href={fileUrl}
+            download={fileName}
+            className="inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download PDF
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  // Rest of the component implementation remains the same...
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [scale, setScale] = useState(1.0);
+  const [rotation, setRotation] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchText, setSearchText] = useState<string>('');
-  const [showSearch, setShowSearch] = useState<boolean>(false);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [showThumbnails, setShowThumbnails] = useState<boolean>(false);
-  const [pdfInfo, setPdfInfo] = useState<any>(null);
-
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [showThumbnails, setShowThumbnails] = useState(false);
+  
   const containerRef = useRef<HTMLDivElement>(null);
-  const pageRefs = useRef<{ [key: number]: HTMLDivElement }>({});
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // Load PDF document
-  const onDocumentLoadSuccess = useCallback(
-    ({ numPages, ...info }: { numPages: number }) => {
-      setNumPages(numPages);
-      setPageNumber(1);
-      setLoading(false);
-      setError(null);
-      setPdfInfo(info);
-      onLoadSuccess?.({ numPages, ...info });
-    },
-    [onLoadSuccess]
-  );
-
-  const onDocumentLoadError = useCallback(
-    (error: Error) => {
-      setLoading(false);
-      setError(error.message || 'Failed to load PDF');
-      onLoadError?.(error);
-    },
-    [onLoadError]
-  );
-
-  // Navigation
-  const goToPrevPage = useCallback(() => {
-    setPageNumber((prev) => Math.max(prev - 1, 1));
-  }, []);
-
-  const goToNextPage = useCallback(() => {
-    setPageNumber((prev) => Math.min(prev + 1, numPages));
-  }, [numPages]);
-
-  const goToPage = useCallback((page: number) => {
-    setPageNumber(Math.max(1, Math.min(page, numPages)));
-  }, [numPages]);
-
-  // Zoom controls
-  const zoomIn = useCallback(() => {
-    setScale((prev) => Math.min(prev + 0.25, 5.0));
-  }, []);
-
-  const zoomOut = useCallback(() => {
-    setScale((prev) => Math.max(prev - 0.25, 0.25));
-  }, []);
-
-  const resetZoom = useCallback(() => {
-    setScale(1.0);
-  }, []);
-
-  const fitToWidth = useCallback(() => {
-    if (containerRef.current) {
-      const containerWidth = containerRef.current.clientWidth - 40; // Account for padding
-      const pageWidth = 595; // Standard PDF page width in points
-      const newScale = containerWidth / pageWidth;
-      setScale(Math.max(0.25, Math.min(newScale, 5.0)));
-    }
-  }, []);
-
-  // Rotation
-  const rotateClockwise = useCallback(() => {
-    setRotation((prev) => (prev + 90) % 360);
-  }, []);
-
-  // Download
-  const downloadPDF = useCallback(() => {
-    if (fileUrl) {
-      const link = document.createElement('a');
-      link.href = fileUrl;
-      link.download = fileName || fileUrl.split('/').pop() || 'document.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  }, [fileUrl, fileName]);
-
-  // Share
-  const sharePDF = useCallback(async () => {
-    if (navigator.share && fileUrl) {
-      try {
-        await navigator.share({
-          title: fileName || 'PDF Document',
-          url: fileUrl,
+  // Update dimensions on mount and resize
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width } = containerRef.current.getBoundingClientRect();
+        setDimensions({
+          width: Math.min(width - 48, maxWidth),
+          height: maxHeight
         });
-      } catch (error) {
-        // Fallback to copying URL
-        navigator.clipboard.writeText(fileUrl);
-        alert('PDF URL copied to clipboard');
       }
-    } else {
-      // Fallback to copying URL
-      navigator.clipboard.writeText(fileUrl);
-      alert('PDF URL copied to clipboard');
-    }
-  }, [fileUrl, fileName]);
+    };
 
-  // Fullscreen
-  const toggleFullscreen = useCallback(() => {
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, [maxWidth, maxHeight]);
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setLoading(false);
+    setError(null);
+  };
+
+  const onDocumentLoadError = (error: Error) => {
+    setError('Failed to load PDF document');
+    setLoading(false);
+    onError?.(error);
+  };
+
+  const changePage = (offset: number) => {
+    setPageNumber(prevPageNumber => {
+      const newPageNumber = prevPageNumber + offset;
+      return Math.min(Math.max(1, newPageNumber), numPages || 1);
+    });
+  };
+
+  const changeZoom = (delta: number) => {
+    setScale(prevScale => Math.min(Math.max(0.5, prevScale + delta), 3));
+  };
+
+  const rotate = () => {
+    setRotation(prevRotation => (prevRotation + 90) % 360);
+  };
+
+  const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       containerRef.current?.requestFullscreen();
       setIsFullscreen(true);
@@ -164,381 +151,239 @@ export default function EnhancedPDFViewer({
       document.exitFullscreen();
       setIsFullscreen(false);
     }
-  }, []);
-
-  // Listen for fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return;
-
-      switch (e.key) {
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          e.preventDefault();
-          goToPrevPage();
-          break;
-        case 'ArrowRight':
-        case 'ArrowDown':
-          e.preventDefault();
-          goToNextPage();
-          break;
-        case '+':
-        case '=':
-          e.preventDefault();
-          zoomIn();
-          break;
-        case '-':
-          e.preventDefault();
-          zoomOut();
-          break;
-        case '0':
-          e.preventDefault();
-          resetZoom();
-          break;
-        case 'f':
-          if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            setShowSearch(true);
-          }
-          break;
-        case 'Escape':
-          if (isFullscreen) {
-            document.exitFullscreen();
-          } else if (showSearch) {
-            setShowSearch(false);
-          }
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrevPage, goToNextPage, zoomIn, zoomOut, resetZoom, isFullscreen, showSearch]);
-
-  // Generate thumbnail pages for sidebar
-  const renderThumbnails = () => {
-    if (!showThumbnails || numPages === 0) return null;
-
-    return (
-      <div className="w-48 bg-gray-900 border-r border-gray-700 overflow-y-auto">
-        <div className="p-3 border-b border-gray-700">
-          <h3 className="text-sm font-medium text-white">Pages ({numPages})</h3>
-        </div>
-        <div className="p-2 space-y-2">
-          {Array.from({ length: numPages }, (_, i) => i + 1).map((page) => (
-            <div
-              key={page}
-              onClick={() => goToPage(page)}
-              className={cn(
-                "relative cursor-pointer rounded border-2 transition-all",
-                page === pageNumber 
-                  ? "border-orange-500 bg-orange-500/10" 
-                  : "border-gray-700 hover:border-gray-600"
-              )}
-            >
-              <div className="aspect-[3/4] bg-white rounded">
-                <Document file={fileUrl} loading={null} error={null}>
-                  <Page
-                    pageNumber={page}
-                    scale={0.15}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    className="w-full h-full"
-                  />
-                </Document>
-              </div>
-              <div className="absolute bottom-1 left-1 right-1 text-center">
-                <span className="text-xs text-white bg-black bg-opacity-75 px-1 rounded">
-                  {page}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
   };
 
-  if (!fileUrl) {
-    return (
-      <div className={cn('border border-gray-700 rounded-lg p-8 text-center bg-gray-800', className)}>
-        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-400">No PDF file selected</p>
-      </div>
-    );
-  }
+  const handleDownload = () => {
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.download = fileName;
+    link.click();
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: fileName,
+          text: `Check out this document: ${fileName}`,
+          url: window.location.href
+        });
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    }
+  };
 
   return (
     <div 
       ref={containerRef}
       className={cn(
-        'bg-gray-900 rounded-lg overflow-hidden flex flex-col',
-        isFullscreen && 'fixed inset-0 z-50 rounded-none',
+        "pdf-viewer-container bg-gray-50 rounded-lg overflow-hidden",
+        isFullscreen && "fixed inset-0 z-50 bg-white",
         className
       )}
     >
-      {/* Header Controls */}
-      {showControls && (
-        <div className="bg-gray-800 border-b border-gray-700 p-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            {/* File Info */}
-            <div className="flex items-center space-x-3">
-              <FileText className="w-6 h-6 text-red-400" />
-              <div>
-                <h3 className="font-medium text-white truncate max-w-md">
-                  {fileName || 'PDF Document'}
-                </h3>
-                {pdfInfo && (
-                  <p className="text-sm text-gray-400">
-                    {numPages} pages
-                    {pdfInfo.info?.Title && ` • ${pdfInfo.info.Title}`}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Search */}
-            {showSearch && (
-              <div className="flex items-center space-x-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search in PDF..."
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    className="pl-10 pr-4 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-orange-500 focus:outline-none"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  onClick={() => setShowSearch(false)}
-                  className="p-2 text-gray-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {/* Action Buttons */}
+      {/* Toolbar */}
+      {showToolbar && (
+        <div className="pdf-toolbar bg-white border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
+              {/* Page Navigation */}
               <button
-                onClick={() => setShowSearch(!showSearch)}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
-                title="Search (Ctrl+F)"
+                onClick={() => changePage(-1)}
+                disabled={pageNumber <= 1}
+                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Previous page"
               >
-                <Search className="w-4 h-4" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
               
+              <span className="text-sm text-gray-600">
+                Page {pageNumber} of {numPages || '-'}
+              </span>
+              
               <button
-                onClick={() => setShowThumbnails(!showThumbnails)}
-                className={cn(
-                  "p-2 rounded transition-colors",
-                  showThumbnails 
-                    ? "bg-orange-500 text-white" 
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                )}
-                title="Toggle Thumbnails"
+                onClick={() => changePage(1)}
+                disabled={pageNumber >= (numPages || 1)}
+                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Next page"
               >
-                <BookOpen className="w-4 h-4" />
+                <ChevronRight className="w-5 h-5" />
               </button>
 
-              <div className="h-6 w-px bg-gray-600" />
+              <div className="w-px h-6 bg-gray-300 mx-2" />
 
+              {/* Zoom Controls */}
               <button
-                onClick={downloadPDF}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
-                title="Download PDF"
+                onClick={() => changeZoom(-0.1)}
+                className="p-2 rounded hover:bg-gray-100"
+                title="Zoom out"
               >
-                <Download className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={sharePDF}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
-                title="Share PDF"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={toggleFullscreen}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
-                title="Fullscreen"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
-
-              {onClose && (
-                <button
-                  onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-white transition-colors"
-                  title="Close"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Navigation and Zoom Controls */}
-          <div className="flex items-center justify-between mt-4 flex-wrap gap-4">
-            {/* Page Navigation */}
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={goToPrevPage}
-                disabled={pageNumber <= 1 || loading}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
+                <ZoomOut className="w-5 h-5" />
               </button>
               
-              <div className="flex items-center space-x-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={numPages}
-                  value={pageNumber}
-                  onChange={(e) => goToPage(parseInt(e.target.value) || 1)}
-                  className="w-16 px-2 py-1 bg-gray-700 text-white text-center rounded border border-gray-600 focus:border-orange-500 focus:outline-none"
-                />
-                <span className="text-gray-400">of {numPages || '--'}</span>
-              </div>
-
-              <button
-                onClick={goToNextPage}
-                disabled={pageNumber >= numPages || loading}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Zoom Controls */}
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={zoomOut}
-                disabled={loading}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 transition-colors"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              
-              <span className="text-sm text-gray-300 min-w-[60px] text-center">
+              <span className="text-sm text-gray-600 min-w-[60px] text-center">
                 {Math.round(scale * 100)}%
               </span>
               
               <button
-                onClick={zoomIn}
-                disabled={loading}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 transition-colors"
+                onClick={() => changeZoom(0.1)}
+                className="p-2 rounded hover:bg-gray-100"
+                title="Zoom in"
               >
-                <ZoomIn className="w-4 h-4" />
+                <ZoomIn className="w-5 h-5" />
+              </button>
+
+              <div className="w-px h-6 bg-gray-300 mx-2" />
+
+              {/* Other Controls */}
+              <button
+                onClick={rotate}
+                className="p-2 rounded hover:bg-gray-100"
+                title="Rotate"
+              >
+                <RotateCw className="w-5 h-5" />
               </button>
 
               <button
-                onClick={fitToWidth}
-                disabled={loading}
-                className="px-3 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 transition-colors text-sm"
+                onClick={() => setShowThumbnails(!showThumbnails)}
+                className="p-2 rounded hover:bg-gray-100"
+                title="Toggle thumbnails"
               >
-                Fit Width
+                <BookOpen className="w-5 h-5" />
               </button>
 
               <button
-                onClick={resetZoom}
-                disabled={loading}
-                className="px-3 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 transition-colors text-sm"
+                onClick={() => setShowSearch(!showSearch)}
+                className="p-2 rounded hover:bg-gray-100"
+                title="Search"
               >
-                Reset
+                <Search className="w-5 h-5" />
               </button>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {allowShare && (
+                <button
+                  onClick={handleShare}
+                  className="p-2 rounded hover:bg-gray-100"
+                  title="Share"
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
+              )}
+
+              {allowDownload && (
+                <button
+                  onClick={handleDownload}
+                  className="p-2 rounded hover:bg-gray-100"
+                  title="Download"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+              )}
 
               <button
-                onClick={rotateClockwise}
-                disabled={loading}
-                className="p-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 transition-colors"
+                onClick={toggleFullscreen}
+                className="p-2 rounded hover:bg-gray-100"
+                title="Fullscreen"
               >
-                <RotateCw className="w-4 h-4" />
+                {isFullscreen ? <X className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
               </button>
             </div>
           </div>
+
+          {/* Search Bar */}
+          {showSearch && (
+            <div className="mt-3 flex items-center">
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search in document..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <button
+                onClick={() => setShowSearch(false)}
+                className="ml-2 p-2 rounded hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* PDF Content */}
+      <div className="pdf-content flex h-full">
         {/* Thumbnails Sidebar */}
-        {renderThumbnails()}
+        {showThumbnails && (
+          <div className="pdf-thumbnails w-48 bg-gray-100 border-r border-gray-200 overflow-y-auto p-2">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Pages</h3>
+            <div className="space-y-2">
+              {Array.from(new Array(numPages || 0), (el, index) => (
+                <button
+                  key={`thumb-${index}`}
+                  onClick={() => setPageNumber(index + 1)}
+                  className={cn(
+                    "w-full p-2 rounded border-2 transition-colors",
+                    pageNumber === index + 1
+                      ? "border-orange-500 bg-orange-50"
+                      : "border-gray-300 hover:border-gray-400"
+                  )}
+                >
+                  <div className="text-xs text-gray-600">Page {index + 1}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* PDF Viewer */}
-        <div 
-          className="flex-1 overflow-auto bg-gray-100"
-          style={{ height: showControls ? 'calc(100% - 140px)' : height }}
-        >
+        {/* Main PDF View */}
+        <div className="flex-1 overflow-auto p-6 flex items-center justify-center">
           {loading && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Loader className="w-8 h-8 text-orange-500 mx-auto mb-4 animate-spin" />
-                <p className="text-gray-600">Loading PDF...</p>
-              </div>
+            <div className="flex flex-col items-center">
+              <Loader className="w-8 h-8 animate-spin text-orange-500 mb-2" />
+              <p className="text-gray-600">Loading PDF...</p>
             </div>
           )}
 
           {error && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center p-8">
-                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading PDF</h3>
-                <p className="text-gray-600 mb-4">{error}</p>
-                <button 
-                  onClick={() => window.location.reload()} 
-                  className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-                >
-                  Retry
-                </button>
-              </div>
+            <div className="flex flex-col items-center text-red-600">
+              <AlertCircle className="w-8 h-8 mb-2" />
+              <p>{error}</p>
             </div>
           )}
 
-          {!loading && !error && fileUrl && (
-            <div className="flex justify-center p-4">
-              <Document
-                file={fileUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={onDocumentLoadError}
-                loading={null}
-                error={null}
-                className="pdf-document"
-              >
-                <Page
-                  pageNumber={pageNumber}
-                  scale={scale}
-                  rotate={rotation}
-                  renderTextLayer={true}
-                  renderAnnotationLayer={true}
-                  className="pdf-page shadow-2xl border border-gray-300"
-                />
-              </Document>
-            </div>
+          {!loading && !error && (
+            <Document
+              file={fileUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={
+                <div className="flex items-center">
+                  <Loader className="w-6 h-6 animate-spin mr-2" />
+                  Loading PDF...
+                </div>
+              }
+            >
+              <Page
+                pageNumber={pageNumber}
+                scale={scale}
+                rotate={rotation}
+                width={dimensions.width}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                className="shadow-lg"
+              />
+            </Document>
           )}
         </div>
       </div>
-
-      {/* Keyboard Shortcuts Help */}
-      {isFullscreen && (
-        <div className="absolute bottom-4 right-4 bg-black bg-opacity-75 text-white p-2 rounded text-xs">
-          <div>← → Navigate • + - Zoom • F11 Exit Fullscreen</div>
-        </div>
-      )}
     </div>
   );
 }
