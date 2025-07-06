@@ -1,11 +1,7 @@
 {
-  "root": "apps/web",
-  "installCommand": "npm install -g pnpm@8.10.0 && pnpm install",
-  "buildCommand": "pnpm build",
-  "devCommand": "pnpm dev",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  "buildCommand": "cd apps/web && pnpm build",
+  "installCommand": "corepack enable && corepack prepare pnpm@8.10.0 --activate && pnpm install",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs",
+  "devCommand": "pnpm dev"
 }
