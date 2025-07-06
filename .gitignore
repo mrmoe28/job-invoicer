@@ -53,8 +53,8 @@ build/
 temp/
 
 # File uploads
-uploads/
-/uploads/
+apps/web/public/uploads/*
+!apps/web/public/uploads/.gitkeep
 
 # OS generated files
 Thumbs.db

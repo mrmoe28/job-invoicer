@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* Import PDF viewer styles */
-@import './pdf-styles.css';
+@import './pdf-viewer.css';
 
 /* Theme-aware base styles */
 html {
