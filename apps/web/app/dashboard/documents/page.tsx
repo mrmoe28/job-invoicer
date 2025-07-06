@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileText, Upload, Download, Trash2, Search, Filter, FolderPlus, Eye } from 'lucide-react';
+import { FileText, Upload, Download, Trash2, Search, Filter, FolderPlus, Eye, PenTool } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import DocumentViewer from '@/components/DocumentViewer';
+import DocumentSigner from '@/components/DocumentSigner';
 
 interface Document {
   id: string;
@@ -75,6 +76,7 @@ export default function DocumentsPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
+  const [signingDocument, setSigningDocument] = useState<Document | null>(null);
 
   const handleFileSelect = (files: FileList | null) => {
     if (files && files.length > 0) {
@@ -365,6 +367,15 @@ export default function DocumentsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          {doc.type === 'application/pdf' && doc.status !== 'signed' && (
+                            <button
+                              onClick={() => setSigningDocument(doc)}
+                              className="p-2 text-gray-400 hover:text-orange-500 hover:bg-gray-600 rounded transition-colors"
+                              title="Sign Document"
+                            >
+                              <PenTool className="w-4 h-4" />
+                            </button>
+                          )}
                           <a
                             href={doc.url}
                             download
@@ -408,6 +419,23 @@ export default function DocumentsPage() {
         <DocumentViewer
           document={viewingDocument}
           onClose={() => setViewingDocument(null)}
+        />
+      )}
+      
+      {/* Document Signer */}
+      {signingDocument && (
+        <DocumentSigner
+          document={signingDocument}
+          onClose={() => setSigningDocument(null)}
+          onSign={(docId, signatures) => {
+            // Update document status
+            setDocuments(prev => prev.map(doc => 
+              doc.id === docId 
+                ? { ...doc, status: 'signed' as const }
+                : doc
+            ));
+            addToast('Document signed successfully!', 'success');
+          }}
         />
       )}
       

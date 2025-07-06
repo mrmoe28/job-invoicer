@@ -1,293 +1,179 @@
 'use client';
 
-import { useState } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
-// import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-// import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  ZoomIn, 
-  ZoomOut, 
-  Download, 
-  X, 
-  Edit3,
-  Save,
-  MousePointer
-} from 'lucide-react';
-import SignaturePad from './SignaturePad';
-
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-
-interface SignatureField {
-  id: string;
-  page: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  signature?: string;
-}
+import React, { useState } from 'react';
+import { FileText, CheckCircle, AlertCircle, Download } from 'lucide-react';
+import SignatureField from './signature/SignatureField';
+import { useToast } from './Toast';
 
 interface DocumentSignerProps {
-  url: string;
-  title?: string;
-  onComplete?: (signatures: SignatureField[]) => void;
-  onClose?: () => void;
+  document: {
+    id: string;
+    name: string;
+    url: string;
+    type: string;
+  };
+  onClose: () => void;
+  onSign?: (documentId: string, signatures: SignatureData[]) => void;
 }
 
-export default function DocumentSigner({ url, title, onComplete, onClose }: DocumentSignerProps) {
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isPlacingSignature, setIsPlacingSignature] = useState(false);
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [signatureFields, setSignatureFields] = useState<SignatureField[]>([]);
-  const [currentFieldId, setCurrentFieldId] = useState<string | null>(null);
-  const [pageRefs, setPageRefs] = useState<{ [key: number]: HTMLDivElement | null }>({});
+interface SignatureData {
+  field: string;
+  signature: string;
+  signedBy: string;
+  signedAt: string;
+}
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-    setLoading(false);
-    setError(null);
-  }
+export default function DocumentSigner({ document, onClose, onSign }: DocumentSignerProps) {
+  const { addToast } = useToast();
+  const [signatures, setSignatures] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
-  function onDocumentLoadError(error: Error) {
-    console.error('PDF load error:', error);
-    setError('Failed to load PDF. Please try again.');
-    setLoading(false);
-  }
+  // Example signature fields - in production, these would come from document metadata
+  const signatureFields = [
+    { id: 'contractor', label: 'Contractor Signature', required: true },
+    { id: 'client', label: 'Client Signature', required: true },
+    { id: 'witness', label: 'Witness Signature (Optional)', required: false }
+  ];
 
-  const handlePageClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isPlacingSignature) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100; // Percentage
-    const y = ((e.clientY - rect.top) / rect.height) * 100; // Percentage
-
-    const newField: SignatureField = {
-      id: Date.now().toString(),
-      page: pageNumber,
-      x,
-      y,
-      width: 200 / rect.width * 100, // Convert to percentage
-      height: 80 / rect.height * 100, // Convert to percentage
-    };
-
-    setSignatureFields([...signatureFields, newField]);
-    setCurrentFieldId(newField.id);
-    setShowSignaturePad(true);
-    setIsPlacingSignature(false);
+  const handleSignature = (fieldId: string, signature: string) => {
+    setSignatures(prev => ({
+      ...prev,
+      [fieldId]: signature
+    }));
   };
 
-  const handleSignatureSave = (signature: string) => {
-    if (!currentFieldId) return;
+  const handleSubmit = async () => {
+    // Check if all required signatures are provided
+    const missingRequired = signatureFields
+      .filter(field => field.required && !signatures[field.id])
+      .map(field => field.label);
 
-    setSignatureFields(fields =>
-      fields.map(field =>
-        field.id === currentFieldId
-          ? { ...field, signature }
-          : field
-      )
-    );
-    setShowSignaturePad(false);
-    setCurrentFieldId(null);
-  };
-
-  const handleRemoveSignature = (fieldId: string) => {
-    setSignatureFields(fields => fields.filter(f => f.id !== fieldId));
-  };
-
-  const handleComplete = () => {
-    if (signatureFields.length === 0) {
-      alert('Please add at least one signature');
+    if (missingRequired.length > 0) {
+      addToast(`Please provide: ${missingRequired.join(', ')}`, 'error');
       return;
     }
 
-    const unsignedFields = signatureFields.filter(f => !f.signature);
-    if (unsignedFields.length > 0) {
-      alert('Please complete all signature fields');
-      return;
-    }
+    setIsSaving(true);
 
-    onComplete?.(signatureFields);
+    try {
+      // Prepare signature data
+      const signatureData: SignatureData[] = Object.entries(signatures).map(([fieldId, signature]) => ({
+        field: fieldId,
+        signature,
+        signedBy: 'Current User', // Get from auth context
+        signedAt: new Date().toISOString()
+      }));
+
+      // In production, save to database
+      if (onSign) {
+        onSign(document.id, signatureData);
+      }
+
+      addToast('Document signed successfully!', 'success');
+      setTimeout(onClose, 1500);
+    } catch (error) {
+      addToast('Failed to save signatures', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const changePage = (offset: number) => {
-    setPageNumber(prevPageNumber => {
-      const newPageNumber = prevPageNumber + offset;
-      return Math.max(1, Math.min(newPageNumber, numPages));
-    });
+  const downloadSignedDocument = () => {
+    // In production, this would generate a PDF with embedded signatures
+    addToast('Downloading signed document...', 'info');
+    window.open(document.url, '_blank');
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col">
-      {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
-        <h3 className="text-white font-medium">
-          {title || 'Sign Document'}
-        </h3>
-        <div className="flex items-center gap-4">
-          {/* Place Signature Button */}
+    <div className="fixed inset-0 z-50 bg-black/90 flex">
+      {/* Document Preview */}
+      <div className="flex-1 flex flex-col">
+        <div className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-gray-400" />
+            <h3 className="text-lg font-semibold text-white">{document.name}</h3>
+          </div>
           <button
-            onClick={() => setIsPlacingSignature(!isPlacingSignature)}
-            className={`flex items-center gap-2 px-4 py-2 rounded transition-colors ${
-              isPlacingSignature
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-800 text-gray-300 hover:text-white'
+            onClick={downloadSignedDocument}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+          >
+            <Download className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="flex-1 bg-gray-800 p-4">
+          <iframe
+            src={document.url}
+            className="w-full h-full bg-white rounded"
+            title={document.name}
+          />
+        </div>
+      </div>
+
+      {/* Signature Panel */}
+      <div className="w-96 bg-gray-900 border-l border-gray-700 flex flex-col">
+        <div className="p-4 border-b border-gray-700">
+          <h3 className="text-lg font-semibold text-white mb-1">Sign Document</h3>
+          <p className="text-sm text-gray-400">
+            Add your signature to the required fields below
+          </p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {signatureFields.map(field => (
+            <SignatureField
+              key={field.id}
+              label={field.label}
+              required={field.required}
+              onSign={(signature) => handleSignature(field.id, signature)}
+            />
+          ))}
+
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+            <div className="flex gap-3">
+              <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-300">
+                <p className="font-medium mb-1">Legal Notice</p>
+                <p className="text-xs">
+                  By signing this document, you agree to the terms and conditions outlined within.
+                  This electronic signature is legally binding.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-gray-700 space-y-3">
+          <button
+            onClick={handleSubmit}
+            disabled={isSaving}
+            className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+              isSaving
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                : 'bg-orange-500 text-white hover:bg-orange-600'
             }`}
           >
-            {isPlacingSignature ? (
+            {isSaving ? (
               <>
-                <MousePointer className="w-4 h-4" />
-                Click to place signature
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                Saving...
               </>
             ) : (
               <>
-                <Edit3 className="w-4 h-4" />
-                Add Signature
+                <CheckCircle className="h-5 w-5" />
+                Submit Signatures
               </>
             )}
           </button>
-
-          {/* Complete Button */}
-          <button
-            onClick={handleComplete}
-            disabled={signatureFields.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save className="w-4 h-4" />
-            Complete Signing
-          </button>
-
-          {/* Close */}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* PDF Content */}
-      <div className="flex-1 overflow-auto flex items-center justify-center p-4">
-        {loading && (
-          <div className="text-white">Loading document...</div>
-        )}
-        
-        {error && (
-          <div className="text-red-500 text-center">
-            <p>{error}</p>
-          </div>
-        )}
-
-        <Document
-          file={url}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          loading={null}
-          className="max-w-full"
-        >
-          {!loading && !error && (
-            <div className="relative">
-              <div
-                ref={ref => setPageRefs({ ...pageRefs, [pageNumber]: ref })}
-                onClick={handlePageClick}
-                className={`relative ${isPlacingSignature ? 'cursor-crosshair' : ''}`}
-              >
-                <Page 
-                  pageNumber={pageNumber} 
-                  scale={scale}
-                  className="shadow-2xl"
-                  renderTextLayer={true}
-                  renderAnnotationLayer={true}
-                />
-                
-                {/* Render signature fields for current page */}
-                {signatureFields
-                  .filter(field => field.page === pageNumber)
-                  .map(field => (
-                    <div
-                      key={field.id}
-                      className="absolute border-2 border-orange-500 bg-orange-500/10 rounded group"
-                      style={{
-                        left: `${field.x}%`,
-                        top: `${field.y}%`,
-                        width: `${field.width}%`,
-                        height: `${field.height}%`,
-                      }}
-                    >
-                      {field.signature ? (
-                        <img 
-                          src={field.signature} 
-                          alt="Signature" 
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <span className="text-orange-500 text-sm">Sign Here</span>
-                        </div>
-                      )}
-                      
-                      {/* Remove button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveSignature(field.id);
-                        }}
-                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-        </Document>
-      </div>
-
-      {/* Footer with Navigation */}
-      {!loading && !error && numPages > 0 && (
-        <div className="bg-gray-900 border-t border-gray-700 px-4 py-3 flex items-center justify-center gap-4">
-          <button
-            onClick={() => changePage(-1)}
-            disabled={pageNumber <= 1}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          
-          <span className="text-gray-400 text-sm">
-            Page {pageNumber} of {numPages}
-          </span>
           
           <button
-            onClick={() => changePage(1)}
-            disabled={pageNumber >= numPages}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={onClose}
+            className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
-            <ChevronRight className="w-4 h-4" />
+            Cancel
           </button>
         </div>
-      )}
-
-      {/* Signature Pad Modal */}
-      {showSignaturePad && (
-        <SignaturePad
-          onSave={handleSignatureSave}
-          onClose={() => {
-            setShowSignaturePad(false);
-            setCurrentFieldId(null);
-          }}
-        />
-      )}
+      </div>
     </div>
   );
 }
