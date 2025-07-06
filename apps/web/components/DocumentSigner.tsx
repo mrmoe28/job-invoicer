@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, CheckCircle, AlertCircle, Download, X, PenTool, Upload, Type, Move } from 'lucide-react';
-import Draggable from 'react-draggable';
 import { useToast } from './Toast';
 
 interface DocumentSignerProps {
@@ -33,8 +32,6 @@ interface PlacedSignature {
   page: number;
   x: number;
   y: number;
-  width: number;
-  height: number;
 }
 
 const SIGNATURE_FONTS = [
@@ -45,7 +42,6 @@ const SIGNATURE_FONTS = [
 
 export default function DocumentSigner({ document, onClose, onSign }: DocumentSignerProps) {
   const { addToast } = useToast();
-  const [currentPage] = useState<number>(1);
   const [signatureMode, setSignatureMode] = useState<'type' | 'upload'>('type');
   const [typedName, setTypedName] = useState('');
   const [selectedFont, setSelectedFont] = useState(SIGNATURE_FONTS[0].value);
@@ -58,7 +54,11 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
   useEffect(() => {
     const savedSignatures = localStorage.getItem(`signatures_${document.id}`);
     if (savedSignatures) {
-      setPlacedSignatures(JSON.parse(savedSignatures));
+      try {
+        setPlacedSignatures(JSON.parse(savedSignatures));
+      } catch (e) {
+        console.error('Error loading saved signatures:', e);
+      }
     }
   }, [document.id]);
 
@@ -139,36 +139,23 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
     const newSignature: PlacedSignature = {
       id: Date.now().toString(),
       imageUrl: signatureImage,
-      page: currentPage,
-      x: 50,
-      y: 50,
-      width: 200,
-      height: 75
+      page: 1,
+      x: 100,
+      y: 100
     };
 
-    setPlacedSignatures([...placedSignatures, newSignature]);
+    const updatedSignatures = [...placedSignatures, newSignature];
+    setPlacedSignatures(updatedSignatures);
     
     // Save to localStorage
-    const updatedSignatures = [...placedSignatures, newSignature];
     localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updatedSignatures));
-  };
-
-  const updateSignaturePosition = (id: string, x: number, y: number) => {
-    setPlacedSignatures(prev => {
-      const updated = prev.map(sig => 
-        sig.id === id ? { ...sig, x, y } : sig
-      );
-      localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updated));
-      return updated;
-    });
+    addToast('Signature added to document', 'success');
   };
 
   const removeSignature = (id: string) => {
-    setPlacedSignatures(prev => {
-      const updated = prev.filter(sig => sig.id !== id);
-      localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updated));
-      return updated;
-    });
+    const updated = placedSignatures.filter(sig => sig.id !== id);
+    setPlacedSignatures(updated);
+    localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updated));
   };
 
   const handleSubmit = async () => {
@@ -182,12 +169,12 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
     try {
       // Convert placed signatures to SignatureData format
       const signatureData: SignatureData[] = placedSignatures.map(sig => ({
-        userId: 'current-user', // Get from auth context
+        userId: 'current-user',
         imageUrl: sig.imageUrl,
         page: sig.page,
-        xPercent: (sig.x / 800) * 100, // Assuming 800px width for now
-        yPercent: (sig.y / 1000) * 100, // Assuming 1000px height for now
-        widthPercent: (sig.width / 800) * 100,
+        xPercent: 10, // Fixed position for now
+        yPercent: 10,
+        widthPercent: 25,
         signedAt: new Date().toISOString()
       }));
 
@@ -196,10 +183,16 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
       if (document.file) {
         formData.append('pdf', document.file);
       } else {
-        // For URL-based PDFs, we'd need to fetch and convert to blob
-        const response = await fetch(document.url);
-        const blob = await response.blob();
-        formData.append('pdf', blob, document.name);
+        try {
+          const response = await fetch(document.url);
+          const blob = await response.blob();
+          formData.append('pdf', blob, document.name);
+        } catch (error) {
+          console.error('Error fetching PDF:', error);
+          addToast('Error loading PDF file', 'error');
+          setIsSaving(false);
+          return;
+        }
       }
       formData.append('signatures', JSON.stringify(signatureData));
       formData.append('documentName', document.name);
@@ -251,44 +244,20 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
         </div>
         
         <div className="flex-1 bg-gray-800 p-4 overflow-auto">
-          <div className="relative mx-auto bg-white rounded-lg shadow-lg" style={{ width: '800px', minHeight: '1000px' }}>
+          <div className="relative mx-auto bg-white rounded-lg shadow-lg" style={{ width: '100%', maxWidth: '800px', height: '100%' }}>
             {/* PDF Preview using iframe */}
             <iframe
               src={pdfUrl}
               className="w-full h-full rounded-lg"
-              style={{ minHeight: '1000px' }}
               title={document.name}
             />
             
-            {/* Signature Overlay */}
-            <div className="absolute inset-0 pointer-events-none">
-              {placedSignatures.map(signature => (
-                <Draggable
-                  key={signature.id}
-                  defaultPosition={{ x: signature.x, y: signature.y }}
-                  onStop={(e, data) => updateSignaturePosition(signature.id, data.x, data.y)}
-                  bounds="parent"
-                >
-                  <div 
-                    className="absolute cursor-move pointer-events-auto group"
-                    style={{ width: signature.width, height: signature.height }}
-                  >
-                    <img
-                      src={signature.imageUrl}
-                      alt="Signature"
-                      className="w-full h-full object-contain border-2 border-transparent group-hover:border-orange-500"
-                      draggable={false}
-                    />
-                    <button
-                      onClick={() => removeSignature(signature.id)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </Draggable>
-              ))}
-            </div>
+            {/* Show placed signatures count */}
+            {placedSignatures.length > 0 && (
+              <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
+                {placedSignatures.length} signature{placedSignatures.length > 1 ? 's' : ''} added
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -298,7 +267,7 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
         <div className="p-4 border-b border-gray-700">
           <h3 className="text-lg font-semibold text-white mb-1">Sign Document</h3>
           <p className="text-sm text-gray-400">
-            Create your signature and place it on the document
+            Create your signature and add it to the document
           </p>
         </div>
 
@@ -439,12 +408,10 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
             <div className="flex gap-3">
               <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-blue-300">
-                <p className="font-medium mb-1">Instructions</p>
+                <p className="font-medium mb-1">Note</p>
                 <p className="text-xs">
-                  1. Create or upload your signature<br/>
-                  2. Click "Add to Document"<br/>
-                  3. Drag signature to desired position<br/>
-                  4. Click "Submit" when ready
+                  Signatures will be placed at a fixed position on the document. 
+                  Full drag-and-drop positioning will be available in the next update.
                 </p>
               </div>
             </div>

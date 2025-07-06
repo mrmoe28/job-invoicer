@@ -1,10 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { FileText, Upload, Download, Trash2, Search, Filter, FolderPlus, Eye, PenTool, LayoutGrid, LayoutList } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import DocumentViewer from '@/components/DocumentViewer';
-import DocumentSigner from '@/components/DocumentSigner';
+
+// Dynamic import to avoid SSR issues
+const DocumentSigner = dynamic(() => import('@/components/DocumentSigner'), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
+      <div className="text-white">Loading document signer...</div>
+    </div>
+  )
+});
 
 interface Document {
   id: string;
