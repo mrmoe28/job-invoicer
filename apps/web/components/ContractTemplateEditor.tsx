@@ -63,9 +63,12 @@ export default function ContractTemplateEditor({
     if (template.id === 'solar-installation-agreement') {
       const projectSize = parseFloat(values.project_size || 0);
       const costPerWatt = parseFloat(values.cost_per_watt || 0);
-      if (projectSize && costPerWatt) {
+      if (projectSize > 0 && costPerWatt > 0) {
         const total = (projectSize * 1000 * costPerWatt).toFixed(2);
         setValues(prev => ({ ...prev, total_cost: total }));
+      } else if (!values.total_cost) {
+        // Set a default value if total_cost is not set
+        setValues(prev => ({ ...prev, total_cost: '0.00' }));
       }
     }
   }, [values.project_size, values.cost_per_watt, template.id]);

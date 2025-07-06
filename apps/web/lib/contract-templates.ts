@@ -111,6 +111,7 @@ export const SOLAR_INSTALLATION_TEMPLATE: ContractTemplate = {
       name: 'Total Project Cost ($)',
       type: 'number',
       placeholder: '1800.00',
+      defaultValue: '0.00',
       required: true
     },
     
@@ -333,10 +334,16 @@ export const CONTRACT_TEMPLATES = [
 export function populateTemplate(template: ContractTemplate, values: Record<string, any>): string {
   let content = template.content;
   
-  // Replace all placeholders with values
-  Object.keys(values).forEach(key => {
-    const regex = new RegExp(`{{${key}}}`, 'g');
-    content = content.replace(regex, values[key] || '');
+  // First, find all placeholders in the template
+  const placeholderRegex = /{{(\w+)}}/g;
+  const placeholders = content.match(placeholderRegex) || [];
+  
+  // Replace all placeholders with values or empty string
+  placeholders.forEach(placeholder => {
+    const key = placeholder.replace(/{{|}}/g, '');
+    const value = values[key] || '';
+    const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    content = content.replace(regex, value);
   });
   
   return content;
