@@ -68,6 +68,7 @@ export default function DocumentsPage() {
   const [signingDocument, setSigningDocument] = useState<Document | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Load documents on mount
   useEffect(() => {
@@ -90,57 +91,69 @@ export default function DocumentsPage() {
 
   const handleFileSelect = async (files: FileList | null) => {
     if (files && files.length > 0) {
+      setIsUploading(true);
       let successCount = 0;
-      const uploadPromises = Array.from(files).map(async (file) => {
-        // Validate file type
-        const validTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
-        const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-        
-        if (!validTypes.includes(fileExtension)) {
-          addToast(`Invalid file type: ${file.name}`, 'error');
-          return null;
-        }
-        
-        // Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-          addToast(`File too large: ${file.name} (max 10MB)`, 'error');
-          return null;
-        }
-        
-        console.log('Uploading file:', file.name, file.size);
-        
-        // Upload file to API
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('category', 'contracts');
-        
-        try {
-          const response = await fetch('/api/documents/upload', {
-            method: 'POST',
-            body: formData
-          });
+      
+      try {
+        const uploadPromises = Array.from(files).map(async (file) => {
+          // Validate file type
+          const validTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+          const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
           
-          if (response.ok) {
-            const data = await response.json();
-            successCount++;
-            return data.document;
-          } else {
-            throw new Error('Upload failed');
+          if (!validTypes.includes(fileExtension)) {
+            addToast(`Invalid file type: ${file.name}`, 'error');
+            return null;
           }
-        } catch (error) {
-          console.error('Upload error:', error);
-          addToast(`Failed to upload ${file.name}`, 'error');
-          return null;
+          
+          // Validate file size (max 10MB)
+          if (file.size > 10 * 1024 * 1024) {
+            addToast(`File too large: ${file.name} (max 10MB)`, 'error');
+            return null;
+          }
+          
+          console.log('Uploading file:', file.name, file.size);
+          
+          // Upload file to API
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('category', 'contracts');
+          
+          try {
+            const response = await fetch('/api/documents/upload', {
+              method: 'POST',
+              body: formData
+            });
+            
+            console.log('Upload response status:', response.status);
+            const data = await response.json();
+            console.log('Upload response data:', data);
+            
+            if (response.ok) {
+              successCount++;
+              return data.document;
+            } else {
+              throw new Error(data.error || 'Upload failed');
+            }
+          } catch (error) {
+            console.error('Upload error:', error);
+            addToast(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            return null;
+          }
+        });
+        
+        const results = await Promise.all(uploadPromises);
+        const newDocuments = results.filter(doc => doc !== null);
+        
+        if (newDocuments.length > 0) {
+          setDocuments(prev => [...newDocuments, ...prev]);
+          addToast(`Successfully uploaded ${successCount} file${successCount > 1 ? 's' : ''}`, 'success');
+          setShowUpload(false);
         }
-      });
-      
-      const results = await Promise.all(uploadPromises);
-      const newDocuments = results.filter(doc => doc !== null);
-      
-      if (newDocuments.length > 0) {
-        setDocuments(prev => [...newDocuments, ...prev]);
-        addToast(`Successfully uploaded ${successCount} file${successCount > 1 ? 's' : ''}`, 'success');
-        setShowUpload(false);
+      } catch (error) {
+        console.error('File selection error:', error);
+        addToast('An error occurred during upload', 'error');
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -155,10 +168,10 @@ export default function DocumentsPage() {
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    handleFileSelect(e.dataTransfer.files);
+    await handleFileSelect(e.dataTransfer.files);
   };
 
   const handleDelete = (doc: Document) => {
@@ -274,29 +287,40 @@ export default function DocumentsPage() {
               </button>
             </div>
             <div 
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors relative ${
                 isDragging 
                   ? 'border-orange-500 bg-orange-500/10' 
                   : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-              }`}
-              onClick={() => document.getElementById('file-upload')?.click()}
+              } ${isUploading ? 'pointer-events-none opacity-50' : ''}`}
+              onClick={() => !isUploading && document.getElementById('file-upload')?.click()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-orange-500' : 'text-gray-400 dark:text-gray-400'}`} />
-              <p className={`mb-2 ${isDragging ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'}`}>
-                {isDragging ? 'Drop files here...' : 'Drag and drop files here or click to browse'}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">Supported formats: PDF, DOC, DOCX, XLS, XLSX</p>
+              {isUploading ? (
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Uploading files...</p>
+                </div>
+              ) : (
+                <>
+                  <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-orange-500' : 'text-gray-400 dark:text-gray-400'}`} />
+                  <p className={`mb-2 ${isDragging ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'}`}>
+                    {isDragging ? 'Drop files here...' : 'Drag and drop files here or click to browse'}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">Supported formats: PDF, DOC, DOCX, XLS, XLSX</p>
+                </>
+              )}
               <input
                 id="file-upload"
                 type="file"
                 className="hidden"
                 accept=".pdf,.doc,.docx,.xls,.xlsx"
                 multiple
-                onChange={(e) => {
-                  handleFileSelect(e.target.files);
+                onChange={async (e) => {
+                  if (e.target.files) {
+                    await handleFileSelect(e.target.files);
+                  }
                   // Reset the input
                   e.target.value = '';
                 }}
