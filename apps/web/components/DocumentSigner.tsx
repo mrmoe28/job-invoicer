@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, CheckCircle, AlertCircle, Download, X, PenTool, Upload, Type, Move } from 'lucide-react';
+import { FileText, CheckCircle, AlertCircle, Download, X, Type, Upload, Move } from 'lucide-react';
+import { Worker, Viewer } from '@react-pdf-viewer/core';
+import '@react-pdf-viewer/core/lib/styles/index.css';
 import { useToast } from './Toast';
 
 interface DocumentSignerProps {
@@ -32,6 +34,8 @@ interface PlacedSignature {
   page: number;
   x: number;
   y: number;
+  width: number;
+  height: number;
 }
 
 const SIGNATURE_FONTS = [
@@ -49,6 +53,10 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
   const [placedSignatures, setPlacedSignatures] = useState<PlacedSignature[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [numPages, setNumPages] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedSignature, setDraggedSignature] = useState<PlacedSignature | null>(null);
 
   // Load saved signatures from localStorage
   useEffect(() => {
@@ -99,8 +107,8 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
     canvas.height = 150;
 
     // Clear canvas
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'transparent';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Set font and draw signature
     ctx.fillStyle = 'black';
@@ -139,9 +147,11 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
     const newSignature: PlacedSignature = {
       id: Date.now().toString(),
       imageUrl: signatureImage,
-      page: 1,
+      page: currentPage,
       x: 100,
-      y: 100
+      y: 100,
+      width: 200,
+      height: 75
     };
 
     const updatedSignatures = [...placedSignatures, newSignature];
@@ -149,13 +159,42 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
     
     // Save to localStorage
     localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updatedSignatures));
-    addToast('Signature added to document', 'success');
+    addToast('Signature added! You can drag it to position.', 'success');
+  };
+
+  const updateSignaturePosition = (id: string, x: number, y: number) => {
+    const updated = placedSignatures.map(sig => 
+      sig.id === id ? { ...sig, x, y } : sig
+    );
+    setPlacedSignatures(updated);
+    localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updated));
   };
 
   const removeSignature = (id: string) => {
     const updated = placedSignatures.filter(sig => sig.id !== id);
     setPlacedSignatures(updated);
     localStorage.setItem(`signatures_${document.id}`, JSON.stringify(updated));
+  };
+
+  const handleMouseDown = (e: React.MouseEvent, signature: PlacedSignature) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDraggedSignature(signature);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !draggedSignature) return;
+
+    const container = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - container.left - (draggedSignature.width / 2);
+    const y = e.clientY - container.top - (draggedSignature.height / 2);
+
+    updateSignaturePosition(draggedSignature.id, x, y);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setDraggedSignature(null);
   };
 
   const handleSubmit = async () => {
@@ -168,12 +207,13 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
 
     try {
       // Convert placed signatures to SignatureData format
+      // For now, we'll use fixed percentages since we don't have the actual PDF dimensions
       const signatureData: SignatureData[] = placedSignatures.map(sig => ({
         userId: 'current-user',
         imageUrl: sig.imageUrl,
         page: sig.page,
-        xPercent: 10, // Fixed position for now
-        yPercent: 10,
+        xPercent: 20, // Fixed position for now
+        yPercent: 70, // Bottom of page
         widthPercent: 25,
         signedAt: new Date().toISOString()
       }));
@@ -234,30 +274,71 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
             <FileText className="h-5 w-5 text-gray-400" />
             <h3 className="text-lg font-semibold text-white">{document.name}</h3>
           </div>
-          <button
-            onClick={() => window.open(pdfUrl, '_blank')}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-            title="Open in new tab"
-          >
-            <Download className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <span>Page {currentPage} of {numPages || '...'}</span>
+            </div>
+            <button
+              onClick={() => window.open(pdfUrl, '_blank')}
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+              title="Open in new tab"
+            >
+              <Download className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         
-        <div className="flex-1 bg-gray-800 p-4 overflow-auto">
-          <div className="relative mx-auto bg-white rounded-lg shadow-lg" style={{ width: '100%', maxWidth: '800px', height: '100%' }}>
-            {/* PDF Preview using iframe */}
-            <iframe
-              src={pdfUrl}
-              className="w-full h-full rounded-lg"
-              title={document.name}
-            />
-            
-            {/* Show placed signatures count */}
-            {placedSignatures.length > 0 && (
-              <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
-                {placedSignatures.length} signature{placedSignatures.length > 1 ? 's' : ''} added
+        <div 
+          className="flex-1 bg-gray-800 p-4 overflow-auto relative"
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          <div className="relative mx-auto bg-white rounded-lg shadow-lg" style={{ width: '100%', maxWidth: '800px', minHeight: '600px' }}>
+            {/* PDF Viewer */}
+            <Worker workerUrl={`https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js`}>
+              <div style={{ height: '100%', minHeight: '600px' }}>
+                <Viewer 
+                  fileUrl={pdfUrl}
+                  onDocumentLoad={(e) => setNumPages(e.doc.numPages)}
+                  onPageChange={(e) => setCurrentPage(e.currentPage)}
+                />
               </div>
-            )}
+            </Worker>
+            
+            {/* Signature Overlays */}
+            {placedSignatures
+              .filter(sig => sig.page === currentPage)
+              .map(signature => (
+                <div
+                  key={signature.id}
+                  className="absolute cursor-move group"
+                  style={{ 
+                    left: signature.x, 
+                    top: signature.y,
+                    width: signature.width,
+                    height: signature.height,
+                    zIndex: 10
+                  }}
+                  onMouseDown={(e) => handleMouseDown(e, signature)}
+                >
+                  <img
+                    src={signature.imageUrl}
+                    alt="Signature"
+                    className="w-full h-full object-contain pointer-events-none select-none"
+                    draggable={false}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeSignature(signature.id);
+                    }}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
           </div>
         </div>
       </div>
@@ -267,7 +348,7 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
         <div className="p-4 border-b border-gray-700">
           <h3 className="text-lg font-semibold text-white mb-1">Sign Document</h3>
           <p className="text-sm text-gray-400">
-            Create your signature and add it to the document
+            Create your signature and place it on the document
           </p>
         </div>
 
@@ -391,12 +472,12 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
               <div className="space-y-1 text-xs text-gray-400">
                 {placedSignatures.map((sig, index) => (
                   <div key={sig.id} className="flex justify-between">
-                    <span>Signature {index + 1}</span>
+                    <span>Signature {index + 1} - Page {sig.page}</span>
                     <button
-                      onClick={() => removeSignature(sig.id)}
-                      className="text-red-400 hover:text-red-300"
+                      onClick={() => setCurrentPage(sig.page)}
+                      className="text-orange-400 hover:text-orange-300"
                     >
-                      Remove
+                      View
                     </button>
                   </div>
                 ))}
@@ -408,10 +489,12 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
             <div className="flex gap-3">
               <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-blue-300">
-                <p className="font-medium mb-1">Note</p>
+                <p className="font-medium mb-1">How to Sign</p>
                 <p className="text-xs">
-                  Signatures will be placed at a fixed position on the document. 
-                  Full drag-and-drop positioning will be available in the next update.
+                  1. Create or upload your signature<br/>
+                  2. Click "Add to Document"<br/>
+                  3. Drag signature to desired position<br/>
+                  4. Click "Submit" when ready
                 </p>
               </div>
             </div>
