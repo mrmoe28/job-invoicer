@@ -194,53 +194,93 @@ export const documents = pgTable('documents', {
   orgIdx: index('documents_org_idx').on(table.organizationId),
 }));
 
-// Crew Members table - for managing construction crew
-export const crewMembers = pgTable('crew_members', {
+// Contractors table - for managing construction contractors
+export const contractors = pgTable('contractors', {
   id: uuid('id').defaultRandom().primaryKey(),
   organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
   userId: uuid('user_id').references(() => users.id), // link to user if they have account
+  
+  // Personal Information
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
+  
+  // Company Information
+  companyName: varchar('company_name', { length: 255 }),
+  businessType: varchar('business_type', { length: 100 }), // LLC, Corporation, Sole Proprietor, etc.
+  licenseNumber: varchar('license_number', { length: 100 }),
+  insuranceProvider: varchar('insurance_provider', { length: 255 }),
+  insurancePolicyNumber: varchar('insurance_policy_number', { length: 100 }),
+  insuranceExpirationDate: date('insurance_expiration_date'),
+  bondingCompany: varchar('bonding_company', { length: 255 }),
+  bondAmount: decimal('bond_amount', { precision: 12, scale: 2 }),
+  
+  // Contact Information
   email: varchar('email', { length: 255 }),
   phone: varchar('phone', { length: 50 }),
+  mobile: varchar('mobile', { length: 50 }),
+  fax: varchar('fax', { length: 50 }),
+  website: varchar('website', { length: 255 }),
+  
+  // Address Information
+  address: text('address'),
+  city: varchar('city', { length: 100 }),
+  state: varchar('state', { length: 50 }),
+  zipCode: varchar('zip_code', { length: 20 }),
+  country: varchar('country', { length: 100 }).default('US'),
+  
+  // Business Details
   skills: jsonb('skills'), // array of skills/certifications
+  specialties: jsonb('specialties'), // array of specialty areas
   hourlyRate: decimal('hourly_rate', { precision: 8, scale: 2 }),
-  payrollId: varchar('payroll_id', { length: 100 }), // external payroll system ID
+  dayRate: decimal('day_rate', { precision: 10, scale: 2 }),
+  overtimeRate: decimal('overtime_rate', { precision: 8, scale: 2 }),
+  paymentTerms: varchar('payment_terms', { length: 100 }), // Net 30, Net 15, etc.
+  taxId: varchar('tax_id', { length: 50 }), // EIN or SSN for 1099
+  w9OnFile: boolean('w9_on_file').notNull().default(false),
+  
+  // Emergency Contact
   emergencyContact: jsonb('emergency_contact'), // name, phone, relationship
-  hireDate: date('hire_date'),
-  status: varchar('status', { length: 50 }).notNull().default('active'), // active, inactive, terminated
+  
+  // Status and Dates
+  contractStartDate: date('contract_start_date'),
+  contractEndDate: date('contract_end_date'),
+  status: varchar('status', { length: 50 }).notNull().default('active'), // active, inactive, suspended, terminated
+  rating: decimal('rating', { precision: 3, scale: 2 }), // 0.00 to 5.00
   notes: text('notes'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
-  nameIdx: index('crew_members_name_idx').on(table.firstName, table.lastName),
-  emailIdx: index('crew_members_email_idx').on(table.email),
-  statusIdx: index('crew_members_status_idx').on(table.status),
-  userIdx: index('crew_members_user_idx').on(table.userId),
-  orgIdx: index('crew_members_org_idx').on(table.organizationId),
+  nameIdx: index('contractors_name_idx').on(table.firstName, table.lastName),
+  companyIdx: index('contractors_company_idx').on(table.companyName),
+  emailIdx: index('contractors_email_idx').on(table.email),
+  statusIdx: index('contractors_status_idx').on(table.status),
+  userIdx: index('contractors_user_idx').on(table.userId),
+  orgIdx: index('contractors_org_idx').on(table.organizationId),
 }));
 
-// Job Assignments table - for linking crew members to jobs
+// Job Assignments table - for linking contractors to jobs
 export const jobAssignments = pgTable('job_assignments', {
   id: uuid('id').defaultRandom().primaryKey(),
   organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
   jobId: uuid('job_id').references(() => jobs.id).notNull(),
-  crewMemberId: uuid('crew_member_id').references(() => crewMembers.id).notNull(),
-  role: varchar('role', { length: 100 }), // foreman, laborer, specialist, etc.
+  contractorId: uuid('contractor_id').references(() => contractors.id).notNull(),
+  role: varchar('role', { length: 100 }), // foreman, subcontractor, specialist, etc.
   assignedDate: date('assigned_date').notNull(),
   unassignedDate: date('unassigned_date'),
   hourlyRate: decimal('hourly_rate', { precision: 8, scale: 2 }), // can override default rate
+  dayRate: decimal('day_rate', { precision: 10, scale: 2 }), // can override default rate
+  contractAmount: decimal('contract_amount', { precision: 12, scale: 2 }), // fixed contract amount if applicable
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
   jobIdx: index('job_assignments_job_idx').on(table.jobId),
-  crewIdx: index('job_assignments_crew_idx').on(table.crewMemberId),
+  contractorIdx: index('job_assignments_contractor_idx').on(table.contractorId),
   roleIdx: index('job_assignments_role_idx').on(table.role),
   orgIdx: index('job_assignments_org_idx').on(table.organizationId),
-  // Unique constraint: one crew member can't have multiple active assignments to same job
-  uniqueActiveAssignment: unique().on(table.jobId, table.crewMemberId, table.isActive),
+  // Unique constraint: one contractor can't have multiple active assignments to same job
+  uniqueActiveAssignment: unique().on(table.jobId, table.contractorId, table.isActive),
 }));
 
 // Email Verification Tokens table - for email verification and password resets
@@ -285,7 +325,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   jobs: many(jobs),
   tasks: many(tasks),
   documents: many(documents),
-  crewMembers: many(crewMembers),
+  contractors: many(contractors),
   jobAssignments: many(jobAssignments),
 }));
 
@@ -378,13 +418,13 @@ export const documentsRelations = relations(documents, ({ one }) => ({
   }),
 }));
 
-export const crewMembersRelations = relations(crewMembers, ({ one, many }) => ({
+export const contractorsRelations = relations(contractors, ({ one, many }) => ({
   organization: one(organizations, {
-    fields: [crewMembers.organizationId],
+    fields: [contractors.organizationId],
     references: [organizations.id],
   }),
   user: one(users, {
-    fields: [crewMembers.userId],
+    fields: [contractors.userId],
     references: [users.id],
   }),
   jobAssignments: many(jobAssignments),
@@ -399,9 +439,9 @@ export const jobAssignmentsRelations = relations(jobAssignments, ({ one }) => ({
     fields: [jobAssignments.jobId],
     references: [jobs.id],
   }),
-  crewMember: one(crewMembers, {
-    fields: [jobAssignments.crewMemberId],
-    references: [crewMembers.id],
+  contractor: one(contractors, {
+    fields: [jobAssignments.contractorId],
+    references: [contractors.id],
   }),
 }));
 

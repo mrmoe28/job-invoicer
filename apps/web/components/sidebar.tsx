@@ -54,7 +54,7 @@ const Icons = {
 
 const navigationItems = [
   { name: 'Dashboard', href: '/dashboard', icon: Icons.dashboard },
-  { name: 'Contacts', href: '/dashboard/contacts', icon: Icons.contacts },
+  { name: 'Contractors', href: '/dashboard/contacts', icon: Icons.contacts },
   { name: 'Jobs', href: '/dashboard/jobs', icon: Icons.jobs },
   { name: 'Tasks', href: '/dashboard/tasks', icon: Icons.tasks },
   { name: 'Schedule', href: '/dashboard/scheduling', icon: Icons.schedule },
