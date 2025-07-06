@@ -56,6 +56,10 @@ temp/
 apps/web/public/uploads/*
 !apps/web/public/uploads/.gitkeep
 
+# Document metadata
+apps/web/data/*.json
+!apps/web/data/.gitkeep
+
 # OS generated files
 Thumbs.db
 ehthumbs.db

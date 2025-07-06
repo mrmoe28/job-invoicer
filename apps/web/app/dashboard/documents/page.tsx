@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { FileText, Upload, Download, Trash2, Search, Filter, FolderPlus, Eye, PenTool, LayoutGrid, LayoutList } from 'lucide-react';
 import { useToast } from '@/components/Toast';
@@ -67,44 +67,78 @@ export default function DocumentsPage() {
   const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
   const [signingDocument, setSigningDocument] = useState<Document | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleFileSelect = (files: FileList | null) => {
+  // Load documents on mount
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
+  const loadDocuments = async () => {
+    try {
+      const response = await fetch('/api/documents/upload');
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.documents || []);
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileSelect = async (files: FileList | null) => {
     if (files && files.length > 0) {
       let successCount = 0;
-      Array.from(files).forEach(file => {
+      const uploadPromises = Array.from(files).map(async (file) => {
         // Validate file type
         const validTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
         const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
         
         if (!validTypes.includes(fileExtension)) {
           addToast(`Invalid file type: ${file.name}`, 'error');
-          return;
+          return null;
         }
         
         // Validate file size (max 10MB)
         if (file.size > 10 * 1024 * 1024) {
           addToast(`File too large: ${file.name} (max 10MB)`, 'error');
-          return;
+          return null;
         }
         
-        console.log('File selected:', file.name, file.size);
-        // Add file to documents list
-        const newDoc: Document = {
-          id: Date.now().toString() + Math.random(),
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          url: URL.createObjectURL(file),
-          file: file, // Store the File object
-          uploadDate: new Date(),
-          category: 'contracts', // Default category
-          status: 'draft'
-        };
-        setDocuments(prev => [...prev, newDoc]);
-        successCount++;
+        console.log('Uploading file:', file.name, file.size);
+        
+        // Upload file to API
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('category', 'contracts');
+        
+        try {
+          const response = await fetch('/api/documents/upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            successCount++;
+            return data.document;
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          addToast(`Failed to upload ${file.name}`, 'error');
+          return null;
+        }
       });
       
-      if (successCount > 0) {
+      const results = await Promise.all(uploadPromises);
+      const newDocuments = results.filter(doc => doc !== null);
+      
+      if (newDocuments.length > 0) {
+        setDocuments(prev => [...newDocuments, ...prev]);
         addToast(`Successfully uploaded ${successCount} file${successCount > 1 ? 's' : ''}`, 'success');
         setShowUpload(false);
       }

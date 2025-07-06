@@ -1,3 +1,1 @@
-# This directory is for uploaded documents
-# Files uploaded here will be served statically
-# For production, consider using external storage like S3 or Cloudinary
+# This directory stores uploaded documents
