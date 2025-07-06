@@ -61,9 +61,6 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  // Enable SWC minification
-  swcMinify: true,
-
   // Compression
   compress: true,
 
@@ -76,8 +73,6 @@ const nextConfig = {
   // Experimental features
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-dropdown-menu'],
-    // Enable Partial Prerendering for better performance
-    ppr: true,
   },
 
   // Turbopack configuration (moved from experimental.turbo)
