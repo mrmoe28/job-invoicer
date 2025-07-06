@@ -1,13 +1,4 @@
 {
-  "buildCommand": "pnpm turbo build --filter=@pulsecrm/web",
-  "installCommand": "pnpm install --no-frozen-lockfile --config.optional=false",
-  "outputDirectory": "apps/web/.next",
-  "framework": null,
-  "regions": ["iad1"],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/"
-    }
-  ]
+  "buildCommand": "cd apps/web && pnpm build",
+  "installCommand": "pnpm install --no-frozen-lockfile"
 }
