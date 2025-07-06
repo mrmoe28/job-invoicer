@@ -1,3 +1,11 @@
 {
-  "root": "apps/web"
+  "root": "apps/web",
+  "installCommand": "npm install -g pnpm@8.10.0 && pnpm install",
+  "buildCommand": "pnpm build",
+  "devCommand": "pnpm dev",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  }
 }
