@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileText, Upload, Download, Trash2, Search, Filter, FolderPlus, Eye, PenTool } from 'lucide-react';
+import { FileText, Upload, Download, Trash2, Search, Filter, FolderPlus, Eye, PenTool, LayoutGrid, LayoutList } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import DocumentViewer from '@/components/DocumentViewer';
 import DocumentSigner from '@/components/DocumentSigner';
@@ -38,13 +38,13 @@ function formatFileSize(bytes: number): string {
 
 function getCategoryColor(categoryId?: string): string {
   const colors = {
-    contracts: 'border-blue-500 text-blue-400',
-    invoices: 'border-green-500 text-green-400',
-    permits: 'border-purple-500 text-purple-400',
-    blueprints: 'border-cyan-500 text-cyan-400',
-    safety: 'border-red-500 text-red-400',
+    contracts: 'border-blue-500 text-blue-600 dark:text-blue-400',
+    invoices: 'border-green-500 text-green-600 dark:text-green-400',
+    permits: 'border-purple-500 text-purple-600 dark:text-purple-400',
+    blueprints: 'border-cyan-500 text-cyan-600 dark:text-cyan-400',
+    safety: 'border-red-500 text-red-600 dark:text-red-400',
   };
-  return colors[categoryId as keyof typeof colors] || 'border-gray-500 text-gray-400';
+  return colors[categoryId as keyof typeof colors] || 'border-gray-500 text-gray-600 dark:text-gray-400';
 }
 
 export default function DocumentsPage() {
@@ -77,6 +77,7 @@ export default function DocumentsPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
   const [signingDocument, setSigningDocument] = useState<Document | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   const handleFileSelect = (files: FileList | null) => {
     if (files && files.length > 0) {
@@ -188,30 +189,64 @@ export default function DocumentsPage() {
   ];
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-white">Documents</h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowUpload(!showUpload)}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
-            >
-              <Upload className="w-4 h-4" />
-              Upload Document
-            </button>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Top Navigation Bar */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <FileText className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Document Management</h1>
+            </div>
+            <div className="flex items-center gap-4">
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-2 rounded transition-colors ${
+                    viewMode === 'table'
+                      ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                  title="Table View"
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded transition-colors ${
+                    viewMode === 'grid'
+                      ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
+              <button
+                onClick={() => setShowUpload(!showUpload)}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Upload Document
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
 
         {/* Upload Section */}
         {showUpload && (
-          <div className="mb-6 bg-gray-800 rounded-lg border border-gray-700 p-6">
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Upload New Document</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Upload New Document</h2>
               <button
                 onClick={() => setShowUpload(false)}
-                className="text-gray-400 hover:text-white text-2xl"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl"
               >
                 ×
               </button>
@@ -220,18 +255,18 @@ export default function DocumentsPage() {
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                 isDragging 
                   ? 'border-orange-500 bg-orange-500/10' 
-                  : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/50'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
               }`}
               onClick={() => document.getElementById('file-upload')?.click()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-orange-500' : 'text-gray-400'}`} />
-              <p className={`mb-2 ${isDragging ? 'text-orange-500' : 'text-gray-400'}`}>
+              <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-orange-500' : 'text-gray-400 dark:text-gray-400'}`} />
+              <p className={`mb-2 ${isDragging ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'}`}>
                 {isDragging ? 'Drop files here...' : 'Drag and drop files here or click to browse'}
               </p>
-              <p className="text-sm text-gray-500">Supported formats: PDF, DOC, DOCX, XLS, XLSX</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">Supported formats: PDF, DOC, DOCX, XLS, XLSX</p>
               <input
                 id="file-upload"
                 type="file"
@@ -258,7 +293,7 @@ export default function DocumentsPage() {
               placeholder="Search documents..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500"
+              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-orange-500"
             />
           </div>
 
@@ -268,7 +303,7 @@ export default function DocumentsPage() {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-orange-500"
             >
               {allCategories.map(cat => (
                 <option key={cat.id} value={cat.id}>
@@ -289,56 +324,57 @@ export default function DocumentsPage() {
                 onClick={() => setFilterCategory(category.id)}
                 className={`p-4 rounded-lg border transition-colors ${
                   filterCategory === category.id
-                    ? 'bg-gray-700 border-orange-500'
-                    : 'bg-gray-800 border-gray-700 hover:bg-gray-700'
+                    ? 'bg-orange-50 dark:bg-gray-700 border-orange-500'
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
               >
                 <div className="text-2xl mb-2">{category.icon}</div>
-                <div className="text-sm font-medium text-white">{category.name}</div>
-                <div className="text-xs text-gray-400 mt-1">{count} documents</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-white">{category.name}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{count} documents</div>
               </button>
             );
           })}
         </div>
 
         {/* Document List */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Size
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Upload Date
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+        {viewMode === 'table' ? (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Size
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Upload Date
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredDocuments.map((doc) => {
                   const category = Object.values(DOCUMENT_CATEGORIES).find(cat => cat.id === doc.category);
                   
                   return (
-                    <tr key={doc.id} className="hover:bg-gray-700/50 transition-colors">
+                    <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {getFileIcon(doc)}
                           <button
                             onClick={() => setViewingDocument(doc)}
-                            className="ml-3 text-white hover:text-orange-500 text-left transition-colors"
+                            className="ml-3 text-gray-900 dark:text-white hover:text-orange-500 text-left transition-colors"
                           >
                             {doc.name}
                           </button>
@@ -352,17 +388,17 @@ export default function DocumentsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(doc.status)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-gray-300">
                         {formatFileSize(doc.size)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-gray-300">
                         {new Date(doc.uploadDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => setViewingDocument(doc)}
-                            className="p-2 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
                             title="View"
                           >
                             <Eye className="w-4 h-4" />
@@ -370,7 +406,7 @@ export default function DocumentsPage() {
                           {doc.type === 'application/pdf' && doc.status !== 'signed' && doc.status !== 'completed' && (
                             <button
                               onClick={() => setSigningDocument(doc)}
-                              className="p-2 text-gray-400 hover:text-orange-500 hover:bg-gray-600 rounded transition-colors"
+                              className="p-2 text-gray-500 dark:text-gray-400 hover:text-orange-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
                               title="Sign Document"
                             >
                               <PenTool className="w-4 h-4" />
@@ -379,14 +415,14 @@ export default function DocumentsPage() {
                           <a
                             href={doc.url}
                             download
-                            className="p-2 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
                             title="Download"
                           >
                             <Download className="w-4 h-4" />
                           </a>
                           <button
                             onClick={() => handleDelete(doc)}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-600 rounded transition-colors"
+                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -399,12 +435,92 @@ export default function DocumentsPage() {
               </tbody>
             </table>
           </div>
+        </div>
+        ) : (
+          /* Grid View */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredDocuments.map((doc) => {
+              const category = Object.values(DOCUMENT_CATEGORIES).find(cat => cat.id === doc.category);
+              
+              return (
+                <div 
+                  key={doc.id} 
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg dark:hover:shadow-gray-900/50 transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      {getFileIcon(doc)}
+                      <span className={`px-2 py-1 text-xs rounded-full border ${getCategoryColor(doc.category)}`}>
+                        {category?.name || 'Other'}
+                      </span>
+                    </div>
+                    {getStatusBadge(doc.status)}
+                  </div>
+                  
+                  <button
+                    onClick={() => setViewingDocument(doc)}
+                    className="text-left w-full mb-3"
+                  >
+                    <h3 className="font-medium text-gray-900 dark:text-white hover:text-orange-500 transition-colors truncate">
+                      {doc.name}
+                    </h3>
+                  </button>
+                  
+                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    <div className="flex justify-between">
+                      <span>Size:</span>
+                      <span>{formatFileSize(doc.size)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Uploaded:</span>
+                      <span>{new Date(doc.uploadDate).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setViewingDocument(doc)}
+                      className="flex-1 p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      title="View"
+                    >
+                      <Eye className="w-4 h-4 mx-auto" />
+                    </button>
+                    {doc.type === 'application/pdf' && doc.status !== 'signed' && doc.status !== 'completed' && (
+                      <button
+                        onClick={() => setSigningDocument(doc)}
+                        className="flex-1 p-2 text-gray-600 dark:text-gray-400 hover:text-orange-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                        title="Sign"
+                      >
+                        <PenTool className="w-4 h-4 mx-auto" />
+                      </button>
+                    )}
+                    <a
+                      href={doc.url}
+                      download
+                      className="flex-1 p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      title="Download"
+                    >
+                      <Download className="w-4 h-4 mx-auto" />
+                    </a>
+                    <button
+                      onClick={() => handleDelete(doc)}
+                      className="flex-1 p-2 text-gray-600 dark:text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4 mx-auto" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
           {/* Empty State */}
           {filteredDocuments.length === 0 && (
             <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">
+              <FileText className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">
                 {searchTerm || filterCategory !== 'all' 
                   ? 'No documents found matching your criteria' 
                   : 'No documents uploaded yet'}
