@@ -2,23 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, CheckCircle, AlertCircle, Download, X, PenTool, Upload, Type, Move } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import Draggable from 'react-draggable';
 import { useToast } from './Toast';
-
-// Dynamic import for react-pdf to avoid SSR issues
-const Document = dynamic(() => import('react-pdf').then(mod => mod.Document), { 
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div></div>
-});
-
-const Page = dynamic(() => import('react-pdf').then(mod => mod.Page), { 
-  ssr: false 
-});
-
-// Import CSS files
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 interface DocumentSignerProps {
   document: {
@@ -60,10 +45,7 @@ const SIGNATURE_FONTS = [
 
 export default function DocumentSigner({ document, onClose, onSign }: DocumentSignerProps) {
   const { addToast } = useToast();
-  const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageWidth, setPageWidth] = useState<number>(0);
-  const [pageHeight, setPageHeight] = useState<number>(0);
+  const [currentPage] = useState<number>(1);
   const [signatureMode, setSignatureMode] = useState<'type' | 'upload'>('type');
   const [typedName, setTypedName] = useState('');
   const [selectedFont, setSelectedFont] = useState(SIGNATURE_FONTS[0].value);
@@ -71,17 +53,6 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
   const [placedSignatures, setPlacedSignatures] = useState<PlacedSignature[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string>('');
-  const [pdfReady, setPdfReady] = useState(false);
-
-  // Initialize PDF.js worker
-  useEffect(() => {
-    const setupWorker = async () => {
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
-      setPdfReady(true);
-    };
-    setupWorker();
-  }, []);
 
   // Load saved signatures from localStorage
   useEffect(() => {
@@ -112,15 +83,6 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
       document.head.removeChild(link);
     };
   }, []);
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-  };
-
-  const onPageLoadSuccess = (page: any) => {
-    setPageWidth(page.width);
-    setPageHeight(page.height);
-  };
 
   const generateTypedSignature = () => {
     if (!typedName.trim()) {
@@ -223,9 +185,9 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
         userId: 'current-user', // Get from auth context
         imageUrl: sig.imageUrl,
         page: sig.page,
-        xPercent: (sig.x / pageWidth) * 100,
-        yPercent: (sig.y / pageHeight) * 100,
-        widthPercent: (sig.width / pageWidth) * 100,
+        xPercent: (sig.x / 800) * 100, // Assuming 800px width for now
+        yPercent: (sig.y / 1000) * 100, // Assuming 1000px height for now
+        widthPercent: (sig.width / 800) * 100,
         signedAt: new Date().toISOString()
       }));
 
@@ -270,14 +232,6 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
     }
   };
 
-  if (!pdfReady) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
-        <div className="text-white">Loading PDF viewer...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex">
       {/* Document Preview */}
@@ -287,43 +241,28 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
             <FileText className="h-5 w-5 text-gray-400" />
             <h3 className="text-lg font-semibold text-white">{document.name}</h3>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <span>Page</span>
-              <input
-                type="number"
-                min="1"
-                max={numPages}
-                value={currentPage}
-                onChange={(e) => setCurrentPage(parseInt(e.target.value) || 1)}
-                className="w-16 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white"
-              />
-              <span>of {numPages}</span>
-            </div>
-          </div>
+          <button
+            onClick={() => window.open(pdfUrl, '_blank')}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+            title="Open in new tab"
+          >
+            <Download className="h-5 w-5" />
+          </button>
         </div>
         
         <div className="flex-1 bg-gray-800 p-4 overflow-auto">
-          <div className="relative mx-auto" style={{ width: 'fit-content' }}>
-            {pdfUrl && (
-              <Document
-                file={pdfUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                className="shadow-lg"
-              >
-                <Page 
-                  pageNumber={currentPage} 
-                  onLoadSuccess={onPageLoadSuccess}
-                  renderTextLayer={true}
-                  renderAnnotationLayer={true}
-                />
-              </Document>
-            )}
+          <div className="relative mx-auto bg-white rounded-lg shadow-lg" style={{ width: '800px', minHeight: '1000px' }}>
+            {/* PDF Preview using iframe */}
+            <iframe
+              src={pdfUrl}
+              className="w-full h-full rounded-lg"
+              style={{ minHeight: '1000px' }}
+              title={document.name}
+            />
             
-            {/* Render placed signatures for current page */}
-            {placedSignatures
-              .filter(sig => sig.page === currentPage)
-              .map(signature => (
+            {/* Signature Overlay */}
+            <div className="absolute inset-0 pointer-events-none">
+              {placedSignatures.map(signature => (
                 <Draggable
                   key={signature.id}
                   defaultPosition={{ x: signature.x, y: signature.y }}
@@ -331,7 +270,7 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
                   bounds="parent"
                 >
                   <div 
-                    className="absolute cursor-move group"
+                    className="absolute cursor-move pointer-events-auto group"
                     style={{ width: signature.width, height: signature.height }}
                   >
                     <img
@@ -349,6 +288,7 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
                   </div>
                 </Draggable>
               ))}
+            </div>
           </div>
         </div>
       </div>
@@ -480,14 +420,14 @@ export default function DocumentSigner({ document, onClose, onSign }: DocumentSi
                 Placed Signatures ({placedSignatures.length})
               </h4>
               <div className="space-y-1 text-xs text-gray-400">
-                {placedSignatures.map(sig => (
+                {placedSignatures.map((sig, index) => (
                   <div key={sig.id} className="flex justify-between">
-                    <span>Page {sig.page}</span>
+                    <span>Signature {index + 1}</span>
                     <button
-                      onClick={() => setCurrentPage(sig.page)}
-                      className="text-orange-400 hover:text-orange-300"
+                      onClick={() => removeSignature(sig.id)}
+                      className="text-red-400 hover:text-red-300"
                     >
-                      View
+                      Remove
                     </button>
                   </div>
                 ))}

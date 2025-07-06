@@ -49,28 +49,7 @@ function getCategoryColor(categoryId?: string): string {
 
 export default function DocumentsPage() {
   const { addToast, ToastContainer } = useToast();
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: '1',
-      name: 'Service Agreement - Smith Project.pdf',
-      type: 'application/pdf',
-      size: 2458624,
-      url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-      uploadDate: new Date('2024-01-15'),
-      category: 'contracts',
-      status: 'signed'
-    },
-    {
-      id: '2',
-      name: 'Building Permit - 123 Main St.pdf',
-      type: 'application/pdf',
-      size: 1234567,
-      url: 'https://pdfobject.com/pdf/sample.pdf',
-      uploadDate: new Date('2024-01-10'),
-      category: 'permits',
-      status: 'draft'
-    }
-  ]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [showUpload, setShowUpload] = useState(false);
@@ -139,7 +118,6 @@ export default function DocumentsPage() {
   };
 
   const handleDelete = (doc: Document) => {
-    if (!confirm(`Are you sure you want to delete ${doc.name}?`)) return;
     setDocuments(prev => prev.filter(d => d.id !== doc.id));
     addToast(`Deleted ${doc.name}`, 'success');
   };
