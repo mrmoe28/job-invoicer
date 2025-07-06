@@ -1,4 +1,3 @@
 {
-  "buildCommand": "cd apps/web && pnpm build",
-  "installCommand": "pnpm install --no-frozen-lockfile"
+  "root": "apps/web"
 }
