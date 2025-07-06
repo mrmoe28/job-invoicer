@@ -34,6 +34,17 @@ export default function JobsPage() {
   ]);
   const [viewJob, setViewJob] = useState<any>(null);
   const [editJob, setEditJob] = useState<any>(null);
+  
+  // Form state for create modal
+  const [formData, setFormData] = useState({
+    title: '',
+    contactId: '',
+    status: 'pending',
+    startDate: '',
+    priority: 'medium',
+    budget: '',
+    description: ''
+  });
 
   // tRPC queries and mutations
   const utils = trpc.useUtils();
@@ -47,6 +58,16 @@ export default function JobsPage() {
       utils.getDashboardStats.invalidate();
       setShowCreateModal(false);
       setEditJob(null);
+      // Reset form
+      setFormData({
+        title: '',
+        contactId: '',
+        status: 'pending',
+        startDate: '',
+        priority: 'medium',
+        budget: '',
+        description: ''
+      });
     },
     onError: (error: any) => {
       console.error('Error creating job:', error);
@@ -107,8 +128,8 @@ export default function JobsPage() {
     return columnSettings.filter(col => col.visible).sort((a, b) => a.order - b.order);
   }, [columnSettings]);
 
-  const handleSaveJob = (jobData: any) => {
-    if (!jobData.title?.trim()) {
+  const handleSaveJob = () => {
+    if (!formData.title?.trim()) {
       alert('Please enter a job title');
       return;
     }
@@ -122,12 +143,12 @@ export default function JobsPage() {
     const companyId = companies[0].id;
 
     createJobMutation.mutate({
-      title: jobData.title,
-      description: jobData.description || '',
+      title: formData.title,
+      description: formData.description || '',
       companyId: companyId,
-      priority: jobData.priority || 'medium',
-      assignedTo: jobData.assignedTo || '',
-      dueDate: jobData.startDate?.toISOString() || new Date().toISOString(),
+      priority: formData.priority as JobPriority || 'medium',
+      assignedTo: '', // TODO: Add assignee selection
+      dueDate: formData.startDate ? new Date(formData.startDate).toISOString() : new Date().toISOString(),
     });
   };
 
@@ -298,202 +319,140 @@ export default function JobsPage() {
               <table className="w-full">
                 <thead className="bg-gray-700">
                   <tr>
-                    <th className="text-left p-4 text-gray-300 font-medium">
+                    <th className="px-6 py-3 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedJobs.length === jobs.length}
                         onChange={(e) => handleSelectAllJobs(e.target.checked)}
-                        className="rounded bg-gray-600 border-gray-500"
-                        aria-label="Select all jobs"
+                        className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
                       />
                     </th>
-                    {getVisibleColumns().filter(col => !['notes', 'updates', 'tasks', 'image'].includes(col.id)).map((column) => (
-                      <th key={column.id} className={`text-left p-4 text-gray-300 font-medium ${column.id === 'actions' ? 'text-center' : ''}`}>
+                    {getVisibleColumns().map(column => (
+                      <th key={column.id} className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         {column.label}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-700">
                   {jobs.map((job) => (
-                    <tr key={job.id} className="border-t border-gray-700 hover:bg-gray-700">
-                      <td className="p-4">
+                    <tr key={job.id} className="hover:bg-gray-700/50 transition-colors">
+                      <td className="px-6 py-4">
                         <input
                           type="checkbox"
                           checked={selectedJobs.includes(job.id)}
                           onChange={(e) => handleSelectJob(job.id, e.target.checked)}
-                          className="rounded bg-gray-600 border-gray-500"
+                          className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
                         />
                       </td>
-                      <td className="p-4 text-white font-medium">{job.title}</td>
-                      <td className="p-4 text-gray-300">{(job as any).companyName || 'N/A'}</td>
-                      <td className="p-4">
-                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm">{job.status}</span>
-                      </td>
-                      <td className="p-4 text-gray-300">
-                        {job.dueDate ? new Date(job.dueDate).toLocaleDateString() : 'Not set'}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleJobView(job.id)}
-                            className="text-blue-400 hover:text-blue-300 transition-colors"
-                            title="View job details"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleJobEdit(job.id)}
-                            className="text-gray-400 hover:text-gray-300 transition-colors"
-                            title="Edit job"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleJobDelete(job.id)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
-                            title="Delete job"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
+                      {getVisibleColumns().map(column => (
+                        <td key={column.id} className="px-6 py-4 whitespace-nowrap text-gray-300">
+                          {column.id === 'title' && job.title}
+                          {column.id === 'contact' && 'Contact Name'}
+                          {column.id === 'status' && (
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              job.status === 'completed' ? 'bg-green-900 text-green-300' :
+                              job.status === 'in_progress' ? 'bg-blue-900 text-blue-300' :
+                              job.status === 'pending' ? 'bg-yellow-900 text-yellow-300' :
+                              'bg-gray-700 text-gray-300'
+                            }`}>
+                              {job.status}
+                            </span>
+                          )}
+                          {column.id === 'startDate' && new Date(job.createdAt).toLocaleDateString()}
+                          {column.id === 'priority' && job.priority}
+                          {column.id === 'actions' && (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleJobView(job.id)}
+                                className="text-gray-400 hover:text-white"
+                                title="View job"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleJobEdit(job.id)}
+                                className="text-gray-400 hover:text-white"
+                                title="Edit job"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleJobDelete(job.id)}
+                                className="text-gray-400 hover:text-red-500"
+                                title="Delete job"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
-            {viewMode === 'grid' && (
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {jobs.map((job) => (
-                  <div key={job.id} className="bg-gray-700 rounded-xl p-5 shadow flex flex-col justify-between">
-                    <div>
-                      <h4 className="text-lg font-bold text-white mb-2">{job.title}</h4>
-                      <div className="text-gray-300 text-sm mb-1">Assigned To: {job.assignedTo}</div>
-                      <div className="text-gray-300 text-sm mb-1">Due: {new Date(job.dueDate).toDateString()}</div>
-                      <div className="text-gray-300 text-sm mb-1">Priority: {job.priority}</div>
-                      <div className="text-gray-300 text-sm mb-1">Status: {job.status}</div>
-                    </div>
-                    <div className="flex items-center justify-between mt-4">
-                      <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">{job.status}</span>
-                      <div className="flex space-x-2">
-                        <button onClick={() => handleJobView(job.id)} className="text-blue-400 hover:text-blue-300" title="View job details">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                        </button>
-                        <button onClick={() => handleJobEdit(job.id)} className="text-gray-400 hover:text-gray-300" title="Edit job">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        </button>
-                        <button onClick={() => handleJobDelete(job.id)} className="text-red-400 hover:text-red-300" title="Delete job">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      </div>
+          </div>
+        </div>
+
+        {/* Column Settings Modal */}
+        {showColumnSettings && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-white">Column Settings</h3>
+                <button
+                  onClick={() => setShowColumnSettings(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {columnSettings.map((column, index) => (
+                  <div key={column.id} className="flex items-center justify-between p-2 rounded hover:bg-gray-700">
+                    <label className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={column.visible}
+                        onChange={() => handleColumnToggle(column.id)}
+                        className="rounded border-gray-600 text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className="text-gray-300">{column.label}</span>
+                    </label>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => handleColumnReorder(column.id, 'up')}
+                        disabled={index === 0}
+                        className="p-1 text-gray-400 hover:text-white disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleColumnReorder(column.id, 'down')}
+                        disabled={index === columnSettings.length - 1}
+                        className="p-1 text-gray-400 hover:text-white disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-            {viewMode === 'kanban' && (
-              <div className="p-6 overflow-x-auto">
-                <div className="flex gap-6 min-w-[900px]">
-                  {['To Do', 'In Progress', 'Completed'].map((status) => (
-                    <div key={status} className="flex-1 min-w-[280px] bg-gray-700 rounded-xl p-4">
-                      <h4 className="text-lg font-bold text-white mb-4">{status}</h4>
-                      {jobs.filter((job) => job.status === status).length === 0 && (
-                        <div className="text-gray-400 text-sm">No jobs</div>
-                      )}
-                      {jobs.filter((job) => job.status === status).map((job) => (
-                        <div key={job.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
-                          <div>
-                            <div className="text-white font-semibold mb-1">{job.title}</div>
-                            <div className="text-gray-300 text-xs mb-1">Assigned To: {job.assignedTo}</div>
-                            <div className="text-gray-300 text-xs mb-1">Due: {new Date(job.dueDate).toDateString()}</div>
-                            <div className="text-gray-300 text-xs mb-1">Priority: {job.priority}</div>
-                            <div className="text-gray-300 text-xs mb-1">Status: {job.status}</div>
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <div className="flex space-x-2">
-                              <button onClick={() => handleJobView(job.id)} className="text-blue-400 hover:text-blue-300" title="View job details">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                              </button>
-                              <button onClick={() => handleJobEdit(job.id)} className="text-gray-400 hover:text-gray-300" title="Edit job">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                              </button>
-                              <button onClick={() => handleJobDelete(job.id)} className="text-red-400 hover:text-red-300" title="Delete job">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Column Settings Panel */}
-        {showColumnSettings && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Customize Columns</h3>
-            <div className="space-y-3">
-              {columnSettings.map((column) => (
-                <div key={column.id} className="flex items-center justify-between">
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={column.visible}
-                      onChange={() => handleColumnToggle(column.id)}
-                      className="rounded bg-gray-600 border-gray-500 text-orange-500 focus:ring-orange-500"
-                    />
-                    <span className="text-gray-300">{column.label}</span>
-                  </label>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleColumnReorder(column.id, 'up')}
-                      disabled={column.order === 0}
-                      className="p-1 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      title={`Move ${column.label} up`}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleColumnReorder(column.id, 'down')}
-                      disabled={column.order === columnSettings.length - 1}
-                      className="p-1 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      title={`Move ${column.label} down`}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowColumnSettings(false)}
-                className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setShowColumnSettings(false)}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Save Changes
-              </button>
             </div>
           </div>
         )}
@@ -505,7 +464,18 @@ export default function JobsPage() {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-white">Create New Job</h3>
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setFormData({
+                      title: '',
+                      contactId: '',
+                      status: 'pending',
+                      startDate: '',
+                      priority: 'medium',
+                      budget: '',
+                      description: ''
+                    });
+                  }}
                   className="text-gray-400 hover:text-white transition-colors"
                   title="Close modal"
                 >
@@ -521,13 +491,19 @@ export default function JobsPage() {
                   <input
                     type="text"
                     placeholder="Enter job title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Contact</label>
-                  <select className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500">
+                  <select 
+                    value={formData.contactId}
+                    onChange={(e) => setFormData({ ...formData, contactId: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
+                  >
                     <option value="">Select contact...</option>
                     <option value="john">John Smith</option>
                     <option value="sarah">Sarah Johnson</option>
@@ -537,7 +513,11 @@ export default function JobsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
-                  <select className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500">
+                  <select 
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
+                  >
                     <option value="pending">Pending</option>
                     <option value="in-progress">In Progress</option>
                     <option value="completed">Completed</option>
@@ -549,13 +529,19 @@ export default function JobsPage() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Start Date</label>
                   <input
                     type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Priority</label>
-                  <select className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500">
+                  <select 
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-orange-500"
+                  >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
@@ -568,6 +554,8 @@ export default function JobsPage() {
                   <input
                     type="text"
                     placeholder="$0.00"
+                    value={formData.budget}
+                    onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
@@ -577,6 +565,8 @@ export default function JobsPage() {
                   <textarea
                     rows={3}
                     placeholder="Job description..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 resize-none"
                   />
                 </div>
@@ -584,108 +574,31 @@ export default function JobsPage() {
 
               <div className="flex justify-end space-x-3 mt-6">
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setFormData({
+                      title: '',
+                      contactId: '',
+                      status: 'pending',
+                      startDate: '',
+                      priority: 'medium',
+                      budget: '',
+                      description: ''
+                    });
+                  }}
                   className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    const form = document.querySelector('.bg-gray-800.border.border-gray-700.rounded-xl.p-6.w-full.max-w-md.mx-4');
-                    if (!form) return;
-                    const title = (form.querySelector('input[placeholder="Enter job title"]') as HTMLInputElement)?.value;
-                    const contactId = (form.querySelector('select') as HTMLSelectElement)?.value;
-                    const statusValue = (form.querySelectorAll('select')[1] as HTMLSelectElement)?.value;
-                    const startDateStr = (form.querySelector('input[type="date"]') as HTMLInputElement)?.value;
-                    const priorityValue = (form.querySelectorAll('select')[2] as HTMLSelectElement)?.value;
-                    const budgetStr = (form.querySelector('input[placeholder="$0.00"]') as HTMLInputElement)?.value;
-                    const description = (form.querySelector('textarea') as HTMLTextAreaElement)?.value;
-                    const startDate = startDateStr ? new Date(startDateStr) : new Date();
-                    const budget = budgetStr ? parseFloat(budgetStr.replace(/[^\d.]/g, '')) : 0;
-                    // Validate status and priority
-                    const validStatuses = ['quoted', 'scheduled', 'in_progress', 'completed', 'cancelled', 'on_hold'] as const;
-                    const validPriorities: JobPriority[] = ['low', 'medium', 'high', 'urgent'];
-                    const status = validStatuses.includes(statusValue as JobStatus) ? statusValue as JobStatus : 'quoted';
-                    const priority = validPriorities.includes(priorityValue as JobPriority) ? priorityValue as JobPriority : 'medium';
-                    if (editJob) {
-                      // TODO: Implement job update mutation
-                      console.log('Update job:', { editJob, title, contactId, status, startDate, priority, budget, description });
-                      setEditJob(null);
-                      setShowCreateModal(false);
-                    } else {
-                      handleSaveJob({
-                        id: `${title?.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-                        title,
-                        contactId,
-                        status,
-                        startDate,
-                        priority,
-                        budget,
-                        description,
-                        address: '',
-                        systemType: '',
-                        contactPhone: '',
-                        notes: '',
-                        tasks: [],
-                        updates: '',
-                        image: '',
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                      });
-                    }
-                  }}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  onClick={handleSaveJob}
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
                 >
-                  {editJob ? 'Save Changes' : 'Create Job'}
+                  Create Job
                 </button>
               </div>
             </div>
           </div>
-        )}
-
-        {/* View Job Modal */}
-        {viewJob && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white">Job Details</h3>
-                <button
-                  onClick={() => setViewJob(null)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                  title="Close modal"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="space-y-2">
-                <div><span className="font-medium text-gray-300">Title:</span> <span className="text-white">{viewJob.title}</span></div>
-                <div><span className="font-medium text-gray-300">Contact:</span> <span className="text-white">{viewJob.contactId}</span></div>
-                <div><span className="font-medium text-gray-300">Status:</span> <span className="text-white">{viewJob.status}</span></div>
-                <div><span className="font-medium text-gray-300">Start Date:</span> <span className="text-white">{viewJob.startDate.toDateString()}</span></div>
-                <div><span className="font-medium text-gray-300">Priority:</span> <span className="text-white">{viewJob.priority}</span></div>
-                <div><span className="font-medium text-gray-300">Budget:</span> <span className="text-white">{viewJob.budget}</span></div>
-                <div><span className="font-medium text-gray-300">Description:</span> <span className="text-white">{viewJob.description}</span></div>
-              </div>
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setViewJob(null)}
-                  className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Click outside to close column settings */}
-        {showColumnSettings && (
-          <div
-            className="fixed inset-0 z-0"
-            onClick={() => setShowColumnSettings(false)}
-          ></div>
         )}
       </div>
     </DashboardLayout>
