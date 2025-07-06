@@ -9,6 +9,19 @@
         ".next/**",
         "!.next/cache/**"
       ],
+      "env": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "POSTGRES_URL",
+        "DATABASE_URL_UNPOOLED",
+        "POSTGRES_URL_NON_POOLING",
+        "NEXTAUTH_URL",
+        "NEXTAUTH_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_API_URL",
+        "VERCEL_URL",
+        "VERCEL_ENV"
+      ],
       "cache": true
     },
     "dev": {
@@ -56,9 +69,21 @@
   "globalEnv": [
     "NODE_ENV",
     "DATABASE_URL",
+    "POSTGRES_URL",
+    "DATABASE_URL_UNPOOLED",
+    "POSTGRES_URL_NON_POOLING",
     "REDIS_URL",
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_WS_URL",
-    "NEXT_PUBLIC_API_URL"
+    "NEXT_PUBLIC_API_URL",
+    "NEXTAUTH_URL",
+    "NEXTAUTH_SECRET",
+    "VERCEL",
+    "VERCEL_ENV",
+    "VERCEL_URL",
+    "POSTGRES_HOST",
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_DATABASE"
   ]
 }

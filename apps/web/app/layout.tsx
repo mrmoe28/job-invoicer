@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { ReactNode } from 'react'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { TrpcProvider } from '../providers'
 import { AuthProvider } from '../providers/auth-provider'
 import './globals.css'
@@ -71,6 +73,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
             {children}
           </TrpcProvider>
         </AuthProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

@@ -50,6 +50,7 @@ const nextConfig = {
   // Image optimization
   images: {
     formats: ['image/webp', 'image/avif'],
+    domains: ['localhost', 'pulsecrm.vercel.app'], // Add your production domain
     remotePatterns: [
       {
         protocol: 'https',
@@ -59,6 +60,9 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+
+  // Enable SWC minification
+  swcMinify: true,
 
   // Compression
   compress: true,
@@ -71,7 +75,9 @@ const nextConfig = {
 
   // Experimental features
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-dropdown-menu'],
+    // Enable Partial Prerendering for better performance
+    ppr: true,
   },
 
   // Turbopack configuration (moved from experimental.turbo)

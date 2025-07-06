@@ -4,7 +4,7 @@
   "private": true,
   "description": "Modern React-based CRM dashboard for crew management with intelligent interfaces and advanced collaboration tools",
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=18.17.0"
   },
   "packageManager": "pnpm@8.10.0",
   "scripts": {
@@ -17,10 +17,13 @@
     "db:push": "turbo db:push",
     "db:studio": "turbo db:studio",
     "db:seed": "turbo db:seed",
+    "db:generate": "turbo db:generate",
     "storybook": "turbo storybook",
     "prepare": "husky install",
     "docker:dev": "docker-compose -f docker/docker-compose.dev.yml up",
-    "docker:build": "docker build -f docker/prod.Dockerfile -t pulsecrm:latest ."
+    "docker:build": "docker build -f docker/prod.Dockerfile -t pulsecrm:latest .",
+    "vercel-build": "turbo build",
+    "postinstall": "turbo db:generate"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
@@ -28,6 +31,8 @@
     "@react-pdf-viewer/default-layout": "^3.12.0",
     "@trpc/server": "^10.45.2",
     "@types/react": "^18.3.11",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv-cli": "^7.3.0",
