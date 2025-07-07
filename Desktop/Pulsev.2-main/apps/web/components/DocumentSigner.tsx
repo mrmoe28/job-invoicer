@@ -1,11 +1,12 @@
 "use client";
 import { findSignatureFields } from '../lib/pdf/findSignatureFields';
 
-import React, { useState, useEffect } from 'react';
-import { FileText, CheckCircle, AlertCircle, Download, X, Type, Upload, Move } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { FileText, CheckCircle, AlertCircle, Download, X, Type, Upload, Move, UserPlus, Send, Mail } from 'lucide-react';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import { useToast } from './Toast';
+import { SignaturePicker, SignatureOverlay } from './signature';
 
 interface DocumentSignerProps {
   document: {
@@ -27,6 +28,8 @@ interface SignatureData {
   yPercent: number;
   widthPercent: number;
   signedAt: string;
+  name?: string;
+  email?: string;
 }
 
 interface PlacedSignature {
@@ -39,21 +42,31 @@ interface PlacedSignature {
   height: number;
 }
 
-const SIGNATURE_FONTS = [
-  { name: 'Great Vibes', value: 'Great Vibes, cursive' },
-  { name: 'Pacifico', value: 'Pacifico, cursive' },
-  { name: 'Roboto Slab', value: 'Roboto Slab, serif' }
-];
+interface Recipient {
+  email: string;
+  name: string;
+  type: 'signer' | 'cc' | 'bcc';
+}
 
 export default function DocumentSigner({ document: pdfDocument, onCloseAction, onSign }: DocumentSignerProps) {
   const { addToast } = useToast();
-  const [signatureMode, setSignatureMode] = useState<'type' | 'upload'>('type');
-  const [typedName, setTypedName] = useState('');
-  const [selectedFont, setSelectedFont] = useState(SIGNATURE_FONTS[0].value);
+  const [showSignaturePicker, setShowSignaturePicker] = useState(false);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [placedSignatures, setPlacedSignatures] = useState<PlacedSignature[]>([]);
   const [signatureHighlights, setSignatureHighlights] = useState<Array<{ page: number, x: number, y: number, width: number, height: number }>>([]);
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [numPages, setNumPages] = useState(0);
+  const [selectedSignatureId, setSelectedSignatureId] = useState<string | null>(null);
+  const [showEmailOptions, setShowEmailOptions] = useState(false);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [emailSubject, setEmailSubject] = useState<string>(`Signed Document: ${pdfDocument.name}`);
+  const [emailBody, setEmailBody] = useState<string>('');
+
+  // Reference to PDF container for positioning
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
+
   // Scan PDF for 'Signature' fields and highlight them
   useEffect(() => {
     if (!pdfUrl) return;
@@ -66,11 +79,6 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
       }
     })();
   }, [pdfUrl]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [numPages, setNumPages] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [draggedSignature, setDraggedSignature] = useState<PlacedSignature | null>(null);
 
   // Load saved signatures from localStorage
   useEffect(() => {
@@ -95,72 +103,23 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
     }
   }, [pdfDocument.file, pdfDocument.url]);
 
-  // Add Google Fonts
-  useEffect(() => {
-    const link = document.createElement('link');
-    link.href = 'https://fonts.googleapis.com/css2?family=Great+Vibes&family=Pacifico&family=Roboto+Slab:wght@400;700&display=swap';
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
-
-  const generateTypedSignature = () => {
-    if (!typedName.trim()) {
-      addToast('Please enter your name', 'error');
-      return;
-    }
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas size
-    canvas.width = 400;
-    canvas.height = 150;
-
-    // Clear canvas
-    ctx.fillStyle = 'transparent';
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Set font and draw signature
-    ctx.fillStyle = 'black';
-    ctx.font = `48px ${selectedFont}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(typedName, canvas.width / 2, canvas.height / 2);
-
-    // Convert to base64
-    const dataUrl = canvas.toDataURL('image/png');
-    setSignatureImage(dataUrl);
+  const handleSignatureSave = (sigDataUrl: string) => {
+    setSignatureImage(sigDataUrl);
+    setShowSignaturePicker(false);
+    
+    // Automatically add signature to current page
+    addSignatureToPage(sigDataUrl);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.match(/^image\/(png|jpg|jpeg)$/)) {
-      addToast('Please upload a PNG or JPG image', 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setSignatureImage(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const addSignatureToPage = () => {
-    if (!signatureImage) {
+  const addSignatureToPage = (imageUrl: string = signatureImage!) => {
+    if (!imageUrl) {
       addToast('Please create or upload a signature first', 'error');
       return;
     }
 
     const newSignature: PlacedSignature = {
       id: Date.now().toString(),
-      imageUrl: signatureImage,
+      imageUrl,
       page: currentPage,
       x: 100,
       y: 100,
@@ -170,15 +129,16 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
 
     const updatedSignatures = [...placedSignatures, newSignature];
     setPlacedSignatures(updatedSignatures);
+    setSelectedSignatureId(newSignature.id);
     
     // Save to localStorage
     localStorage.setItem(`signatures_${pdfDocument.id}`, JSON.stringify(updatedSignatures));
     addToast('Signature added! You can drag it to position.', 'success');
   };
 
-  const updateSignaturePosition = (id: string, x: number, y: number) => {
+  const updateSignaturePosition = (id: string, x: number, y: number, width: number, height: number) => {
     const updated = placedSignatures.map(sig => 
-      sig.id === id ? { ...sig, x, y } : sig
+      sig.id === id ? { ...sig, x, y, width, height } : sig
     );
     setPlacedSignatures(updated);
     localStorage.setItem(`signatures_${pdfDocument.id}`, JSON.stringify(updated));
@@ -187,43 +147,29 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
   const removeSignature = (id: string) => {
     const updated = placedSignatures.filter(sig => sig.id !== id);
     setPlacedSignatures(updated);
+    setSelectedSignatureId(null);
     localStorage.setItem(`signatures_${pdfDocument.id}`, JSON.stringify(updated));
   };
 
-  // Refactored drag-and-drop logic for signatures
-  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
-  const signatureContainerRef = React.useRef<HTMLDivElement>(null);
-
-  const handleMouseDown = (e: React.MouseEvent, signature: PlacedSignature) => {
-    e.preventDefault();
-    setIsDragging(true);
-    setDraggedSignature(signature);
-    // Calculate offset between mouse and top-left of signature
-    setDragOffset({
-      x: e.clientX - signature.x,
-      y: e.clientY - signature.y,
-    });
-    // Add listeners to window for smooth dragging
-    window.addEventListener('mousemove', handleWindowMouseMove);
-    window.addEventListener('mouseup', handleWindowMouseUp);
+  const addRecipient = () => {
+    setRecipients([...recipients, { 
+      email: '', 
+      name: '', 
+      type: 'signer' 
+    }]);
   };
 
-  const handleWindowMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !draggedSignature || !dragOffset) return;
-    const container = signatureContainerRef.current?.getBoundingClientRect();
-    if (!container) return;
-    // Calculate new position relative to container
-    const x = e.clientX - container.left - dragOffset.x;
-    const y = e.clientY - container.top - dragOffset.y;
-    updateSignaturePosition(draggedSignature.id, x, y);
+  const updateRecipient = (index: number, field: keyof Recipient, value: string) => {
+    const updated = [...recipients];
+    updated[index] = {
+      ...updated[index],
+      [field]: value
+    };
+    setRecipients(updated);
   };
 
-  const handleWindowMouseUp = () => {
-    setIsDragging(false);
-    setDraggedSignature(null);
-    setDragOffset(null);
-    window.removeEventListener('mousemove', handleWindowMouseMove);
-    window.removeEventListener('mouseup', handleWindowMouseUp);
+  const removeRecipient = (index: number) => {
+    setRecipients(recipients.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
@@ -236,16 +182,28 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
 
     try {
       // Convert placed signatures to SignatureData format
-      // For now, we'll use fixed percentages since we don't have the actual PDF dimensions
-      const signatureData: SignatureData[] = placedSignatures.map(sig => ({
-        userId: 'current-user',
-        imageUrl: sig.imageUrl,
-        page: sig.page,
-        xPercent: 20, // Fixed position for now
-        yPercent: 70, // Bottom of page
-        widthPercent: 25,
-        signedAt: new Date().toISOString()
-      }));
+      const signatureData: SignatureData[] = placedSignatures.map(sig => {
+        // Get container dimensions
+        const container = pdfContainerRef.current?.getBoundingClientRect();
+        const page = document.querySelector(`.rpv-core__page:nth-child(${sig.page})`)?.getBoundingClientRect();
+        
+        // Calculate percentages
+        const xPercent = container && page ? (sig.x / page.width) * 100 : 20;
+        const yPercent = container && page ? (sig.y / page.height) * 100 : 70;
+        const widthPercent = container && page ? (sig.width / page.width) * 100 : 25;
+        
+        return {
+          userId: 'current-user',
+          imageUrl: sig.imageUrl,
+          page: sig.page,
+          xPercent,
+          yPercent,
+          widthPercent,
+          signedAt: new Date().toISOString(),
+          name: recipients.length > 0 ? recipients[0].name : undefined,
+          email: recipients.length > 0 ? recipients[0].email : undefined
+        };
+      });
 
       // Send to API
       const formData = new FormData();
@@ -263,8 +221,22 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
           return;
         }
       }
+      
       formData.append('signatures', JSON.stringify(signatureData));
       formData.append('documentName', pdfDocument.name);
+      
+      // Add email options if provided
+      if (recipients.length > 0) {
+        formData.append('recipients', JSON.stringify(recipients));
+      }
+      
+      if (emailSubject.trim()) {
+        formData.append('emailSubject', emailSubject);
+      }
+      
+      if (emailBody.trim()) {
+        formData.append('emailBody', emailBody);
+      }
 
       const apiResponse = await fetch('/api/send-signed-pdf', {
         method: 'POST',
@@ -272,7 +244,8 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
       });
 
       if (!apiResponse.ok) {
-        throw new Error('Failed to send signed document');
+        const errorData = await apiResponse.json();
+        throw new Error(errorData.error || 'Failed to send signed document');
       }
 
       const result = await apiResponse.json();
@@ -288,7 +261,7 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
       setTimeout(onCloseAction, 1500);
     } catch (error) {
       console.error('Error submitting signatures:', error);
-      addToast('Failed to save signatures', 'error');
+      addToast(`Failed to save signatures: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -319,9 +292,10 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
         
         <div 
           className="flex-1 bg-gray-800 p-4 overflow-auto relative"
+          onClick={() => setSelectedSignatureId(null)}
         >
           <div
-            ref={signatureContainerRef}
+            ref={pdfContainerRef}
             className="relative mx-auto bg-white rounded-lg shadow-lg"
             style={{ width: '100%', maxWidth: '800px', minHeight: '600px' }}
           >
@@ -352,38 +326,29 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
                   }}
                 />
               ))}
+              
             {/* Signature Overlays */}
             {placedSignatures
               .filter(sig => sig.page === currentPage)
               .map(signature => (
-                <div
+                <SignatureOverlay
                   key={signature.id}
-                  className="absolute cursor-move group"
-                  style={{ 
-                    left: signature.x, 
-                    top: signature.y,
+                  id={signature.id}
+                  imageUrl={signature.imageUrl}
+                  initialPosition={{
+                    x: signature.x,
+                    y: signature.y,
                     width: signature.width,
-                    height: signature.height,
-                    zIndex: 10
+                    height: signature.height
                   }}
-                  onMouseDown={(e) => handleMouseDown(e, signature)}
-                >
-                  <img
-                    src={signature.imageUrl}
-                    alt="Signature"
-                    className="w-full h-full object-contain select-none"
-                    draggable={false}
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeSignature(signature.id);
-                    }}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                  containerRef={pdfContainerRef}
+                  onPositionChange={(id, x, y, width, height) => 
+                    updateSignaturePosition(id, x, y, width, height)
+                  }
+                  onRemove={removeSignature}
+                  isSelected={selectedSignatureId === signature.id}
+                  onSelect={(id) => setSelectedSignatureId(id)}
+                />
               ))}
           </div>
         </div>
@@ -399,113 +364,121 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Signature Mode Toggle */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setSignatureMode('type')}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                signatureMode === 'type'
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              <Type className="w-4 h-4" />
-              Type
-            </button>
-            <button
-              onClick={() => setSignatureMode('upload')}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                signatureMode === 'upload'
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              <Upload className="w-4 h-4" />
-              Upload
-            </button>
-          </div>
+          {/* Add Signature Button */}
+          <button
+            onClick={() => setShowSignaturePicker(true)}
+            className="w-full px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+          >
+            <Type className="w-4 h-4" />
+            {signatureImage ? 'Change Signature' : 'Add Signature'}
+          </button>
+          
+          {/* Email Options Toggle */}
+          <button
+            onClick={() => setShowEmailOptions(!showEmailOptions)}
+            className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+              showEmailOptions 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            {showEmailOptions ? 'Hide Email Options' : 'Email Options'}
+          </button>
 
-          {/* Type Signature */}
-          {signatureMode === 'type' && (
-            <div className="space-y-3">
+          {/* Email Options */}
+          {showEmailOptions && (
+            <div className="space-y-4 bg-gray-800 p-4 rounded-lg">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Your Name
+                  Email Subject
                 </label>
                 <input
                   type="text"
-                  value={typedName}
-                  onChange={(e) => setTypedName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Enter email subject"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500"
                 />
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Font Style
+                  Email Body (Optional)
                 </label>
-                <select
-                  value={selectedFont}
-                  onChange={(e) => setSelectedFont(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
-                >
-                  {SIGNATURE_FONTS.map(font => (
-                    <option key={font.value} value={font.value}>
-                      {font.name}
-                    </option>
-                  ))}
-                </select>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Enter email body text..."
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500"
+                  rows={4}
+                />
               </div>
               
-              <button
-                onClick={generateTypedSignature}
-                className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-              >
-                Generate Signature
-              </button>
-            </div>
-          )}
-
-          {/* Upload Signature */}
-          {signatureMode === 'upload' && (
-            <div className="space-y-3">
-              <label className="block">
-                <span className="block text-sm font-medium text-gray-300 mb-2">
-                  Upload Signature Image
-                </span>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg"
-                  onChange={handleFileUpload}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600"
-                />
-              </label>
-              <p className="text-xs text-gray-400">
-                Supported formats: PNG, JPG (max 5MB)
-              </p>
-            </div>
-          )}
-
-          {/* Signature Preview */}
-          {signatureImage && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-gray-300">Signature Preview</h4>
-              <div className="bg-white rounded-lg p-4">
-                <img
-                  src={signatureImage}
-                  alt="Signature preview"
-                  className="max-w-full h-auto mx-auto"
-                  style={{ maxHeight: '100px' }}
-                />
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Recipients
+                  </label>
+                  <button
+                    onClick={addRecipient}
+                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    Add
+                  </button>
+                </div>
+                
+                {recipients.length === 0 ? (
+                  <div className="text-sm text-gray-500 text-center bg-gray-700 p-3 rounded-lg">
+                    No recipients added. Document will be sent to default recipients.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recipients.map((recipient, index) => (
+                      <div key={index} className="bg-gray-700 p-3 rounded-lg space-y-2">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="col-span-2">
+                            <input
+                              type="email"
+                              value={recipient.email}
+                              onChange={(e) => updateRecipient(index, 'email', e.target.value)}
+                              placeholder="Email"
+                              className="w-full px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white placeholder-gray-400 text-sm focus:outline-none focus:border-orange-500"
+                            />
+                          </div>
+                          <select
+                            value={recipient.type}
+                            onChange={(e) => updateRecipient(index, 'type', e.target.value as 'signer' | 'cc' | 'bcc')}
+                            className="px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-orange-500"
+                          >
+                            <option value="signer">To</option>
+                            <option value="cc">CC</option>
+                            <option value="bcc">BCC</option>
+                          </select>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <input
+                            type="text"
+                            value={recipient.name}
+                            onChange={(e) => updateRecipient(index, 'name', e.target.value)}
+                            placeholder="Name (optional)"
+                            className="w-full px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white placeholder-gray-400 text-sm focus:outline-none focus:border-orange-500"
+                          />
+                          
+                          <button
+                            onClick={() => removeRecipient(index)}
+                            className="ml-2 p-1 text-red-400 hover:text-red-300"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <button
-                onClick={addSignatureToPage}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <Move className="w-4 h-4" />
-                Add to Document
-              </button>
             </div>
           )}
 
@@ -520,7 +493,10 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
                   <div key={sig.id} className="flex justify-between">
                     <span>Signature {index + 1} - Page {sig.page}</span>
                     <button
-                      onClick={() => setCurrentPage(sig.page)}
+                      onClick={() => {
+                        setCurrentPage(sig.page);
+                        setSelectedSignatureId(sig.id);
+                      }}
                       className="text-orange-400 hover:text-orange-300"
                     >
                       View
@@ -537,9 +513,9 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
               <div className="text-sm text-blue-300">
                 <p className="font-medium mb-1">How to Sign</p>
                 <p className="text-xs">
-                  1. Create or upload your signature<br/>
-                  2. Click "Add to Document"<br/>
-                  3. Drag signature to desired position<br/>
+                  1. Click "Add Signature" to create your signature<br/>
+                  2. Drag the signature to position it on the document<br/>
+                  3. Resize as needed using the handle in the corner<br/>
                   4. Click "Submit" when ready
                 </p>
               </div>
@@ -564,7 +540,7 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
               </>
             ) : (
               <>
-                <CheckCircle className="h-5 w-5" />
+                <Send className="h-5 w-5" />
                 Submit Signed Document
               </>
             )}
@@ -578,6 +554,15 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
           </button>
         </div>
       </div>
+
+      {/* Signature Picker Modal */}
+      {showSignaturePicker && (
+        <SignaturePicker 
+          onSave={handleSignatureSave}
+          onClose={() => setShowSignaturePicker(false)}
+          documentName={pdfDocument.name}
+        />
+      )}
     </div>
   );
 }

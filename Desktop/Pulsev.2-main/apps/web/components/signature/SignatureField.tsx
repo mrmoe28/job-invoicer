@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { PenTool, X, Calendar, User } from 'lucide-react';
-import SignaturePad from './SignaturePad';
+import SignaturePicker from './SignaturePicker';
 
 interface SignatureFieldProps {
   label?: string;
@@ -100,7 +100,7 @@ export default function SignatureField({
       </div>
 
       {showPad && (
-        <SignaturePad
+        <SignaturePicker
           onSave={handleSaveSignature}
           onClose={() => setShowPad(false)}
           documentName={label}

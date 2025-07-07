@@ -11,7 +11,11 @@ const DocumentSigner = dynamic(() => import('@/components/DocumentSigner'), {
   ssr: false,
   loading: () => (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
-      <div className="text-white">Loading document signer...</div>
+      <div className="flex flex-col items-center gap-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-orange-500 border-t-transparent"></div>
+        <div className="text-white text-lg">Loading document signer...</div>
+        <div className="text-gray-400 text-sm">This may take a moment for large documents</div>
+      </div>
     </div>
   )
 });
@@ -596,7 +600,7 @@ export default function DocumentsPage() {
                 ? { ...doc, status: 'signed' as const }
                 : doc
             ));
-            addToast('Document signed successfully!', 'success');
+            addToast('Document signed and sent successfully!', 'success');
           }}
         />
       )}
