@@ -3,7 +3,7 @@ import { writeFile, mkdir, readFile } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 import os from 'os';
-import { put, list, del } from '@vercel/blob';
+import { put } from '@vercel/blob';
 
 // In development, use temp directory; in production, use Vercel Blob Storage
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -94,15 +94,18 @@ export async function POST(request: NextRequest) {
     let fileUrl: string;
     let base64Data: string | undefined;
     
-    if (isDevelopment) {
-      // In development: store as base64 in metadata
+    // Default to development mode or when blob token is missing
+    const useLocalStorage = isDevelopment || !process.env.BLOB_READ_WRITE_TOKEN;
+    
+    if (useLocalStorage) {
+      // Store as base64 in metadata (for development or when blob storage is not configured)
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       base64Data = buffer.toString('base64');
       fileUrl = `data:${file.type};base64,${base64Data}`;
-      console.log('Storing file as base64 in development mode');
+      console.log('Storing file as base64');
     } else {
-      // In production: use Vercel Blob Storage
+      // In production with Vercel Blob Storage configured
       try {
         console.log('Uploading to Vercel Blob Storage...');
         const blob = await put(filename, file, {
@@ -113,10 +116,12 @@ export async function POST(request: NextRequest) {
         console.log('File uploaded to Vercel Blob:', blob.url);
       } catch (blobError) {
         console.error('Error uploading to Vercel Blob:', blobError);
-        return NextResponse.json(
-          { error: 'Failed to upload to Vercel Blob Storage', details: blobError instanceof Error ? blobError.message : 'Unknown error' },
-          { status: 500 }
-        );
+        // Fallback to base64 if blob upload fails
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        base64Data = buffer.toString('base64');
+        fileUrl = `data:${file.type};base64,${base64Data}`;
+        console.log('Fallback: Storing file as base64 after Blob upload failure');
       }
     }
 
@@ -131,7 +136,7 @@ export async function POST(request: NextRequest) {
       category: formData.get('category') as string || 'contracts',
       status: 'draft',
       url: fileUrl,
-      ...(isDevelopment && base64Data ? { base64Data } : {})
+      ...(base64Data ? { base64Data } : {})
     };
 
     // Load existing metadata and add new document

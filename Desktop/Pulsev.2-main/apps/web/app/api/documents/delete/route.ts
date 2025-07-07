@@ -6,6 +6,7 @@ import { existsSync } from 'fs';
 
 const DATA_DIR = path.join(process.cwd(), 'apps/web/data');
 const METADATA_FILE = path.join(DATA_DIR, 'documents-metadata.json');
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 interface DocumentMetadata {
   id: string;
@@ -74,7 +75,7 @@ export async function DELETE(request: NextRequest) {
     const document = metadata[documentIndex];
     
     // Delete file from Vercel Blob if URL is not base64
-    if (document.url && !document.url.startsWith('data:')) {
+    if (document.url && !document.url.startsWith('data:') && process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         console.log('Deleting from Vercel Blob:', document.filename);
         await del(document.url);
