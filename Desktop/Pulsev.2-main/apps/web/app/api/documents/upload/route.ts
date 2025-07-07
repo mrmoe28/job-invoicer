@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     
     if (!existsSync(uploadDir)) {
       await mkdir(uploadDir, { recursive: true });
+      console.log(`Created upload directory: ${uploadDir}`);
     }
     
     const filePath = path.join(uploadDir, fileName);
@@ -66,24 +67,69 @@ export async function POST(request: NextRequest) {
     // In production, handle file saving differently if needed
     if (isProduction) {
       // If using Vercel Blob, uncomment this code:
-      /*
       try {
-        const { put } = await import('@vercel/blob');
-        const blob = await put(fileName, buffer, {
-          access: 'public',
-        });
-        fileUrl = blob.url;
+        console.log('Checking for Vercel Blob support...');
+        if (process.env.NEXT_PUBLIC_USE_VERCEL_BLOB === 'true') {
+          const { put } = await import('@vercel/blob');
+          console.log('Using Vercel Blob for storage');
+          const blob = await put(fileName, buffer, {
+            access: 'public',
+          });
+          const blobUrl = blob.url;
+          console.log(`File uploaded to Vercel Blob: ${blobUrl}`);
+          
+          // Store file info in database using Drizzle
+          try {
+            // Check if db is properly initialized
+            if (!db) {
+              console.error('Database not initialized');
+              throw new Error('Database not initialized');
+            }
+            
+            const result = await db.insert(documents).values({
+              id,
+              name: file.name,
+              type: file.type,
+              size: file.size.toString(),
+              path: fileName,
+              url: blobUrl,
+              organizationId: 'default-org', // Replace with actual org ID from auth
+              userId: 'default-user', // Replace with actual user ID from auth
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+            
+            console.log('Document saved to database with Blob URL');
+            
+            return NextResponse.json({
+              success: true,
+              file: {
+                id,
+                filename: fileName,
+                originalName: file.name,
+                size: file.size,
+                type: file.type,
+                url: blobUrl,
+                uploadedAt: new Date().toISOString(),
+              }
+            });
+          } catch (dbError) {
+            console.error('Database error with Blob storage:', dbError);
+            // Continue with local storage as fallback
+          }
+        } else {
+          console.log('Vercel Blob not enabled, using file system storage');
+        }
       } catch (blobError) {
-        console.error('Vercel Blob error:', blobError);
-        // Fallback to local storage
-        await writeFile(filePath, buffer);
+        console.error('Vercel Blob error, falling back to file system:', blobError);
       }
-      */
       
-      // For now, just save to /tmp in production
+      // Fallback to local storage in /tmp
+      console.log(`Saving file to: ${filePath}`);
       await writeFile(filePath, buffer);
     } else {
       // In development, save to public/uploads
+      console.log(`Saving file to: ${filePath}`);
       await writeFile(filePath, buffer);
     }
     
@@ -95,6 +141,10 @@ export async function POST(request: NextRequest) {
         throw new Error('Database not initialized');
       }
       
+      // Get user and organization info from request headers (set by middleware)
+      const userId = request.headers.get('x-auth-user-id') || 'default-user';
+      const orgId = request.headers.get('x-auth-organization-id') || 'default-org';
+      
       const result = await db.insert(documents).values({
         id,
         name: file.name,
@@ -102,8 +152,8 @@ export async function POST(request: NextRequest) {
         size: file.size.toString(),
         path: filePath,
         url: fileUrl,
-        organizationId: 'default-org', // Replace with actual org ID from auth
-        userId: 'default-user', // Replace with actual user ID from auth
+        organizationId: orgId,
+        userId: userId,
         createdAt: new Date(),
         updatedAt: new Date(),
       });

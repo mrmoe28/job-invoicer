@@ -1,42 +1,44 @@
-/**
- * Fallback auth middleware for cases where NextAuth is not properly configured
- * This allows the app to function in development or demo environments
- */
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+/**
+ * Authentication middleware
+ * Provides a simplified authentication mechanism that works across all environments
+ */
 export function middleware(request: NextRequest) {
   // Get path from request
   const path = request.nextUrl.pathname;
   
-  // Only intercept API routes that require authentication
-  if (path.startsWith('/api/') && 
-      !path.startsWith('/api/auth/') && 
-      !path.startsWith('/api/simple-auth/')) {
-    
-    // Get token from cookie or header
-    const token = request.cookies.get('pulse-auth-token')?.value || 
-                 request.headers.get('Authorization')?.replace('Bearer ', '');
-    
-    // If no token, check if this is a development or demo environment
-    if (!token) {
-      // For development and demo, allow access without token
-      if (process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-        // Add demo user context to headers
-        const requestHeaders = new Headers(request.headers);
-        requestHeaders.set('x-auth-user-id', 'demo-user');
-        requestHeaders.set('x-auth-organization-id', 'demo-org');
-        
-        // Return modified request
-        return NextResponse.next({
-          request: {
-            headers: requestHeaders,
-          },
-        });
-      }
-      
-      // Production environment with no token - return 401
+  // Public paths that don't require authentication
+  const publicPaths = [
+    '/login',
+    '/auth',
+    '/api/auth',      // Include all auth endpoints as public
+    '/test-upload',
+    '/api/documents/upload-simple',
+    '/api/files',
+  ];
+  
+  // Check if the path is public
+  const isPublicPath = publicPaths.some(publicPath => 
+    path === publicPath || path.startsWith(`${publicPath}/`)
+  );
+  
+  // Always allow public paths
+  if (isPublicPath) {
+    return NextResponse.next();
+  }
+  
+  // Get token from cookie or header
+  const token = request.cookies.get('pulse-auth-token')?.value || 
+               request.cookies.get('next-auth.session-token')?.value ||
+               request.cookies.get('__Secure-next-auth.session-token')?.value ||
+               request.headers.get('Authorization')?.replace('Bearer ', '');
+  
+  // For API routes, check if token exists
+  if (path.startsWith('/api/')) {
+    // If no token in production, return 401
+    if (!token && process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
       return new NextResponse(
         JSON.stringify({ error: 'Authentication required' }),
         { 
@@ -46,9 +48,10 @@ export function middleware(request: NextRequest) {
       );
     }
     
-    // Token exists but NextAuth might not be working - add headers for context
+    // For development or demo mode, allow access with demo user context
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-auth-token', token);
+    requestHeaders.set('x-auth-user-id', token ? 'user-from-token' : 'demo-user');
+    requestHeaders.set('x-auth-organization-id', 'org-1');
     
     // Return modified request
     return NextResponse.next({
@@ -58,11 +61,27 @@ export function middleware(request: NextRequest) {
     });
   }
   
-  // Non-API routes or auth routes - continue normally
+  // For page routes, redirect to login if no token
+  if (!token) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('from', path);
+    return NextResponse.redirect(loginUrl);
+  }
+  
+  // User is authenticated, allow access
   return NextResponse.next();
 }
 
-// Only run middleware on API routes
+// Only run middleware on relevant paths
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    /*
+     * Match all request paths except for:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public assets)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|uploads|assets|images).*)',
+  ],
 };

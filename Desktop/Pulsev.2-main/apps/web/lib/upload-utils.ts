@@ -113,7 +113,7 @@ async function uploadSingleFile(
 
     return new Promise((resolve) => {
         const formData = new FormData();
-        formData.append('files', file);
+        formData.append('file', file); // Use 'file' as the key for upload
 
         const xhr = new XMLHttpRequest();
 
@@ -142,10 +142,17 @@ async function uploadSingleFile(
                         file: response.file || response.files?.[0]
                     });
                 } else {
-                    const errorResponse = JSON.parse(xhr.responseText);
+                    let errorMsg = `HTTP ${xhr.status}: ${xhr.statusText}`;
+                    try {
+                        const errorResponse = JSON.parse(xhr.responseText);
+                        errorMsg = errorResponse.error || errorMsg;
+                    } catch (e) {
+                        // If response can't be parsed, use the default error message
+                    }
+                    
                     resolve({
                         success: false,
-                        error: errorResponse.error || `HTTP ${xhr.status}: ${xhr.statusText}`
+                        error: errorMsg
                     });
                 }
             } catch (error) {
@@ -178,8 +185,8 @@ async function uploadSingleFile(
             });
         });
 
-        // Send request
-        xhr.open('POST', '/api/files/upload');
+        // Send request - try the document upload endpoint first
+        xhr.open('POST', '/api/documents/upload');
         xhr.send(formData);
     });
 }
