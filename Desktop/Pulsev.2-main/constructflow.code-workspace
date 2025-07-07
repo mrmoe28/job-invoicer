@@ -1,0 +1,42 @@
+{
+  "name": "ConstructFlow/PulseCRM Development",
+  "folders": [
+    {
+      "name": "Web App",
+      "path": "./apps/web"
+    },
+    {
+      "name": "API",
+      "path": "./packages/api"
+    },
+    {
+      "name": "Database",
+      "path": "./packages/db"
+    },
+    {
+      "name": "UI Components",
+      "path": "./packages/ui"
+    },
+    {
+      "name": "Root",
+      "path": "./"
+    }
+  ],
+  "settings": {
+    "typescript.preferences.includePackageJsonAutoImports": "auto",
+    "editor.formatOnSave": true,
+    "tailwindCSS.experimental.classRegex": [
+      "cn\\(([^)]*)\\)",
+      "clsx\\(([^)]*)\\)"
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "bradlc.vscode-tailwindcss",
+      "ms-vscode.vscode-typescript-next",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "ms-vscode.vscode-json"
+    ]
+  }
+}

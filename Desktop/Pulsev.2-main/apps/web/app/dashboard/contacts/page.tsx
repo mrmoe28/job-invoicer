@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import DashboardLayout from '../../../components/dashboard-layout';
+import DashboardLayout from '@/components/dashboard-layout';
 
 interface Contractor {
   id: string;
@@ -63,6 +63,8 @@ export default function ContractorsPage() {
     status: 'Active',
     rating: 0
   });
+  
+  const [specialtyInput, setSpecialtyInput] = useState('');
 
   const [columnSettings, setColumnSettings] = useState<ColumnSetting[]>([
     { id: 'name', label: 'Name', visible: true, order: 0 },
@@ -522,35 +524,35 @@ export default function ContractorsPage() {
                     type="text" 
                     placeholder="First Name *" 
                     value={addForm.firstName || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, firstName: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...form, firstName: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <input 
                     type="text" 
                     placeholder="Last Name *" 
                     value={addForm.lastName || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, lastName: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...form, lastName: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <input 
                     type="email" 
                     placeholder="Email *" 
                     value={addForm.email || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...form, email: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <input 
                     type="text" 
                     placeholder="Phone" 
                     value={addForm.phone || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...form, phone: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <input 
                     type="text" 
                     placeholder="Mobile" 
                     value={addForm.mobile || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, mobile: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...form, mobile: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                 </div>
@@ -562,35 +564,35 @@ export default function ContractorsPage() {
                     type="text" 
                     placeholder="Company Name" 
                     value={addForm.companyName || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, companyName: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...f, companyName: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <input 
                     type="text" 
                     placeholder="License Number" 
                     value={addForm.licenseNumber || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, licenseNumber: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...f, licenseNumber: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <input 
                     type="text" 
                     placeholder="Insurance Provider" 
                     value={addForm.insuranceProvider || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, insuranceProvider: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...f, insuranceProvider: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <input 
                     type="date" 
                     placeholder="Insurance Expiration" 
                     value={addForm.insuranceExpiration || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, insuranceExpiration: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...f, insuranceExpiration: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <input 
                     type="number" 
                     placeholder="Hourly Rate" 
                     value={addForm.hourlyRate || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, hourlyRate: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...f, hourlyRate: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                 </div>
@@ -602,7 +604,7 @@ export default function ContractorsPage() {
                     type="text" 
                     placeholder="Street Address" 
                     value={addForm.address || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, address: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...f, address: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                   <div className="grid grid-cols-2 gap-4">
@@ -610,14 +612,14 @@ export default function ContractorsPage() {
                       type="text" 
                       placeholder="City" 
                       value={addForm.city || ''} 
-                      onChange={e => setAddForm(f => ({ ...f, city: e.target.value }))} 
+                      onChange={e => setAddForm(form => ({ ...f, city: e.target.value }))} 
                       className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                     />
                     <input 
                       type="text" 
                       placeholder="State" 
                       value={addForm.state || ''} 
-                      onChange={e => setAddForm(f => ({ ...f, state: e.target.value }))} 
+                      onChange={e => setAddForm(form => ({ ...f, state: e.target.value }))} 
                       className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                     />
                   </div>
@@ -625,7 +627,7 @@ export default function ContractorsPage() {
                     type="text" 
                     placeholder="ZIP Code" 
                     value={addForm.zipCode || ''} 
-                    onChange={e => setAddForm(f => ({ ...f, zipCode: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...f, zipCode: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
                   />
                 </div>
@@ -635,7 +637,7 @@ export default function ContractorsPage() {
                   <h4 className="text-white font-medium">Additional Information</h4>
                   <select 
                     value={addForm.status || 'Active'} 
-                    onChange={e => setAddForm(f => ({ ...f, status: e.target.value }))} 
+                    onChange={e => setAddForm(form => ({ ...f, status: e.target.value }))} 
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
                   >
                     <option value="Active">Active</option>
@@ -643,13 +645,62 @@ export default function ContractorsPage() {
                     <option value="Suspended">Suspended</option>
                   </select>
                   <div>
+                    <label className="block text-gray-300 text-sm mb-2">Specialties</label>
+                    <div className="flex space-x-2 mb-2">
+                      <input 
+                        type="text" 
+                        placeholder="Add specialty" 
+                        value={specialtyInput} 
+                        onChange={(e) => setSpecialtyInput(e.target.value)} 
+                        className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (specialtyInput.trim()) {
+                            setAddForm(form => ({
+                              ...form,
+                              specialties: [...(form.specialties || []), specialtyInput.trim()]
+                            }));
+                            setSpecialtyInput('');
+                          }
+                        }}
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(addForm.specialties || []).map((specialty, index) => (
+                        <div key={index} className="bg-gray-600 rounded-lg px-2 py-1 flex items-center space-x-1">
+                          <span className="text-white text-sm">{specialty}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddForm(form => ({
+                                ...form,
+                                specialties: (form.specialties || []).filter((_, i) => i !== index)
+                              }));
+                            }}
+                            className="text-gray-400 hover:text-white"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
                     <label className="block text-gray-300 text-sm mb-2">Rating</label>
                     <div className="flex space-x-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           type="button"
-                          onClick={() => setAddForm(f => ({ ...f, rating: star }))}
+                          onClick={() => setAddForm(form => ({ ...form, rating: star }))}
                           className="focus:outline-none"
                         >
                           <svg className={`w-6 h-6 ${star <= (addForm.rating || 0) ? 'text-yellow-500' : 'text-gray-600'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -658,7 +709,6 @@ export default function ContractorsPage() {
                         </button>
                       ))}
                     </div>
-                  </div>
                 </div>
               </div>
 

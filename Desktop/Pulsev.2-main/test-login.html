@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ConstructFlow Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #ff6600;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #e55500;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .users-list {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .user-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <h1>ConstructFlow Login Test</h1>
+    
+    <div class="users-list">
+        <h2>Registered Users</h2>
+        <div id="usersList">Loading...</div>
+    </div>
+    
+    <h2>Test Login</h2>
+    <div class="form-group">
+        <label>Email:</label>
+        <input type="email" id="email" value="ekosolarize@gmail.com">
+    </div>
+    <div class="form-group">
+        <label>Password:</label>
+        <input type="password" id="password" placeholder="Enter your password">
+    </div>
+    <button onclick="testLogin()">Test Login</button>
+    
+    <div id="result"></div>
+    
+    <h2>Reset Password (for testing)</h2>
+    <div class="form-group">
+        <label>Email:</label>
+        <input type="email" id="resetEmail" value="ekosolarize@gmail.com">
+    </div>
+    <div class="form-group">
+        <label>New Password:</label>
+        <input type="password" id="newPassword" value="test1234">
+    </div>
+    <button onclick="resetPassword()">Reset Password</button>
+    
+    <script>
+        // Load users on page load
+        loadUsers();
+        
+        async function loadUsers() {
+            try {
+                // Read from the database file directly
+                const response = await fetch('/data/database.json');
+                const data = await response.json();
+                
+                const usersList = document.getElementById('usersList');
+                usersList.innerHTML = data.users.map(user => `
+                    <div class="user-item">
+                        <strong>${user.firstName} ${user.lastName}</strong> - ${user.email}<br>
+                        Organization: ${user.organizationName}<br>
+                        Created: ${new Date(user.createdAt).toLocaleDateString()}
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('usersList').innerHTML = 'Error loading users: ' + error.message;
+            }
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const response = await fetch('http://localhost:3010/api/simple-auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>Login Successful!</h3>
+                        <p>User: ${data.user.firstName} ${data.user.lastName}</p>
+                        <p>Email: ${data.user.email}</p>
+                        <p>Organization: ${data.user.organizationName}</p>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>Login Failed</h3>
+                        <p>${data.error || 'Unknown error'}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>Connection Error</h3>
+                    <p>${error.message}</p>
+                    <p>Make sure the server is running on port 3010</p>
+                `;
+            }
+        }
+        
+        async function resetPassword() {
+            const email = document.getElementById('resetEmail').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!confirm(`Reset password for ${email} to "${newPassword}"?`)) {
+                return;
+            }
+            
+            resultDiv.className = 'result success';
+            resultDiv.innerHTML = `
+                <h3>Password Reset Instructions</h3>
+                <p>To reset the password, you need to:</p>
+                <ol>
+                    <li>Stop the development server if it's running</li>
+                    <li>Edit the file: <code>data/database.json</code></li>
+                    <li>Find the user with email: ${email}</li>
+                    <li>Replace their password hash with a new one</li>
+                    <li>Or use the API endpoint when the server is running</li>
+                </ol>
+                <p>For testing, you can use password: <strong>test1234</strong></p>
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -178,9 +178,23 @@ export default function DocumentsPage() {
     await handleFileSelect(e.dataTransfer.files);
   };
 
-  const handleDelete = (doc: Document) => {
-    setDocuments(prev => prev.filter(d => d.id !== doc.id));
-    addToast(`Deleted ${doc.name}`, 'success');
+  const handleDelete = async (doc: Document) => {
+    try {
+      const response = await fetch(`/api/documents/delete?id=${doc.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setDocuments(prev => prev.filter(d => d.id !== doc.id));
+        addToast(`Deleted ${doc.name}`, 'success');
+      } else {
+        const data = await response.json();
+        addToast(`Error deleting file: ${data.error}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      addToast('Failed to delete document', 'error');
+    }
   };
 
   const getFileIcon = (doc: Document) => {

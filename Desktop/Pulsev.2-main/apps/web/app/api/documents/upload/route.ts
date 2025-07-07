@@ -3,16 +3,15 @@ import { writeFile, mkdir, readFile } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 import os from 'os';
+import { put, list, del } from '@vercel/blob';
 
-// In development, use temp directory; in production, use public/uploads
+// In development, use temp directory; in production, use Vercel Blob Storage
 const isDevelopment = process.env.NODE_ENV === 'development';
 const TEMP_DIR = path.join(os.tmpdir(), 'constructflow-uploads');
-const PUBLIC_DIR = path.join(process.cwd(), 'apps/web/public');
-const UPLOAD_DIR = isDevelopment ? TEMP_DIR : path.join(PUBLIC_DIR, 'uploads');
 const DATA_DIR = path.join(process.cwd(), 'apps/web/data');
 const METADATA_FILE = path.join(DATA_DIR, 'documents-metadata.json');
 
-// For development, we'll store files as base64 in the metadata
+// Document metadata structure
 interface DocumentMetadata {
   id: string;
   name: string;
@@ -22,14 +21,15 @@ interface DocumentMetadata {
   uploadDate: string;
   category?: string;
   status?: string;
-  base64Data?: string; // Store file data for development
+  url: string; // Store Vercel Blob URL or base64 data
+  base64Data?: string; // Store file data for development only
 }
 
 async function ensureDirectories() {
   try {
-    if (!existsSync(UPLOAD_DIR)) {
-      await mkdir(UPLOAD_DIR, { recursive: true });
-      console.log('Created upload directory:', UPLOAD_DIR);
+    if (isDevelopment && !existsSync(TEMP_DIR)) {
+      await mkdir(TEMP_DIR, { recursive: true });
+      console.log('Created temp upload directory:', TEMP_DIR);
     }
     if (!existsSync(DATA_DIR)) {
       await mkdir(DATA_DIR, { recursive: true });
@@ -90,23 +90,34 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const filename = `${timestamp}-${file.name}`;
     
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    
-    // In development, store as base64; in production, save to disk
+    // File content handling
+    let fileUrl: string;
     let base64Data: string | undefined;
     
     if (isDevelopment) {
-      // Store as base64 for development
+      // In development: store as base64 in metadata
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
       base64Data = buffer.toString('base64');
+      fileUrl = `data:${file.type};base64,${base64Data}`;
       console.log('Storing file as base64 in development mode');
     } else {
-      // Save to disk in production
-      const filepath = path.join(UPLOAD_DIR, filename);
-      console.log('Saving file to:', filepath);
-      await writeFile(filepath, buffer);
-      console.log('File saved successfully');
+      // In production: use Vercel Blob Storage
+      try {
+        console.log('Uploading to Vercel Blob Storage...');
+        const blob = await put(filename, file, {
+          access: 'public',
+          addRandomSuffix: false, // Use our timestamp-based name
+        });
+        fileUrl = blob.url;
+        console.log('File uploaded to Vercel Blob:', blob.url);
+      } catch (blobError) {
+        console.error('Error uploading to Vercel Blob:', blobError);
+        return NextResponse.json(
+          { error: 'Failed to upload to Vercel Blob Storage', details: blobError instanceof Error ? blobError.message : 'Unknown error' },
+          { status: 500 }
+        );
+      }
     }
 
     // Create document metadata
@@ -119,6 +130,7 @@ export async function POST(request: NextRequest) {
       uploadDate: new Date().toISOString(),
       category: formData.get('category') as string || 'contracts',
       status: 'draft',
+      url: fileUrl,
       ...(isDevelopment && base64Data ? { base64Data } : {})
     };
 
@@ -140,9 +152,7 @@ export async function POST(request: NextRequest) {
         uploadDate: newDocument.uploadDate,
         category: newDocument.category,
         status: newDocument.status,
-        url: isDevelopment && base64Data 
-          ? `data:${file.type};base64,${base64Data}`
-          : `/uploads/${filename}`
+        url: fileUrl
       }
     });
   } catch (error) {
@@ -168,9 +178,7 @@ export async function GET() {
       uploadDate: doc.uploadDate,
       category: doc.category,
       status: doc.status,
-      url: isDevelopment && doc.base64Data
-        ? `data:${doc.type};base64,${doc.base64Data}`
-        : `/uploads/${doc.filename}`
+      url: doc.url // Already contains the correct URL (base64 or Vercel Blob)
     }));
     
     console.log('Returning documents:', documents.length);
