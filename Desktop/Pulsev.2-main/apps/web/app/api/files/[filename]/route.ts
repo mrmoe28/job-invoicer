@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
 import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
+import path from 'path';
 
+/**
+ * Serves files that have been uploaded to the server
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: { filename: string } }
@@ -12,7 +15,7 @@ export async function GET(
     
     if (!filename) {
       return NextResponse.json(
-        { error: 'No filename provided' },
+        { error: 'Filename is required' },
         { status: 400 }
       );
     }
@@ -20,37 +23,38 @@ export async function GET(
     // Sanitize filename to prevent path traversal
     const sanitizedFilename = filename.replace(/\.\./g, '').replace(/[\/\\]/g, '');
     
-    // Check if file exists in production (/tmp) or development (public) directories
-    const isProduction = process.env.NODE_ENV === 'production';
-    const uploadsDir = isProduction 
-      ? path.join('/tmp', 'pulse-uploads') 
-      : path.join(process.cwd(), 'public', 'uploads');
+    // Check multiple possible locations for the file
+    const possiblePaths = [
+      // Serverless /tmp path
+      path.join('/tmp', 'uploads', sanitizedFilename),
+      // Development public path
+      path.join(process.cwd(), 'public', 'uploads', sanitizedFilename),
+      // Another common location
+      path.join(process.cwd(), 'uploads', sanitizedFilename),
+    ];
     
-    const filePath = path.join(uploadsDir, sanitizedFilename);
-    
-    // For development environment, check if file exists in public/uploads as fallback
-    let fileBuffer;
-    if (existsSync(filePath)) {
-      fileBuffer = await fs.readFile(filePath);
-    } else if (!isProduction) {
-      // Try alternate path for dev environment
-      const altPath = path.join(process.cwd(), 'public', 'uploads', sanitizedFilename);
-      if (existsSync(altPath)) {
-        fileBuffer = await fs.readFile(altPath);
-      } else {
-        return NextResponse.json(
-          { error: 'File not found' },
-          { status: 404 }
-        );
+    // Find the first path that exists
+    let filePath = null;
+    for (const p of possiblePaths) {
+      if (existsSync(p)) {
+        filePath = p;
+        break;
       }
-    } else {
+    }
+    
+    if (!filePath) {
+      console.error(`File not found: ${sanitizedFilename}`);
+      console.error('Checked paths:', possiblePaths);
       return NextResponse.json(
         { error: 'File not found' },
         { status: 404 }
       );
     }
     
-    // Determine content type based on file extension
+    // Read the file
+    const fileBuffer = await fs.readFile(filePath);
+    
+    // Determine content type
     const ext = path.extname(sanitizedFilename).toLowerCase();
     let contentType = 'application/octet-stream'; // Default
     
@@ -66,12 +70,17 @@ export async function GET(
       contentType = 'image/svg+xml';
     } else if (ext === '.webp') {
       contentType = 'image/webp';
+    } else if (ext === '.doc' || ext === '.docx') {
+      contentType = 'application/msword';
     }
     
+    // Return the file
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `inline; filename="${sanitizedFilename}"`,
+        // Add cache control to improve performance
+        'Cache-Control': 'public, max-age=86400',
       },
     });
   } catch (error) {
