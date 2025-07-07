@@ -1,44 +1,68 @@
-import { NextRequest, NextResponse } from 'next/server'
+/**
+ * Fallback auth middleware for cases where NextAuth is not properly configured
+ * This allows the app to function in development or demo environments
+ */
+
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Clone the request headers
-  const requestHeaders = new Headers(request.headers)
+  // Get path from request
+  const path = request.nextUrl.pathname;
   
-  // Add security headers
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
-  
-  // Security headers
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('X-DNS-Prefetch-Control', 'on')
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-  
-  // Add HSTS for production
-  if (process.env.NODE_ENV === 'production') {
-    response.headers.set(
-      'Strict-Transport-Security',
-      'max-age=31536000; includeSubDomains'
-    )
+  // Only intercept API routes that require authentication
+  if (path.startsWith('/api/') && 
+      !path.startsWith('/api/auth/') && 
+      !path.startsWith('/api/simple-auth/')) {
+    
+    // Get token from cookie or header
+    const token = request.cookies.get('pulse-auth-token')?.value || 
+                 request.headers.get('Authorization')?.replace('Bearer ', '');
+    
+    // If no token, check if this is a development or demo environment
+    if (!token) {
+      // For development and demo, allow access without token
+      if (process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        // Add demo user context to headers
+        const requestHeaders = new Headers(request.headers);
+        requestHeaders.set('x-auth-user-id', 'demo-user');
+        requestHeaders.set('x-auth-organization-id', 'demo-org');
+        
+        // Return modified request
+        return NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        });
+      }
+      
+      // Production environment with no token - return 401
+      return new NextResponse(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          status: 401, 
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    // Token exists but NextAuth might not be working - add headers for context
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-auth-token', token);
+    
+    // Return modified request
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
   
-  return response
+  // Non-API routes or auth routes - continue normally
+  return NextResponse.next();
 }
 
-// Configure which routes to run middleware on
+// Only run middleware on API routes
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except:
-     * - api routes
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, robots.txt (static files)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt).*)',
-  ],
-}
+  matcher: '/api/:path*',
+};
