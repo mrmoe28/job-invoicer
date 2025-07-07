@@ -3,6 +3,14 @@ import { writeFile, mkdir, readFile } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 import os from 'os';
+
+// Configure Next.js to handle larger file uploads
+export const config = {
+  api: {
+    bodyParser: false, // Disable the default body parser to handle larger files
+    responseLimit: '8mb', // Increase response size limit for base64 data
+  },
+};
 import { put } from '@vercel/blob';
 
 // In development, use temp directory; in production, use Vercel Blob Storage
@@ -69,12 +77,31 @@ async function saveMetadata(metadata: DocumentMetadata[]): Promise<void> {
 
 export async function POST(request: NextRequest) {
   console.log('POST /api/documents/upload - Request received');
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('BLOB_READ_WRITE_TOKEN configured:', !!process.env.BLOB_READ_WRITE_TOKEN);
   
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+    // Log request details
+    console.log('Request method:', request.method);
+    console.log('Request headers:', [...request.headers.entries()]);
     
-    console.log('File received:', file?.name, file?.size);
+    // Parse form data
+    console.log('Parsing form data...');
+    let formData;
+    try {
+      formData = await request.formData();
+      console.log('Form data keys:', [...formData.keys()]);
+    } catch (formError) {
+      console.error('Error parsing form data:', formError);
+      return NextResponse.json(
+        { error: 'Error parsing form data', details: formError instanceof Error ? formError.message : 'Unknown error' },
+        { status: 400 }
+      );
+    }
+    
+    // Get file from form data
+    const file = formData.get('file') as File;
+    console.log('File received:', file ? `${file.name} (${file.size} bytes, ${file.type})` : 'No file');
     
     if (!file) {
       return NextResponse.json(
@@ -84,11 +111,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure directories exist
-    await ensureDirectories();
+    try {
+      await ensureDirectories();
+      console.log('Directories ensured');
+    } catch (dirError) {
+      console.error('Error ensuring directories:', dirError);
+      return NextResponse.json(
+        { error: 'Error creating directories', details: dirError instanceof Error ? dirError.message : 'Unknown error' },
+        { status: 500 }
+      );
+    }
 
     // Generate unique filename
     const timestamp = Date.now();
     const filename = `${timestamp}-${file.name}`;
+    console.log('Generated filename:', filename);
     
     // File content handling
     let fileUrl: string;
@@ -96,18 +133,30 @@ export async function POST(request: NextRequest) {
     
     // Default to development mode or when blob token is missing
     const useLocalStorage = isDevelopment || !process.env.BLOB_READ_WRITE_TOKEN;
+    console.log('Using local storage:', useLocalStorage);
     
     if (useLocalStorage) {
       // Store as base64 in metadata (for development or when blob storage is not configured)
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      base64Data = buffer.toString('base64');
-      fileUrl = `data:${file.type};base64,${base64Data}`;
-      console.log('Storing file as base64');
+      try {
+        console.log('Converting file to base64...');
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        base64Data = buffer.toString('base64');
+        fileUrl = `data:${file.type};base64,${base64Data.substring(0, 20)}...`; // Log truncated for brevity
+        console.log('File converted to base64 successfully');
+      } catch (base64Error) {
+        console.error('Error converting file to base64:', base64Error);
+        return NextResponse.json(
+          { error: 'Error processing file', details: base64Error instanceof Error ? base64Error.message : 'Unknown error' },
+          { status: 500 }
+        );
+      }
     } else {
       // In production with Vercel Blob Storage configured
       try {
         console.log('Uploading to Vercel Blob Storage...');
+        console.log('File details for blob:', file.name, file.size, file.type);
+        
         const blob = await put(filename, file, {
           access: 'public',
           addRandomSuffix: false, // Use our timestamp-based name
@@ -116,12 +165,23 @@ export async function POST(request: NextRequest) {
         console.log('File uploaded to Vercel Blob:', blob.url);
       } catch (blobError) {
         console.error('Error uploading to Vercel Blob:', blobError);
+        console.error('Blob error details:', JSON.stringify(blobError));
+        
         // Fallback to base64 if blob upload fails
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        base64Data = buffer.toString('base64');
-        fileUrl = `data:${file.type};base64,${base64Data}`;
-        console.log('Fallback: Storing file as base64 after Blob upload failure');
+        try {
+          console.log('Falling back to base64 storage...');
+          const bytes = await file.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          base64Data = buffer.toString('base64');
+          fileUrl = `data:${file.type};base64,${base64Data.substring(0, 20)}...`; // Log truncated
+          console.log('Fallback successful: Storing file as base64');
+        } catch (fallbackError) {
+          console.error('Error in base64 fallback:', fallbackError);
+          return NextResponse.json(
+            { error: 'Error processing file (fallback failed)', details: fallbackError instanceof Error ? fallbackError.message : 'Unknown error' },
+            { status: 500 }
+          );
+        }
       }
     }
 
@@ -140,30 +200,50 @@ export async function POST(request: NextRequest) {
     };
 
     // Load existing metadata and add new document
-    const metadata = await loadMetadata();
-    metadata.unshift(newDocument);
-    await saveMetadata(metadata);
+    try {
+      console.log('Loading existing metadata...');
+      const metadata = await loadMetadata();
+      console.log('Current document count:', metadata.length);
+      
+      metadata.unshift(newDocument);
+      await saveMetadata(metadata);
+      console.log('Metadata saved successfully. New count:', metadata.length);
+    } catch (metadataError) {
+      console.error('Error saving metadata:', metadataError);
+      return NextResponse.json(
+        { error: 'Error saving document metadata', details: metadataError instanceof Error ? metadataError.message : 'Unknown error' },
+        { status: 500 }
+      );
+    }
 
-    console.log('Metadata saved successfully');
-
+    // Create response without the base64Data to reduce payload size
+    const responseDocument = {
+      id: newDocument.id,
+      name: newDocument.name,
+      filename: newDocument.filename,
+      size: newDocument.size,
+      type: newDocument.type,
+      uploadDate: newDocument.uploadDate,
+      category: newDocument.category,
+      status: newDocument.status,
+      url: fileUrl
+    };
+    
+    console.log('Upload successful. Returning document:', JSON.stringify(responseDocument));
+    
     return NextResponse.json({
       success: true,
-      document: {
-        id: newDocument.id,
-        name: newDocument.name,
-        filename: newDocument.filename,
-        size: newDocument.size,
-        type: newDocument.type,
-        uploadDate: newDocument.uploadDate,
-        category: newDocument.category,
-        status: newDocument.status,
-        url: fileUrl
-      }
+      document: responseDocument
     });
   } catch (error) {
     console.error('Error in POST /api/documents/upload:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
     return NextResponse.json(
-      { error: 'Failed to upload document', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to upload document', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     );
   }

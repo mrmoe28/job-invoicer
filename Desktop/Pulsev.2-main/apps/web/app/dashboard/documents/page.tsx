@@ -81,13 +81,23 @@ export default function DocumentsPage() {
 
   const loadDocuments = async () => {
     try {
-      const response = await fetch('/api/documents/upload');
+      console.log('Loading documents from API...');
+      const response = await fetch('/api/documents');
+      console.log('Documents API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Documents loaded:', data.documents?.length || 0);
         setDocuments(data.documents || []);
+      } else {
+        console.error('Error loading documents:', response.statusText);
+        const errorText = await response.text();
+        console.error('Error details:', errorText);
+        addToast('Failed to load documents', 'error');
       }
     } catch (error) {
       console.error('Error loading documents:', error);
+      addToast('Failed to load documents', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -99,23 +109,29 @@ export default function DocumentsPage() {
       let successCount = 0;
       
       try {
+        console.log('Starting upload for', files.length, 'files');
+        
         const uploadPromises = Array.from(files).map(async (file) => {
           // Validate file type
           const validTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
           const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
           
+          console.log('File extension:', fileExtension);
+          
           if (!validTypes.includes(fileExtension)) {
+            console.error('Invalid file type:', fileExtension);
             addToast(`Invalid file type: ${file.name}`, 'error');
             return null;
           }
           
           // Validate file size (max 10MB)
           if (file.size > 10 * 1024 * 1024) {
+            console.error('File too large:', file.size);
             addToast(`File too large: ${file.name} (max 10MB)`, 'error');
             return null;
           }
           
-          console.log('Uploading file:', file.name, file.size);
+          console.log('Uploading file:', file.name, file.size, file.type);
           
           // Upload file to API
           const formData = new FormData();
@@ -123,20 +139,34 @@ export default function DocumentsPage() {
           formData.append('category', 'contracts');
           
           try {
-            const response = await fetch('/api/documents/upload', {
+            console.log('Sending fetch request to /api/documents');
+            
+            const response = await fetch('/api/documents', {
               method: 'POST',
               body: formData
             });
             
             console.log('Upload response status:', response.status);
-            const data = await response.json();
-            console.log('Upload response data:', data);
+            console.log('Response headers:', [...response.headers.entries()]);
+            
+            const responseText = await response.text();
+            console.log('Raw response text:', responseText);
+            
+            let data;
+            try {
+              data = JSON.parse(responseText);
+              console.log('Parsed response data:', data);
+            } catch (parseError) {
+              console.error('Error parsing JSON response:', parseError);
+              throw new Error('Invalid JSON response from server');
+            }
             
             if (response.ok) {
               successCount++;
               return data.document;
             } else {
-              throw new Error(data.error || 'Upload failed');
+              console.error('Upload failed with error:', data.error, data.details);
+              throw new Error(data.error || data.details || 'Upload failed');
             }
           } catch (error) {
             console.error('Upload error:', error);
@@ -145,13 +175,19 @@ export default function DocumentsPage() {
           }
         });
         
+        console.log('Waiting for all uploads to complete');
         const results = await Promise.all(uploadPromises);
+        console.log('Upload results:', results);
+        
         const newDocuments = results.filter(doc => doc !== null);
+        console.log('New documents to add:', newDocuments.length);
         
         if (newDocuments.length > 0) {
           setDocuments(prev => [...newDocuments, ...prev]);
           addToast(`Successfully uploaded ${successCount} file${successCount > 1 ? 's' : ''}`, 'success');
           setShowUpload(false);
+        } else {
+          addToast('No files were uploaded successfully', 'error');
         }
       } catch (error) {
         console.error('File selection error:', error);
@@ -180,15 +216,19 @@ export default function DocumentsPage() {
 
   const handleDelete = async (doc: Document) => {
     try {
-      const response = await fetch(`/api/documents/delete?id=${doc.id}`, {
+      console.log('Deleting document:', doc.id);
+      const response = await fetch(`/api/documents/${doc.id}`, {
         method: 'DELETE',
       });
+      
+      console.log('Delete response status:', response.status);
       
       if (response.ok) {
         setDocuments(prev => prev.filter(d => d.id !== doc.id));
         addToast(`Deleted ${doc.name}`, 'success');
       } else {
         const data = await response.json();
+        console.error('Delete error:', data);
         addToast(`Error deleting file: ${data.error}`, 'error');
       }
     } catch (error) {
