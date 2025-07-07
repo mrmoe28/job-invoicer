@@ -53,6 +53,7 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [placedSignatures, setPlacedSignatures] = useState<PlacedSignature[]>([]);
   const [signatureHighlights, setSignatureHighlights] = useState<Array<{ page: number, x: number, y: number, width: number, height: number }>>([]);
+  const [pdfUrl, setPdfUrl] = useState<string>('');
   // Scan PDF for 'Signature' fields and highlight them
   useEffect(() => {
     if (!pdfUrl) return;
@@ -66,7 +67,6 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
     })();
   }, [pdfUrl]);
   const [isSaving, setIsSaving] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -190,25 +190,40 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
     localStorage.setItem(`signatures_${pdfDocument.id}`, JSON.stringify(updated));
   };
 
+  // Refactored drag-and-drop logic for signatures
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const signatureContainerRef = React.useRef<HTMLDivElement>(null);
+
   const handleMouseDown = (e: React.MouseEvent, signature: PlacedSignature) => {
     e.preventDefault();
     setIsDragging(true);
     setDraggedSignature(signature);
+    // Calculate offset between mouse and top-left of signature
+    setDragOffset({
+      x: e.clientX - signature.x,
+      y: e.clientY - signature.y,
+    });
+    // Add listeners to window for smooth dragging
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !draggedSignature) return;
-
-    const container = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - container.left - (draggedSignature.width / 2);
-    const y = e.clientY - container.top - (draggedSignature.height / 2);
-
+  const handleWindowMouseMove = (e: MouseEvent) => {
+    if (!isDragging || !draggedSignature || !dragOffset) return;
+    const container = signatureContainerRef.current?.getBoundingClientRect();
+    if (!container) return;
+    // Calculate new position relative to container
+    const x = e.clientX - container.left - dragOffset.x;
+    const y = e.clientY - container.top - dragOffset.y;
     updateSignaturePosition(draggedSignature.id, x, y);
   };
 
-  const handleMouseUp = () => {
+  const handleWindowMouseUp = () => {
     setIsDragging(false);
     setDraggedSignature(null);
+    setDragOffset(null);
+    window.removeEventListener('mousemove', handleWindowMouseMove);
+    window.removeEventListener('mouseup', handleWindowMouseUp);
   };
 
   const handleSubmit = async () => {
@@ -304,11 +319,12 @@ export default function DocumentSigner({ document: pdfDocument, onCloseAction, o
         
         <div 
           className="flex-1 bg-gray-800 p-4 overflow-auto relative"
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
         >
-          <div className="relative mx-auto bg-white rounded-lg shadow-lg" style={{ width: '100%', maxWidth: '800px', minHeight: '600px' }}>
+          <div
+            ref={signatureContainerRef}
+            className="relative mx-auto bg-white rounded-lg shadow-lg"
+            style={{ width: '100%', maxWidth: '800px', minHeight: '600px' }}
+          >
             {/* PDF Viewer */}
             <Worker workerUrl={`https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`}>
               <div style={{ height: '100%', minHeight: '600px' }}>

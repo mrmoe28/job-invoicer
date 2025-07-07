@@ -15,7 +15,8 @@ import {
     ZoomIn as ZoomInIcon,
     ZoomOut as ZoomOutIcon
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import Draggable from 'react-draggable';
 import { cn } from '../../lib/utils';
 
 interface UniversalDocumentViewerProps {
@@ -95,21 +96,21 @@ const ImageViewer: React.FC<{
             style={{ height: isFullscreen ? '100vh' : height }}
         >
             {/* Header */}
-            <div className="flex justify-between items-center p-4 bg-gray-800 border-b border-gray-700">
+            <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
                 <div className="flex items-center gap-3">
                     <ImageIcon className="w-5 h-5 text-orange-500" />
                     <div>
-                        <h3 className="text-white font-medium">{fileName || 'Image Document'}</h3>
-                        <p className="text-gray-400 text-sm">Image Viewer</p>
+                        <h3 className="font-medium text-white">{fileName || 'Image Document'}</h3>
+                        <p className="text-sm text-gray-400">Image Viewer</p>
                     </div>
                 </div>
 
                 {/* Controls */}
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-gray-700 rounded-lg p-1">
+                    <div className="flex items-center gap-1 p-1 bg-gray-700 rounded-lg">
                         <button
                             onClick={zoomOut}
-                            className="p-2 hover:bg-gray-600 rounded-md text-white"
+                            className="p-2 text-white rounded-md hover:bg-gray-600"
                             title="Zoom Out"
                         >
                             <ZoomOutIcon className="w-4 h-4" />
@@ -125,7 +126,7 @@ const ImageViewer: React.FC<{
 
                         <button
                             onClick={zoomIn}
-                            className="p-2 hover:bg-gray-600 rounded-md text-white"
+                            className="p-2 text-white rounded-md hover:bg-gray-600"
                             title="Zoom In"
                         >
                             <ZoomInIcon className="w-4 h-4" />
@@ -134,7 +135,7 @@ const ImageViewer: React.FC<{
 
                     <button
                         onClick={rotate}
-                        className="p-2 hover:bg-gray-600 rounded-md text-white"
+                        className="p-2 text-white rounded-md hover:bg-gray-600"
                         title="Rotate"
                     >
                         <RotateCw className="w-4 h-4" />
@@ -142,7 +143,7 @@ const ImageViewer: React.FC<{
 
                     <button
                         onClick={toggleFullscreen}
-                        className="p-2 hover:bg-gray-600 rounded-md text-white"
+                        className="p-2 text-white rounded-md hover:bg-gray-600"
                         title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                     >
                         {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -150,7 +151,7 @@ const ImageViewer: React.FC<{
 
                     <button
                         onClick={downloadImage}
-                        className="p-2 hover:bg-gray-600 rounded-md text-white"
+                        className="p-2 text-white rounded-md hover:bg-gray-600"
                         title="Download Image"
                     >
                         <Download className="w-4 h-4" />
@@ -159,7 +160,7 @@ const ImageViewer: React.FC<{
                     {onClose && (
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-gray-600 rounded-md text-white"
+                            className="p-2 text-white rounded-md hover:bg-gray-600"
                             title="Close"
                         >
                             <X className="w-4 h-4" />
@@ -184,8 +185,8 @@ const ImageViewer: React.FC<{
                         <div className="flex flex-col items-center gap-3 text-center">
                             <AlertCircle className="w-12 h-12 text-red-400" />
                             <div>
-                                <p className="text-white font-medium">Failed to load image</p>
-                                <p className="text-gray-400 text-sm">{error}</p>
+                                <p className="font-medium text-white">Failed to load image</p>
+                                <p className="text-sm text-gray-400">{error}</p>
                             </div>
                         </div>
                     </div>
@@ -203,7 +204,7 @@ const ImageViewer: React.FC<{
                             transformOrigin: 'center',
                             transition: 'transform 0.2s ease'
                         }}
-                        className="max-w-none shadow-lg rounded-lg"
+                        className="rounded-lg shadow-lg max-w-none"
                     />
                 </div>
             </div>
@@ -211,7 +212,7 @@ const ImageViewer: React.FC<{
     );
 };
 
-// PDF Viewer Component
+// PDF Viewer Component with Signature Placement
 const PDFViewer: React.FC<{
     fileUrl: string;
     fileName?: string;
@@ -223,6 +224,9 @@ const PDFViewer: React.FC<{
     const [error, setError] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [actualFileUrl, setActualFileUrl] = useState(fileUrl);
+    const [placingSignature, setPlacingSignature] = useState(false);
+    const [signatureBoxes, setSignatureBoxes] = useState<{ x: number; y: number; value: string }[]>([]);
+    const pdfContainerRef = useRef<HTMLDivElement>(null);
 
     // Check if file exists and fallback to public directory if needed
     useEffect(() => {
@@ -243,7 +247,6 @@ const PDFViewer: React.FC<{
                 console.error('Error checking file existence:', error);
             }
         };
-
         checkFileExists();
     }, [fileUrl]);
 
@@ -273,6 +276,22 @@ const PDFViewer: React.FC<{
         window.open(actualFileUrl, '_blank');
     };
 
+    // Handle click to place signature box
+    const handlePdfClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        if (!placingSignature || !pdfContainerRef.current) return;
+        const rect = pdfContainerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        setSignatureBoxes([...signatureBoxes, { x, y, value: '' }]);
+        setPlacingSignature(false);
+    };
+
+    // Handle signature input
+    const handleSignatureChange = (idx: number, value: string) => {
+        setSignatureBoxes(boxes => boxes.map((box, i) => i === idx ? { ...box, value } : box));
+    };
+
+    // Render
     return (
         <div
             className={cn(
@@ -283,12 +302,12 @@ const PDFViewer: React.FC<{
             style={{ height: isFullscreen ? '100vh' : height }}
         >
             {/* Header */}
-            <div className="flex justify-between items-center p-4 bg-gray-800 border-b border-gray-700">
+            <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
                 <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-orange-500" />
                     <div>
-                        <h3 className="text-white font-medium">{fileName || 'PDF Document'}</h3>
-                        <p className="text-gray-400 text-sm">PDF Viewer</p>
+                        <h3 className="font-medium text-white">{fileName || 'PDF Document'}</h3>
+                        <p className="text-sm text-gray-400">PDF Viewer</p>
                     </div>
                 </div>
 
@@ -296,7 +315,7 @@ const PDFViewer: React.FC<{
                 <div className="flex items-center gap-2">
                     <button
                         onClick={openInNewTab}
-                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white text-sm"
+                        className="px-3 py-2 text-sm text-white bg-gray-700 rounded-md hover:bg-gray-600"
                         title="Open in New Tab"
                     >
                         Open in New Tab
@@ -304,7 +323,7 @@ const PDFViewer: React.FC<{
 
                     <button
                         onClick={toggleFullscreen}
-                        className="p-2 hover:bg-gray-600 rounded-md text-white"
+                        className="p-2 text-white rounded-md hover:bg-gray-600"
                         title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                     >
                         {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -312,16 +331,25 @@ const PDFViewer: React.FC<{
 
                     <button
                         onClick={downloadPDF}
-                        className="p-2 hover:bg-gray-600 rounded-md text-white"
+                        className="p-2 text-white rounded-md hover:bg-gray-600"
                         title="Download PDF"
                     >
                         <Download className="w-4 h-4" />
                     </button>
 
+                    {/* Place Signature Button */}
+                    <button
+                        onClick={() => setPlacingSignature(true)}
+                        className={`p-2 text-white rounded-md ${placingSignature ? 'bg-orange-500' : 'hover:bg-gray-600'} transition`}
+                        title="Place Signature"
+                    >
+                        Place Signature
+                    </button>
+
                     {onClose && (
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-gray-600 rounded-md text-white"
+                            className="p-2 text-white rounded-md hover:bg-gray-600"
                             title="Close"
                         >
                             <X className="w-4 h-4" />
@@ -330,10 +358,15 @@ const PDFViewer: React.FC<{
                 </div>
             </div>
 
-            {/* PDF Content */}
-            <div className="relative" style={{ height: 'calc(100% - 73px)' }}>
+            {/* PDF Content with Signature Overlay */}
+            <div
+                className="relative w-full h-full bg-gray-100"
+                style={{ height: 'calc(100% - 73px)' }}
+                ref={pdfContainerRef}
+                onClick={handlePdfClick}
+            >
                 {loading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-900">
                         <div className="flex flex-col items-center gap-3">
                             <Loader className="w-8 h-8 text-orange-500 animate-spin" />
                             <p className="text-gray-400">Loading PDF...</p>
@@ -342,15 +375,15 @@ const PDFViewer: React.FC<{
                 )}
 
                 {error && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-900">
                         <div className="flex flex-col items-center gap-3 text-center">
                             <AlertCircle className="w-12 h-12 text-red-400" />
                             <div>
-                                <p className="text-white font-medium">Failed to load PDF</p>
-                                <p className="text-gray-400 text-sm">{error}</p>
+                                <p className="font-medium text-white">Failed to load PDF</p>
+                                <p className="text-sm text-gray-400">{error}</p>
                                 <button
                                     onClick={openInNewTab}
-                                    className="mt-3 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg"
+                                    className="px-4 py-2 mt-3 text-white bg-orange-500 rounded-lg hover:bg-orange-600"
                                 >
                                     Open in New Tab
                                 </button>
@@ -359,6 +392,7 @@ const PDFViewer: React.FC<{
                     </div>
                 )}
 
+                {/* PDF Iframe */}
                 <iframe
                     src={`${actualFileUrl}#toolbar=1&navpanes=1&scrollbar=1`}
                     width="100%"
@@ -367,7 +401,43 @@ const PDFViewer: React.FC<{
                     onError={handleIframeError}
                     className="border-0"
                     title={fileName || 'PDF Document'}
+                    style={{ pointerEvents: placingSignature ? 'none' : 'auto' }}
                 />
+
+                {/* Signature Boxes Overlay */}
+                {signatureBoxes.map((box, idx) => (
+                    <Draggable
+                        key={idx}
+                        defaultPosition={{ x: box.x, y: box.y }}
+                        onStop={(_, data) => {
+                            setSignatureBoxes(boxes => boxes.map((b, i) => i === idx ? { ...b, x: data.x, y: data.y } : b));
+                        }}
+                        bounds="parent"
+                    >
+                        <div
+                            className="absolute px-4 py-2 bg-white border-2 border-orange-500 border-dashed rounded shadow-lg cursor-move bg-opacity-80"
+                            style={{ minWidth: 120, minHeight: 40, zIndex: 20 }}
+                        >
+                            {box.value ? (
+                                <span style={{ fontFamily: 'cursive', fontSize: 20, color: '#f59e42' }}>{box.value}</span>
+                            ) : (
+                                <input
+                                    type="text"
+                                    placeholder="Type signature"
+                                    className="w-full text-lg font-semibold text-orange-500 bg-transparent outline-none"
+                                    autoFocus
+                                    onBlur={e => handleSignatureChange(idx, e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            handleSignatureChange(idx, (e.target as HTMLInputElement).value);
+                                            (e.target as HTMLInputElement).blur();
+                                        }
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </Draggable>
+                ))}
             </div>
         </div>
     );
@@ -417,14 +487,14 @@ export default function UniversalDocumentViewer({
                 <div className="flex flex-col items-center gap-3 text-center">
                     <AlertCircle className="w-12 h-12 text-red-400" />
                     <div>
-                        <p className="text-white font-medium">Unable to load document</p>
-                        <p className="text-gray-400 text-sm">{error || 'Unsupported file type'}</p>
-                        <p className="text-gray-500 text-xs mt-2">Supported formats: PDF, JPG, PNG, GIF, WebP, SVG</p>
+                        <p className="font-medium text-white">Unable to load document</p>
+                        <p className="text-sm text-gray-400">{error || 'Unsupported file type'}</p>
+                        <p className="mt-2 text-xs text-gray-500">Supported formats: PDF, JPG, PNG, GIF, WebP, SVG</p>
                     </div>
                     {onClose && (
                         <button
                             onClick={onClose}
-                            className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                            className="px-4 py-2 mt-4 text-white bg-gray-700 rounded-lg hover:bg-gray-600"
                         >
                             Close
                         </button>
@@ -440,7 +510,7 @@ export default function UniversalDocumentViewer({
             <ImageViewer
                 fileUrl={fileUrl}
                 fileName={fileName}
-                onCloseAction={onClose}
+                onClose={onClose}
                 className={className}
                 height={height}
             />
