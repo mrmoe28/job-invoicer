@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { TrpcProvider } from '../providers'
 import { AuthProvider } from '../providers/auth-provider'
+import ErrorHandler from '../components/error-handler'
 import './globals.css'
 
 const inter = Inter({
@@ -68,11 +69,13 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} antialiased`}>
-        <AuthProvider>
-          <TrpcProvider>
-            {children}
-          </TrpcProvider>
-        </AuthProvider>
+        <ErrorHandler>
+          <AuthProvider>
+            <TrpcProvider>
+              {children}
+            </TrpcProvider>
+          </AuthProvider>
+        </ErrorHandler>
         <Analytics />
         <SpeedInsights />
       </body>
