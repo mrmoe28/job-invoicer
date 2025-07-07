@@ -64,3 +64,4 @@ apps/web/data/*.json
 Thumbs.db
 ehthumbs.db
 .vercel
+node_modules/
