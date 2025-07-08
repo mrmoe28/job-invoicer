@@ -75,97 +75,116 @@ export default function DocumentsPage() {
 
   // Mock data - in production, this would come from API calls
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setDocuments([
-        {
-          id: '1',
-          fileName: 'solar_installation_contract.pdf',
-          title: 'Solar Installation Contract - Johnson Residence',
-          fileType: 'pdf',
-          fileSize: 2458000,
-          category: 'contract',
-          status: 'active',
-          uploadedBy: 'John Smith',
-          createdAt: '2024-12-28T10:30:00Z',
-          hasSignatures: true,
-          signatures: [
-            {
-              id: '1',
-              signerName: 'Sarah Johnson',
-              signerEmail: 'sarah.johnson@email.com',
-              status: 'signed',
-              signedAt: '2024-12-28T14:20:00Z',
-              signerRole: 'customer'
-            },
-            {
-              id: '2',
-              signerName: 'Mike Davis',
-              signerEmail: 'mike.davis@pulsecrm.com',
-              status: 'signed',
-              signedAt: '2024-12-28T15:45:00Z',
-              signerRole: 'contractor'
-            }
-          ]
-        },
-        {
-          id: '2',
-          fileName: 'permit_application_williams.pdf',
-          title: 'Building Permit Application - Williams Property',
-          fileType: 'pdf',
-          fileSize: 1892000,
-          category: 'permit',
-          status: 'active',
-          uploadedBy: 'Lisa Chen',
-          createdAt: '2024-12-27T09:15:00Z',
-          hasSignatures: true,
-          signatures: [
-            {
-              id: '3',
-              signerName: 'Robert Williams',
-              signerEmail: 'robert.williams@email.com',
-              status: 'pending',
-              signerRole: 'property_owner'
-            }
-          ]
-        },
-        {
-          id: '3',
-          fileName: 'energy_assessment_martinez.pdf',
-          title: 'Energy Assessment Report - Martinez Home',
-          fileType: 'pdf',
-          fileSize: 3421000,
-          category: 'assessment',
-          status: 'active',
-          uploadedBy: 'Tom Wilson',
-          createdAt: '2024-12-26T16:20:00Z',
-          hasSignatures: false,
-          signatures: []
-        },
-        {
-          id: '4',
-          fileName: 'warranty_documentation_garcia.pdf',
-          title: 'Solar Panel Warranty - Garcia Installation',
-          fileType: 'pdf',
-          fileSize: 1567000,
-          category: 'warranty',
-          status: 'active',
-          uploadedBy: 'Anna Rodriguez',
-          createdAt: '2024-12-25T11:10:00Z',
-          hasSignatures: true,
-          signatures: [
-            {
-              id: '4',
-              signerName: 'Carlos Garcia',
-              signerEmail: 'carlos.garcia@email.com',
-              status: 'declined',
-              signerRole: 'customer'
-            }
-          ]
+    const fetchDocuments = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Try to fetch from API first
+        try {
+          const response = await fetch('/api/documents?organizationId=org_default');
+          if (response.ok) {
+            const data = await response.json();
+            setDocuments(data.documents || []);
+            return;
+          }
+        } catch (apiError) {
+          console.log('API not available, using mock data');
         }
-      ]);
-      setIsLoading(false);
-    }, 1000);
+        
+        // Fallback to mock data if API is not available
+        setDocuments([
+          {
+            id: '1',
+            fileName: 'solar_installation_contract.pdf',
+            title: 'Solar Installation Contract - Johnson Residence',
+            fileType: 'pdf',
+            fileSize: 2458000,
+            category: 'contract',
+            status: 'active',
+            uploadedBy: 'John Smith',
+            createdAt: '2024-12-28T10:30:00Z',
+            hasSignatures: true,
+            signatures: [
+              {
+                id: '1',
+                signerName: 'Sarah Johnson',
+                signerEmail: 'sarah.johnson@email.com',
+                status: 'signed',
+                signedAt: '2024-12-28T14:20:00Z',
+                signerRole: 'customer'
+              },
+              {
+                id: '2',
+                signerName: 'Mike Davis',
+                signerEmail: 'mike.davis@pulsecrm.com',
+                status: 'signed',
+                signedAt: '2024-12-28T15:45:00Z',
+                signerRole: 'contractor'
+              }
+            ]
+          },
+          {
+            id: '2',
+            fileName: 'permit_application_williams.pdf',
+            title: 'Building Permit Application - Williams Property',
+            fileType: 'pdf',
+            fileSize: 1892000,
+            category: 'permit',
+            status: 'active',
+            uploadedBy: 'Lisa Chen',
+            createdAt: '2024-12-27T09:15:00Z',
+            hasSignatures: true,
+            signatures: [
+              {
+                id: '3',
+                signerName: 'Robert Williams',
+                signerEmail: 'robert.williams@email.com',
+                status: 'pending',
+                signerRole: 'property_owner'
+              }
+            ]
+          },
+          {
+            id: '3',
+            fileName: 'energy_assessment_martinez.pdf',
+            title: 'Energy Assessment Report - Martinez Home',
+            fileType: 'pdf',
+            fileSize: 3421000,
+            category: 'assessment',
+            status: 'active',
+            uploadedBy: 'Tom Wilson',
+            createdAt: '2024-12-26T16:20:00Z',
+            hasSignatures: false,
+            signatures: []
+          },
+          {
+            id: '4',
+            fileName: 'warranty_documentation_garcia.pdf',
+            title: 'Solar Panel Warranty - Garcia Installation',
+            fileType: 'pdf',
+            fileSize: 1567000,
+            category: 'warranty',
+            status: 'active',
+            uploadedBy: 'Anna Rodriguez',
+            createdAt: '2024-12-25T11:10:00Z',
+            hasSignatures: true,
+            signatures: [
+              {
+                id: '4',
+                signerName: 'Carlos Garcia',
+                signerEmail: 'carlos.garcia@email.com',
+                status: 'declined',
+                signerRole: 'customer'
+              }
+            ]
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDocuments();
   }, []);
 
   const filteredDocuments = documents.filter(doc => {
@@ -219,12 +238,47 @@ export default function DocumentsPage() {
     return { status: 'none', label: 'No signatures', color: 'bg-gray-100 text-gray-800' };
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    try {
+      setIsLoading(true);
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('organizationId', 'org_default'); // In production, get from auth context
+      formData.append('uploadedByUserId', 'user_default'); // In production, get from auth context
+      formData.append('category', 'contract'); // Default category for now
+      formData.append('title', file.name);
+      formData.append('description', 'Uploaded via Documents page');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+      
+      // Add the new document to the list
+      setDocuments(prev => [result.document, ...prev]);
+      
       success(`File "${file.name}" uploaded successfully!`);
       setIsUploadOpen(false);
-      // In production, this would upload to the server
+      
+      // Reset the file input
+      event.target.value = '';
+      
+    } catch (err) {
+      console.error('Upload error:', err);
+      error(err instanceof Error ? err.message : 'Failed to upload file');
+    } finally {
+      setIsLoading(false);
     }
   };
 
