@@ -1,82 +1,40 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createUser, getAllUsers } from "../../../lib/database-postgres";
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@pulsecrm/db';
+import { organizations, users } from '@pulsecrm/db';
 
 export async function GET(request: NextRequest) {
-    try {
-        const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-        const hasPostgres = !!process.env.POSTGRES_URL;
+  try {
+    console.log('🔍 Testing database connection...');
+    
+    // Test basic database connection
+    const orgs = await db.select().from(organizations).limit(1);
+    const usersList = await db.select().from(users).limit(1);
+    
+    console.log('✅ Database test successful');
+    console.log('📊 Organizations found:', orgs.length);
+    console.log('👥 Users found:', usersList.length);
+    
+    return NextResponse.json({
+      status: 'success',
+      message: 'Database connection working',
+      data: {
+        organizations: orgs.length,
+        users: usersList.length,
+        sampleOrg: orgs[0] ? { id: orgs[0].id, name: orgs[0].name } : null,
+        sampleUser: usersList[0] ? { id: usersList[0].id, email: usersList[0].email } : null
+      }
+    });
 
-        console.log('Database test endpoint called');
-        console.log('Environment:', {
-            isVercel,
-            hasPostgres,
-            nodeEnv: process.env.NODE_ENV,
-            platform: process.platform
-        });
-
-        // Get all users to test read functionality
-        const users = await getAllUsers();
-
-        return NextResponse.json({
-            success: true,
-            environment: isVercel ? 'Vercel' : 'Local',
-            databaseType: hasPostgres ? 'Postgres' : (isVercel ? 'Memory' : 'File'),
-            userCount: users.length,
-            users: users.map(u => ({ id: u.id, email: u.email, name: `${u.firstName} ${u.lastName}` })),
-            timestamp: new Date().toISOString()
-        });
-
-    } catch (error) {
-        console.error("Database test error:", error);
-        console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-
-        return NextResponse.json(
-            {
-                error: "Database test failed",
-                details: error instanceof Error ? error.message : String(error),
-                environment: process.env.VERCEL === '1' ? 'Vercel' : 'Local'
-            },
-            { status: 500 }
-        );
-    }
+  } catch (error) {
+    console.error('❌ Database test failed:', error);
+    
+    return NextResponse.json(
+      { 
+        status: 'error',
+        message: 'Database connection failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
 }
-
-export async function POST(request: NextRequest) {
-    try {
-        const { testUser } = await request.json();
-
-        if (testUser) {
-            // Create a test user
-            const result = await createUser({
-                email: `test-${Date.now()}@vercel.com`,
-                password: 'testpassword123',
-                firstName: 'Test',
-                lastName: 'User',
-                organizationName: 'Test Org'
-            });
-
-            return NextResponse.json({
-                success: true,
-                message: 'Test user created successfully',
-                user: {
-                    id: result.user.id,
-                    email: result.user.email,
-                    name: `${result.user.firstName} ${result.user.lastName}`
-                }
-            });
-        }
-
-        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-
-    } catch (error) {
-        console.error("Database test POST error:", error);
-
-        return NextResponse.json(
-            {
-                error: "Database test POST failed",
-                details: error instanceof Error ? error.message : String(error)
-            },
-            { status: 500 }
-        );
-    }
-} 

@@ -72,6 +72,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('contract');
 
   // Mock data - in production, this would come from API calls
   useEffect(() => {
@@ -242,29 +243,40 @@ export default function DocumentsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log('📤 Starting file upload:', file.name, file.type, file.size);
+
     try {
       setIsLoading(true);
       
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('organizationId', 'org_default'); // In production, get from auth context
-      formData.append('uploadedByUserId', 'user_default'); // In production, get from auth context
-      formData.append('category', 'contract'); // Default category for now
-      formData.append('title', file.name);
-      formData.append('description', 'Uploaded via Documents page');
+      formData.append('organizationId', '69dbb846-b799-42f8-91be-164ae3a589c4'); // Use actual org ID from database
+      formData.append('uploadedByUserId', '1026dab7-7ffc-45a3-82c7-e6eb961756cd'); // Use actual user ID from database
+      formData.append('category', selectedCategory);
+      formData.append('title', file.name.replace(/\.[^/.]+$/, "")); // Remove file extension
+      formData.append('description', `Uploaded ${selectedCategory} document via Documents page`);
+
+      console.log('📋 FormData prepared:', {
+        fileName: file.name,
+        category: selectedCategory,
+        fileSize: file.size,
+        fileType: file.type
+      });
 
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
+      console.log('📡 Upload response status:', response.status);
 
       const result = await response.json();
-      
+      console.log('📄 Upload response data:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || result.details || 'Upload failed');
+      }
+
       // Add the new document to the list
       setDocuments(prev => [result.document, ...prev]);
       
@@ -275,8 +287,9 @@ export default function DocumentsPage() {
       event.target.value = '';
       
     } catch (err) {
-      console.error('Upload error:', err);
-      error(err instanceof Error ? err.message : 'Failed to upload file');
+      console.error('❌ Upload error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload file';
+      error(`Upload failed: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -348,16 +361,24 @@ export default function DocumentsPage() {
                   </label>
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
                     onChange={handleFileUpload}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    disabled={isLoading}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Supported formats: PDF, Word documents, Images (max 10MB)
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Category
                   </label>
-                  <select className="w-full px-3 py-2 border rounded-md">
+                  <select 
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
                     <option value="contract">Contract</option>
                     <option value="permit">Permit</option>
                     <option value="assessment">Assessment</option>
@@ -366,6 +387,13 @@ export default function DocumentsPage() {
                     <option value="invoice">Invoice</option>
                   </select>
                 </div>
+                
+                {isLoading && (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-sm text-gray-600">Uploading...</span>
+                  </div>
+                )}
               </div>
             </DialogContent>
           </Dialog>
