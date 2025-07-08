@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # Vercel Deployment Build Script for ConstructFlow/PulseCRM
-# This script ensures proper build process for monorepo deployment
+# This script ensures proper build process for monorepo deployment using NPM
 
 set -e
 
-echo "🚀 Starting ConstructFlow build process..."
+echo "🚀 Starting ConstructFlow build process with NPM..."
 
 # Check Node.js version
 echo "📋 Node.js version: $(node --version)"
-echo "📋 pnpm version: $(pnpm --version)"
+echo "📋 npm version: $(npm --version)"
 
 # Install dependencies
 echo "📦 Installing dependencies..."
-pnpm install --frozen-lockfile
+npm install --no-frozen-lockfile --legacy-peer-deps
 
 # Build the web application
 echo "🔧 Building web application..."
@@ -23,7 +23,7 @@ cd apps/web
 rm -rf .next
 
 # Run the build
-pnpm run build
+npm run build
 
 echo "✅ Build completed successfully!"
 

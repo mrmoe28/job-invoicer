@@ -14,4 +14,4 @@ lsof -ti:3010 | xargs kill -9 2>/dev/null || true
 rm -rf apps/web/.next
 
 # Start the development server
-pnpm dev
+npm run dev

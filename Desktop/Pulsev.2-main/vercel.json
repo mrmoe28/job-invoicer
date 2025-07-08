@@ -1,12 +1,28 @@
 {
+  "version": 2,
+  "name": "pulsecrm",
   "installCommand": "npm install --no-frozen-lockfile --legacy-peer-deps",
   "buildCommand": "npm run build",
   "framework": "nextjs",
   "outputDirectory": "apps/web/.next",
+  "regions": ["iad1"],
   "env": {
     "ENABLE_EXPERIMENTAL_COREPACK": "0",
     "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
-    "NPM_CONFIG_PACKAGE_LOCK": "false"
+    "NPM_CONFIG_PACKAGE_LOCK": "false",
+    "NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "0",
+      "NODE_ENV": "production",
+      "TURBO_TELEMETRY_DISABLED": "1"
+    }
+  },
+  "functions": {
+    "apps/web/app/api/**": {
+      "maxDuration": 30
+    }
   },
   "headers": [
     {

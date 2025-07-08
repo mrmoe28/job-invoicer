@@ -8,6 +8,11 @@ pnpm-workspace.yaml
 bun.lock
 yarn.lock
 
+# Scripts that reference pnpm
+scripts/build-vercel-old.sh
+deployment/vercel/
+start-*pnpm*.sh
+
 # Build outputs (except the ones needed)
 .turbo/
 dist/

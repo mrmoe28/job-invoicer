@@ -12,4 +12,4 @@ nvm use 20
 echo "Using Node version: $(node --version)"
 
 # Start the development server
-pnpm dev
+npm run dev
