@@ -64,3 +64,9 @@ apps/web/data/*.json
 Thumbs.db
 ehthumbs.db
 .vercel
+
+# Documentation files
+*.md
+README*
+CHANGELOG*
+docs/
