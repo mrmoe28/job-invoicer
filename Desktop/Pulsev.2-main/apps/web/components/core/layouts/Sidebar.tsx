@@ -62,6 +62,12 @@ const navigationItems: NavItem[] = [
     icon: Building,
   },
   {
+    title: 'Documents',
+    href: '/dashboard/documents',
+    icon: FileText,
+    badge: 3, // Example: pending signatures
+  },
+  {
     title: 'Schedule',
     href: '/dashboard/scheduling',
     icon: Calendar,

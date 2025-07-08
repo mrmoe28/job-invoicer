@@ -451,3 +451,111 @@ export const userSessionsRelations = relations(userSessions, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// Document Signatures table - for e-signature functionality
+export const documentSignatures = pgTable('document_signatures', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  documentId: uuid('document_id').references(() => documents.id).notNull(),
+  signerId: uuid('signer_id').references(() => users.id), // can be null for external signers
+  signerName: varchar('signer_name', { length: 255 }).notNull(),
+  signerEmail: varchar('signer_email', { length: 255 }).notNull(),
+  signerRole: varchar('signer_role', { length: 100 }), // customer, contractor, witness, etc.
+  signatureData: text('signature_data'), // base64 encoded signature image
+  signatureType: varchar('signature_type', { length: 50 }).notNull().default('draw'), // draw, type, upload
+  ipAddress: varchar('ip_address', { length: 45 }),
+  userAgent: text('user_agent'),
+  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, signed, declined, expired
+  signedAt: timestamp('signed_at'),
+  expiredAt: timestamp('expired_at'),
+  declinedAt: timestamp('declined_at'),
+  declineReason: text('decline_reason'),
+  verificationCode: varchar('verification_code', { length: 10 }), // optional SMS verification
+  isEmailSent: boolean('is_email_sent').notNull().default(false),
+  emailSentAt: timestamp('email_sent_at'),
+  remindersSent: integer('reminders_sent').notNull().default(0),
+  lastReminderAt: timestamp('last_reminder_at'),
+  signaturePosition: jsonb('signature_position'), // {x, y, width, height, page}
+  notes: text('notes'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  documentIdx: index('document_signatures_document_idx').on(table.documentId),
+  signerIdx: index('document_signatures_signer_idx').on(table.signerId),
+  emailIdx: index('document_signatures_email_idx').on(table.signerEmail),
+  statusIdx: index('document_signatures_status_idx').on(table.status),
+  orgIdx: index('document_signatures_org_idx').on(table.organizationId),
+}));
+
+// Document Templates table - for reusable document templates
+export const documentTemplates = pgTable('document_templates', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  category: varchar('category', { length: 100 }), // contract, proposal, invoice, etc.
+  templateType: varchar('template_type', { length: 50 }).notNull().default('pdf'), // pdf, html, docx
+  templateData: text('template_data'), // HTML content or file path
+  filePath: varchar('file_path', { length: 500 }), // for uploaded template files
+  signatureFields: jsonb('signature_fields'), // array of signature field positions
+  variables: jsonb('variables'), // template variables for dynamic content
+  isDefault: boolean('is_default').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
+  createdByUserId: uuid('created_by_user_id').references(() => users.id).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  nameIdx: index('document_templates_name_idx').on(table.name),
+  categoryIdx: index('document_templates_category_idx').on(table.category),
+  typeIdx: index('document_templates_type_idx').on(table.templateType),
+  orgIdx: index('document_templates_org_idx').on(table.organizationId),
+}));
+
+// Update document signatures relations
+export const documentSignaturesRelations = relations(documentSignatures, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [documentSignatures.organizationId],
+    references: [organizations.id],
+  }),
+  document: one(documents, {
+    fields: [documentSignatures.documentId],
+    references: [documents.id],
+  }),
+  signer: one(users, {
+    fields: [documentSignatures.signerId],
+    references: [users.id],
+  }),
+}));
+
+export const documentTemplatesRelations = relations(documentTemplates, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [documentTemplates.organizationId],
+    references: [organizations.id],
+  }),
+  createdBy: one(users, {
+    fields: [documentTemplates.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+// Add many-to-many relations for documents
+export const documentsRelationsUpdated = relations(documents, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [documents.organizationId],
+    references: [organizations.id],
+  }),
+  job: one(jobs, {
+    fields: [documents.jobId],
+    references: [jobs.id],
+  }),
+  contact: one(contacts, {
+    fields: [documents.contactId],
+    references: [contacts.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [documents.uploadedByUserId],
+    references: [users.id],
+  }),
+  signatures: many(documentSignatures),
+}));

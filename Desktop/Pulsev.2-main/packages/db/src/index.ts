@@ -4,10 +4,11 @@ import * as schema from './schema';
 // Environment detection
 const isProduction = process.env.NODE_ENV === 'production';
 const isVercel = process.env.VERCEL === '1';
+const hasPostgresUrl = process.env.POSTGRES_URL && process.env.POSTGRES_URL.startsWith('postgres');
 const hasDatabaseUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres');
 
-// Use PostgreSQL for production/Vercel or if DATABASE_URL is provided
-const usePostgres = isProduction || isVercel || hasDatabaseUrl;
+// Use PostgreSQL for production/Vercel or if POSTGRES_URL/DATABASE_URL is provided
+const usePostgres = isProduction || isVercel || hasPostgresUrl || hasDatabaseUrl;
 
 let db: any;
 let checkDatabaseConnection: () => Promise<boolean>;
@@ -20,7 +21,7 @@ if (usePostgres) {
   const { drizzle } = require('drizzle-orm/postgres-js');
   const postgres = require('postgres');
   
-  const connectionString = process.env.DATABASE_URL || 'postgresql://localhost:5432/pulsecrm';
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://localhost:5432/pulsecrm';
   const sql = postgres(connectionString);
   
   db = drizzle(sql, { 

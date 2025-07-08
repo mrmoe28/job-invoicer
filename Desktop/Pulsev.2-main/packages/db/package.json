@@ -9,7 +9,7 @@
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.js migrate",
-    "db:generate": "node scripts/migrate.js generate", 
+    "db:generate": "node scripts/migrate.js generate",
     "db:seed": "node scripts/migrate.js seed",
     "db:reset": "node scripts/migrate.js reset",
     "db:reset-seed": "node scripts/migrate.js reset-seed",
@@ -21,16 +21,17 @@
     "db:sqlite:studio": "drizzle-kit studio --config=drizzle.config.sqlite.ts"
   },
   "dependencies": {
-    "drizzle-orm": "^0.29.1",
-    "postgres": "^3.4.3",
-    "pg": "^8.11.3"
+    "@neondatabase/serverless": "^0.9.1",
+    "drizzle-orm": "^0.29.5",
+    "pg": "^8.11.3",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
     "@types/node": "^20.10.5",
     "@types/pg": "^8.10.9",
-    "drizzle-kit": "^0.20.6",
-    "typescript": "^5.3.3",
     "better-sqlite3": "^9.2.2",
-    "@types/better-sqlite3": "^7.6.8"
+    "drizzle-kit": "^0.20.6",
+    "typescript": "^5.3.3"
   }
 }
