@@ -263,7 +263,7 @@ export default function DocumentsPage() {
         fileType: file.type
       });
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/api/upload-simple', {
         method: 'POST',
         body: formData,
       });
@@ -317,6 +317,17 @@ export default function DocumentsPage() {
       sidebarCollapsed={sidebarCollapsed}
       onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
     >
+      {/* Debug Section - Remove in production */}
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-medium text-blue-900 mb-2">Debug Information</h3>
+        <div className="text-sm text-blue-800">
+          <p>Documents loaded: {documents.length}</p>
+          <p>Upload API: /api/upload-simple (test mode)</p>
+          <p>Selected category: {selectedCategory}</p>
+          <p>Loading state: {isLoading ? 'true' : 'false'}</p>
+        </div>
+      </div>
+
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
