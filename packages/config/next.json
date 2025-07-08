@@ -17,7 +17,7 @@
     "moduleResolution": "node",
     "noEmit": true,
     "resolveJsonModule": true,
-    "strict": false,
+    "strict": true,
     "target": "es5"
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],

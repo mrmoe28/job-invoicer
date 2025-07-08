@@ -45,4 +45,23 @@ export async function sendPasswordResetEmail({
     console.error('Email service error:', error);
     throw new Error('Failed to send password reset email');
   }
+}
+
+export async function sendPasswordChangedEmail({
+  email,
+  firstName
+}: {
+  email: string;
+  firstName: string;
+}) {
+  try {
+    // Development mode - just log the email
+    console.log(`📧 [DEV] Password changed notification for ${firstName} (${email})`);
+    console.log('✅ Your password has been successfully changed');
+
+    return { success: true, messageId: 'dev-mode-password-changed' };
+  } catch (error) {
+    console.error('Email service error:', error);
+    throw new Error('Failed to send password changed email');
+  }
 } 
