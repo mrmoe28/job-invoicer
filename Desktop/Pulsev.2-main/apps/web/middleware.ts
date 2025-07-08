@@ -17,6 +17,8 @@ export function middleware(request: NextRequest) {
     '/test-upload',
     '/api/documents/upload-simple',
     '/api/files',
+    '/api/documents',  // Add documents API
+    '/api/docs',       // Add docs API
   ];
   
   // Check if the path is public

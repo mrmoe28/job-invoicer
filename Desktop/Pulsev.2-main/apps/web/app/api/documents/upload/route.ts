@@ -1,185 +1,196 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
-import crypto from 'crypto';
-import { db } from '@/lib/db';
-import { documents } from '@/lib/db-schema';
+import path from 'path';
 
-// Configure Next.js to handle larger file uploads
-export const config = {
-  api: {
-    bodyParser: false, // Disable the default body parser to handle larger files
-    responseLimit: '8mb', // Increase response size limit for base64 data
-  },
-};
+// Constants
+const DATA_DIR = path.join(process.cwd(), 'apps/web/data');
+const DOCS_FILE = path.join(DATA_DIR, 'documents.json');
+const IS_DEV = process.env.NODE_ENV === 'development';
 
-export async function POST(request: NextRequest) {
-  console.log('Document upload API route called');
+// Document interface
+interface Document {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  category: string;
+  uploadDate: string;
+  url: string;
+  status: 'draft' | 'pending' | 'signed';
+  uploadedBy?: string;
+}
+
+// Helper functions
+async function ensureDataDir() {
+  if (!existsSync(DATA_DIR)) {
+    await mkdir(DATA_DIR, { recursive: true });
+  }
+}
+
+async function getDocuments(): Promise<Document[]> {
+  await ensureDataDir();
   
+  if (existsSync(DOCS_FILE)) {
+    try {
+      const data = await readFile(DOCS_FILE, 'utf-8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error('Error reading documents file:', error);
+      return [];
+    }
+  }
+  return [];
+}
+
+async function saveDocuments(documents: Document[]): Promise<void> {
+  await ensureDataDir();
+  await writeFile(DOCS_FILE, JSON.stringify(documents, null, 2));
+}
+
+function sanitizeFilename(filename: string): string {
+  // Remove or replace problematic characters
+  return filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+}
+
+// POST - Upload a document
+export async function POST(request: NextRequest) {
   try {
+    // Check if request is multipart/form-data
+    const contentType = request.headers.get('content-type');
+    if (!contentType?.includes('multipart/form-data')) {
+      return NextResponse.json(
+        { error: 'Content-Type must be multipart/form-data' }, 
+        { status: 400 }
+      );
+    }
+
     // Parse form data
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const category = (formData.get('category') as string) || 'contract';
     
-    if (!file) {
-      console.error('No file uploaded');
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
-    }
-    
-    console.log(`Uploading file: ${file.name} ${file.size}`);
-
-    // Check file type and size
-    if (!file.type.includes('pdf') && !file.name.endsWith('.pdf')) {
-      console.error('Invalid file type', file.type);
-      return NextResponse.json({ error: 'Only PDF files are allowed' }, { status: 400 });
+    // Validate file
+    if (!file || !(file instanceof File)) {
+      return NextResponse.json(
+        { error: 'No valid file provided' }, 
+        { status: 400 }
+      );
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      console.error('File too large', file.size);
-      return NextResponse.json({ error: 'File size exceeds 10MB limit' }, { status: 400 });
+    // Validate file type (PDF only)
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json(
+        { error: 'Only PDF files are allowed' }, 
+        { status: 400 }
+      );
     }
 
-    // Generate unique ID and filename
-    const id = crypto.randomUUID();
-    const fileName = `${id}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    
-    // Create uploads directory if it doesn't exist
-    const isProduction = process.env.NODE_ENV === 'production';
-    const uploadDir = isProduction 
-      ? path.join('/tmp', 'pulse-uploads') 
-      : path.join(process.cwd(), 'public', 'uploads');
-    
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-      console.log(`Created upload directory: ${uploadDir}`);
+    // Validate file size (max 25MB)
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { error: 'File size exceeds 25MB limit' }, 
+        { status: 400 }
+      );
     }
+
+    // Generate document ID and metadata
+    const id = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sanitizedName = sanitizeFilename(file.name);
+    const fileBuffer = await file.arrayBuffer();
     
-    const filePath = path.join(uploadDir, fileName);
-    const fileUrl = isProduction 
-      ? `/api/files/${fileName}` 
-      : `/uploads/${fileName}`;
+    let url: string;
     
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    
-    // In production, handle file saving differently if needed
-    if (isProduction) {
-      // If using Vercel Blob, uncomment this code:
+    // Store file based on environment and blob availability
+    if (process.env.BLOB_READ_WRITE_TOKEN && !IS_DEV) {
       try {
-        console.log('Checking for Vercel Blob support...');
-        if (process.env.NEXT_PUBLIC_USE_VERCEL_BLOB === 'true') {
-          const { put } = await import('@vercel/blob');
-          console.log('Using Vercel Blob for storage');
-          const blob = await put(fileName, buffer, {
-            access: 'public',
-          });
-          const blobUrl = blob.url;
-          console.log(`File uploaded to Vercel Blob: ${blobUrl}`);
-          
-          // Store file info in database using Drizzle
-          try {
-            // Check if db is properly initialized
-            if (!db) {
-              console.error('Database not initialized');
-              throw new Error('Database not initialized');
-            }
-            
-            const result = await db.insert(documents).values({
-              id,
-              name: file.name,
-              type: file.type,
-              size: file.size.toString(),
-              path: fileName,
-              url: blobUrl,
-              organizationId: 'default-org', // Replace with actual org ID from auth
-              userId: 'default-user', // Replace with actual user ID from auth
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
-            
-            console.log('Document saved to database with Blob URL');
-            
-            return NextResponse.json({
-              success: true,
-              file: {
-                id,
-                filename: fileName,
-                originalName: file.name,
-                size: file.size,
-                type: file.type,
-                url: blobUrl,
-                uploadedAt: new Date().toISOString(),
-              }
-            });
-          } catch (dbError) {
-            console.error('Database error with Blob storage:', dbError);
-            // Continue with local storage as fallback
-          }
-        } else {
-          console.log('Vercel Blob not enabled, using file system storage');
-        }
+        // Production: use Vercel Blob Storage
+        const blob = await put(`${id}-${sanitizedName}`, file, {
+          access: 'public',
+          addRandomSuffix: false,
+        });
+        url = blob.url;
+        console.log('File uploaded to blob storage:', blob.url);
       } catch (blobError) {
-        console.error('Vercel Blob error, falling back to file system:', blobError);
+        console.error('Blob storage error:', blobError);
+        return NextResponse.json(
+          { error: 'Failed to upload to cloud storage' }, 
+          { status: 500 }
+        );
       }
-      
-      // Fallback to local storage in /tmp
-      console.log(`Saving file to: ${filePath}`);
-      await writeFile(filePath, buffer);
     } else {
-      // In development, save to public/uploads
-      console.log(`Saving file to: ${filePath}`);
-      await writeFile(filePath, buffer);
+      // Development: store as data URL (not recommended for production)
+      const base64 = Buffer.from(fileBuffer).toString('base64');
+      url = `data:${file.type};base64,${base64}`;
+      console.log('File stored as base64 (development mode)');
     }
     
-    // Store file info in database using Drizzle
-    try {
-      // Check if db is properly initialized
-      if (!db) {
-        console.error('Database not initialized');
-        throw new Error('Database not initialized');
-      }
-      
-      // Get user and organization info from request headers (set by middleware)
-      const userId = request.headers.get('x-auth-user-id') || 'default-user';
-      const orgId = request.headers.get('x-auth-organization-id') || 'default-org';
-      
-      const result = await db.insert(documents).values({
-        id,
-        name: file.name,
-        type: file.type,
-        size: file.size.toString(),
-        path: filePath,
-        url: fileUrl,
-        organizationId: orgId,
-        userId: userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      
-      console.log('Document saved to database', result);
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-      // Continue anyway so the file is still saved
-    }
-
-    return NextResponse.json({
-      success: true,
-      file: {
-        id,
-        filename: fileName,
-        originalName: file.name,
-        size: file.size,
-        type: file.type,
-        url: fileUrl,
-        uploadedAt: new Date().toISOString(),
-      }
+    // Create document record
+    const document: Document = {
+      id,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      category,
+      uploadDate: new Date().toISOString(),
+      url,
+      status: 'draft',
+      uploadedBy: request.headers.get('x-auth-user-id') || 'demo-user',
+    };
+    
+    // Add to document storage
+    const documents = await getDocuments();
+    documents.unshift(document); // Add to beginning
+    await saveDocuments(documents);
+    
+    console.log('Document uploaded successfully:', {
+      id: document.id,
+      name: document.name,
+      size: document.size,
+      category: document.category
     });
+    
+    return NextResponse.json({ 
+      success: true, 
+      document,
+      message: 'Document uploaded successfully'
+    });
+    
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Document upload error:', error);
+    
+    // Return appropriate error message
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: `Upload failed: ${error.message}` },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to upload document', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'An unexpected error occurred during upload' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - Retrieve all documents
+export async function GET() {
+  try {
+    const documents = await getDocuments();
+    
+    return NextResponse.json({ 
+      success: true,
+      documents,
+      count: documents.length
+    });
+    
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch documents' },
       { status: 500 }
     );
   }

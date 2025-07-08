@@ -1,0 +1,9 @@
+Fix authentication and document upload issues
+
+- Fixed auth session endpoint errors that were causing 404 and 405 responses
+- Updated NextAuth configuration to match between App Router and Pages Router
+- Improved middleware handling of authentication routes
+- Fixed document upload functionality by correcting form field names and API endpoints
+- Enhanced error handling in file upload utilities
+- Improved Vercel Blob integration for production environments
+- Added detailed documentation in AUTH_ERRORS_FIX.md and DOCUMENT_UPLOAD_FIX.md

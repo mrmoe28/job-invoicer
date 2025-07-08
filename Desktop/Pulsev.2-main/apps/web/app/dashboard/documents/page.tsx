@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FileText, Upload, Download, Trash2, Search, 
-  Filter, Eye, Check, X, LayoutGrid, LayoutList 
+  Filter, Eye, Check, X, LayoutGrid, LayoutList,
+  AlertCircle
 } from 'lucide-react';
 import DashboardLayout from '@/components/dashboard-layout';
 import { useToast } from '@/components/Toast';
@@ -18,9 +19,7 @@ interface Document {
   uploadDate: string;
   url: string;
   status: 'draft' | 'pending' | 'signed';
-  signedUrl?: string;
-  signedDate?: string;
-  signedBy?: string;
+  uploadedBy?: string;
 }
 
 // Document categories
@@ -28,6 +27,8 @@ const CATEGORIES = [
   { id: 'contract', name: 'Contract' },
   { id: 'proposal', name: 'Proposal' },
   { id: 'invoice', name: 'Invoice' },
+  { id: 'agreement', name: 'Agreement' },
+  { id: 'permit', name: 'Permit' },
   { id: 'other', name: 'Other' }
 ];
 
@@ -51,6 +52,8 @@ export default function DocumentsPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [viewDocument, setViewDocument] = useState<Document | null>(null);
+  const [uploadCategory, setUploadCategory] = useState('contract');
+  const [error, setError] = useState<string | null>(null);
   
   // Toast notifications
   const { addToast, ToastContainer } = useToast();
@@ -64,18 +67,28 @@ export default function DocumentsPage() {
   const loadDocuments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/docs');
+      setError(null);
+      
+      const response = await fetch('/api/documents', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (response.ok) {
         const data = await response.json();
         setDocuments(data.documents || []);
+        console.log('Documents loaded:', data.documents?.length || 0);
       } else {
-        console.error('Error loading documents:', response.statusText);
-        addToast('Failed to load documents', 'error');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
     } catch (error) {
       console.error('Error loading documents:', error);
-      addToast('Failed to load documents', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load documents';
+      setError(errorMessage);
+      addToast(`Failed to load documents: ${errorMessage}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -92,36 +105,42 @@ export default function DocumentsPage() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Validate file type (PDF only for now)
+        // Validate file type (PDF only)
         if (file.type !== 'application/pdf') {
           addToast(`${file.name} is not a PDF file`, 'error');
           continue;
         }
         
-        // Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-          addToast(`${file.name} exceeds the 10MB limit`, 'error');
+        // Validate file size (max 25MB)
+        if (file.size > 25 * 1024 * 1024) {
+          addToast(`${file.name} exceeds the 25MB limit`, 'error');
           continue;
         }
         
         // Create form data
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('category', 'contract'); // Default category
+        formData.append('category', uploadCategory);
+        
+        console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
         
         // Upload file
-        const response = await fetch('/api/docs', {
+        const response = await fetch('/api/documents/upload', {
           method: 'POST',
           body: formData
         });
         
         if (response.ok) {
           const data = await response.json();
+          console.log('Upload successful:', data);
+          
+          // Add document to list
           setDocuments(prev => [data.document, ...prev]);
           addToast(`${file.name} uploaded successfully`, 'success');
         } else {
-          const error = await response.json();
-          addToast(`Failed to upload ${file.name}: ${error.error || 'Unknown error'}`, 'error');
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('Upload failed:', errorData);
+          addToast(`Failed to upload ${file.name}: ${errorData.error || 'Unknown error'}`, 'error');
         }
       }
       
@@ -129,7 +148,8 @@ export default function DocumentsPage() {
       setShowUpload(false);
     } catch (error) {
       console.error('Upload error:', error);
-      addToast('An error occurred during upload', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during upload';
+      addToast(`Upload failed: ${errorMessage}`, 'error');
     } finally {
       setUploading(false);
     }
@@ -142,7 +162,7 @@ export default function DocumentsPage() {
     }
     
     try {
-      const response = await fetch(`/api/docs/${doc.id}`, {
+      const response = await fetch(`/api/documents/${doc.id}`, {
         method: 'DELETE'
       });
       
@@ -150,12 +170,13 @@ export default function DocumentsPage() {
         setDocuments(prev => prev.filter(d => d.id !== doc.id));
         addToast(`${doc.name} deleted successfully`, 'success');
       } else {
-        const error = await response.json();
-        addToast(`Failed to delete ${doc.name}: ${error.error || 'Unknown error'}`, 'error');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        addToast(`Failed to delete ${doc.name}: ${errorData.error || 'Unknown error'}`, 'error');
       }
     } catch (error) {
       console.error('Delete error:', error);
-      addToast('An error occurred while deleting the document', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while deleting the document';
+      addToast(`Delete failed: ${errorMessage}`, 'error');
     }
   };
 
@@ -187,16 +208,38 @@ export default function DocumentsPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Documents</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Documents</h1>
+            <p className="text-gray-400 mt-1">
+              Manage your solar project documents, contracts, and agreements
+            </p>
+          </div>
           
           <button
             onClick={() => setShowUpload(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors"
           >
             <Upload className="w-4 h-4" />
             Upload Document
           </button>
         </div>
+
+        {/* Error display */}
+        {error && (
+          <div className="bg-red-900/50 border border-red-500 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-red-400 font-medium">Error loading documents</p>
+              <p className="text-red-300 text-sm">{error}</p>
+            </div>
+            <button
+              onClick={loadDocuments}
+              className="ml-auto bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         
         {/* Filters */}
         <div className="flex items-center space-x-4">
@@ -207,14 +250,14 @@ export default function DocumentsPage() {
               placeholder="Search documents..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-orange-500 focus:outline-none"
             />
           </div>
           
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="bg-gray-700 border border-gray-600 rounded-lg text-white px-3 py-2"
+            className="bg-gray-700 border border-gray-600 rounded-lg text-white px-3 py-2 focus:border-orange-500 focus:outline-none"
           >
             <option value="">All Categories</option>
             {CATEGORIES.map(cat => (
@@ -225,7 +268,7 @@ export default function DocumentsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-gray-700 border border-gray-600 rounded-lg text-white px-3 py-2"
+            className="bg-gray-700 border border-gray-600 rounded-lg text-white px-3 py-2 focus:border-orange-500 focus:outline-none"
           >
             <option value="">All Statuses</option>
             <option value="draft">Draft</option>
@@ -236,13 +279,15 @@ export default function DocumentsPage() {
           <div className="flex bg-gray-700 rounded-lg p-1">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded ${viewMode === 'list' ? 'bg-orange-500 text-white' : 'text-gray-400'}`}
+              className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'}`}
+              title="List view"
             >
               <LayoutList className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-orange-500 text-white' : 'text-gray-400'}`}
+              className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'}`}
+              title="Grid view"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
@@ -257,15 +302,35 @@ export default function DocumentsPage() {
                 <h2 className="text-xl font-bold text-white">Upload Document</h2>
                 <button 
                   onClick={() => setShowUpload(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-white transition-colors"
+                  disabled={uploading}
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Category selection */}
+              <div className="mb-4">
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Document Category
+                </label>
+                <select
+                  value={uploadCategory}
+                  onChange={(e) => setUploadCategory(e.target.value)}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg text-white px-3 py-2 focus:border-orange-500 focus:outline-none"
+                  disabled={uploading}
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
               
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center ${
-                  uploading ? 'opacity-50' : 'hover:border-orange-500 hover:bg-gray-700'
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                  uploading 
+                    ? 'opacity-50 cursor-not-allowed border-gray-600' 
+                    : 'hover:border-orange-500 hover:bg-gray-700 border-gray-600'
                 }`}
                 onClick={() => {
                   if (!uploading) {
@@ -282,7 +347,7 @@ export default function DocumentsPage() {
                   <>
                     <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-300 mb-2">Click to browse or drag & drop</p>
-                    <p className="text-gray-500 text-sm">PDF files only (max 10MB)</p>
+                    <p className="text-gray-500 text-sm">PDF files only (max 25MB)</p>
                   </>
                 )}
                 
@@ -308,7 +373,7 @@ export default function DocumentsPage() {
                 <h2 className="text-xl font-bold text-white truncate">{viewDocument.name}</h2>
                 <button 
                   onClick={() => setViewDocument(null)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -326,14 +391,14 @@ export default function DocumentsPage() {
                 <a
                   href={viewDocument.url}
                   download={viewDocument.name}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   Download
                 </a>
                 <button 
                   onClick={() => setViewDocument(null)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
                   Close
                 </button>
@@ -357,6 +422,15 @@ export default function DocumentsPage() {
                 ? "Upload your first document to get started" 
                 : "Try changing your search filters"}
             </p>
+            {documents.length === 0 && (
+              <button
+                onClick={() => setShowUpload(true)}
+                className="mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 mx-auto transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Upload First Document
+              </button>
+            )}
           </div>
         ) : viewMode === 'list' ? (
           <div className="bg-gray-800 rounded-lg overflow-hidden">
@@ -385,7 +459,7 @@ export default function DocumentsPage() {
               </thead>
               <tbody className="divide-y divide-gray-700">
                 {filteredDocs.map(doc => (
-                  <tr key={doc.id} className="hover:bg-gray-700">
+                  <tr key={doc.id} className="hover:bg-gray-700 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <FileText className="w-4 h-4 text-gray-400 mr-3" />
@@ -412,7 +486,7 @@ export default function DocumentsPage() {
                       <div className="flex justify-end space-x-2">
                         <button
                           onClick={() => setViewDocument(doc)}
-                          className="text-blue-400 hover:text-blue-300"
+                          className="text-blue-400 hover:text-blue-300 transition-colors p-1"
                           title="View"
                         >
                           <Eye className="w-4 h-4" />
@@ -420,7 +494,7 @@ export default function DocumentsPage() {
                         {doc.status !== 'signed' && (
                           <a
                             href={`/dashboard/documents/sign?id=${doc.id}`}
-                            className="text-orange-400 hover:text-orange-300"
+                            className="text-orange-400 hover:text-orange-300 transition-colors p-1"
                             title="Sign Document"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -431,14 +505,14 @@ export default function DocumentsPage() {
                         <a
                           href={doc.url}
                           download={doc.name}
-                          className="text-green-400 hover:text-green-300"
+                          className="text-green-400 hover:text-green-300 transition-colors p-1"
                           title="Download"
                         >
                           <Download className="w-4 h-4" />
                         </a>
                         <button
                           onClick={() => handleDeleteDocument(doc)}
-                          className="text-red-400 hover:text-red-300"
+                          className="text-red-400 hover:text-red-300 transition-colors p-1"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -453,14 +527,14 @@ export default function DocumentsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredDocs.map(doc => (
-              <div key={doc.id} className="bg-gray-800 rounded-lg overflow-hidden flex flex-col">
+              <div key={doc.id} className="bg-gray-800 rounded-lg overflow-hidden flex flex-col hover:bg-gray-750 transition-colors">
                 <div className="p-4 flex-1">
                   <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center">
-                      <FileText className="w-5 h-5 text-gray-400 mr-2" />
-                      <h3 className="text-white font-medium truncate">{doc.name}</h3>
+                    <div className="flex items-center min-w-0 flex-1">
+                      <FileText className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" />
+                      <h3 className="text-white font-medium truncate" title={doc.name}>{doc.name}</h3>
                     </div>
-                    <span className={`ml-2 px-2 py-1 rounded-full text-xs ${getStatusBadge(doc.status)}`}>
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs flex-shrink-0 ${getStatusBadge(doc.status)}`}>
                       {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
                     </span>
                   </div>
@@ -475,7 +549,7 @@ export default function DocumentsPage() {
                 <div className="bg-gray-700 p-3 flex justify-around">
                   <button
                     onClick={() => setViewDocument(doc)}
-                    className="text-blue-400 hover:text-blue-300 p-2"
+                    className="text-blue-400 hover:text-blue-300 p-2 transition-colors"
                     title="View"
                   >
                     <Eye className="w-4 h-4" />
@@ -483,7 +557,7 @@ export default function DocumentsPage() {
                   {doc.status !== 'signed' && (
                     <a
                       href={`/dashboard/documents/sign?id=${doc.id}`}
-                      className="text-orange-400 hover:text-orange-300 p-2"
+                      className="text-orange-400 hover:text-orange-300 p-2 transition-colors"
                       title="Sign Document"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -494,14 +568,14 @@ export default function DocumentsPage() {
                   <a
                     href={doc.url}
                     download={doc.name}
-                    className="text-green-400 hover:text-green-300 p-2"
+                    className="text-green-400 hover:text-green-300 p-2 transition-colors"
                     title="Download"
                   >
                     <Download className="w-4 h-4" />
                   </a>
                   <button
                     onClick={() => handleDeleteDocument(doc)}
-                    className="text-red-400 hover:text-red-300 p-2"
+                    className="text-red-400 hover:text-red-300 p-2 transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
