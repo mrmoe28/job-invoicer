@@ -68,7 +68,6 @@ export interface Customer {
   assignedContractor?: string;
   tags: string[];
   notes: string;
-  documents: string[]; // Document IDs
   contracts: string[]; // Contract IDs
   communicationHistory: string[]; // Communication IDs
   createdAt: Date;

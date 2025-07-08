@@ -101,7 +101,6 @@ export interface Contractor {
     licenses: boolean;
     references: boolean;
   };
-  documents: string[]; // Document IDs
   assignedProjects: string[]; // Project IDs
   paymentInfo: {
     rate: number;

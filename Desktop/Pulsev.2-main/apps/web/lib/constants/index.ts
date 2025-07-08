@@ -31,7 +31,6 @@ export const API_ENDPOINTS = {
     USERS: '/users',
     JOBS: '/jobs',
     CONTACTS: '/contacts',
-    DOCUMENTS: '/documents',
     DASHBOARD: '/dashboard/stats',
 } as const;
 

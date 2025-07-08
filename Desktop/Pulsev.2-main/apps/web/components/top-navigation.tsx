@@ -48,7 +48,6 @@ const navigationItems = [
   { name: 'Tasks', href: '/dashboard/tasks', icon: Icons.tasks },
   { name: 'Jobs', href: '/dashboard/jobs', icon: Icons.jobs },
   { name: 'Contractors', href: '/dashboard/contractors', icon: Icons.crew },
-  { name: 'Documents', href: '/dashboard/documents', icon: Icons.documents },
   { name: 'Scheduling', href: '/dashboard/scheduling', icon: Icons.scheduling },
 ];
 

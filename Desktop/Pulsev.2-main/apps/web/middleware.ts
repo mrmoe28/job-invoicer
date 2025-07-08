@@ -14,10 +14,7 @@ export function middleware(request: NextRequest) {
     '/login',
     '/auth',
     '/api/auth',      // Include all auth endpoints as public
-    '/test-upload',
-    '/api/documents/upload-simple',
     '/api/files',
-    '/api/documents',  // Add documents API
     '/api/docs',       // Add docs API
   ];
   
