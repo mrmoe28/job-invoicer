@@ -57,12 +57,6 @@ const navigationItems: NavItem[] = [
     icon: HardHat,
   },
   {
-    title: 'Documents',
-    href: '/dashboard/documents',
-    icon: FileText,
-    badge: 3, // Example: pending signatures
-  },
-  {
     title: 'Jobs',
     href: '/dashboard/jobs',
     icon: Building,
