@@ -1,201 +1,78 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/core/layouts/DashboardLayout';
-import { useAuthContext } from '@/components/providers/AuthProvider';
 import { useNotifications } from '@/components/providers/NotificationProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { 
   Upload,
   FileText,
-  Search,
-  Filter,
   Download,
-  Eye,
-  Pen,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Plus,
-  MoreHorizontal
+  Trash2,
+  Eye
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 
-interface Document {
+interface SimpleDocument {
   id: string;
-  fileName: string;
-  title?: string;
-  fileType: string;
-  fileSize: number;
+  name: string;
+  type: string;
+  size: number;
+  uploadedAt: string;
   category: string;
-  status: 'active' | 'archived' | 'deleted';
-  uploadedBy: string;
-  createdAt: string;
-  signatures?: DocumentSignature[];
-  hasSignatures: boolean;
 }
 
-interface DocumentSignature {
-  id: string;
-  signerName: string;
-  signerEmail: string;
-  status: 'pending' | 'signed' | 'declined' | 'expired';
-  signedAt?: string;
-  signerRole?: string;
-}
-
-export default function DocumentsPage() {
-  const { user } = useAuthContext();
+export default function SimpleDocumentsPage() {
   const { success, error } = useNotifications();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [documents, setDocuments] = useState<SimpleDocument[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('contract');
 
-  // Mock data - in production, this would come from API calls
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Try to fetch from API first
-        try {
-          const response = await fetch('/api/documents?organizationId=org_default');
-          if (response.ok) {
-            const data = await response.json();
-            setDocuments(data.documents || []);
-            return;
-          }
-        } catch (apiError) {
-          console.log('API not available, using mock data');
-        }
-        
-        // Fallback to mock data if API is not available
-        setDocuments([
-          {
-            id: '1',
-            fileName: 'solar_installation_contract.pdf',
-            title: 'Solar Installation Contract - Johnson Residence',
-            fileType: 'pdf',
-            fileSize: 2458000,
-            category: 'contract',
-            status: 'active',
-            uploadedBy: 'John Smith',
-            createdAt: '2024-12-28T10:30:00Z',
-            hasSignatures: true,
-            signatures: [
-              {
-                id: '1',
-                signerName: 'Sarah Johnson',
-                signerEmail: 'sarah.johnson@email.com',
-                status: 'signed',
-                signedAt: '2024-12-28T14:20:00Z',
-                signerRole: 'customer'
-              },
-              {
-                id: '2',
-                signerName: 'Mike Davis',
-                signerEmail: 'mike.davis@pulsecrm.com',
-                status: 'signed',
-                signedAt: '2024-12-28T15:45:00Z',
-                signerRole: 'contractor'
-              }
-            ]
-          },
-          {
-            id: '2',
-            fileName: 'permit_application_williams.pdf',
-            title: 'Building Permit Application - Williams Property',
-            fileType: 'pdf',
-            fileSize: 1892000,
-            category: 'permit',
-            status: 'active',
-            uploadedBy: 'Lisa Chen',
-            createdAt: '2024-12-27T09:15:00Z',
-            hasSignatures: true,
-            signatures: [
-              {
-                id: '3',
-                signerName: 'Robert Williams',
-                signerEmail: 'robert.williams@email.com',
-                status: 'pending',
-                signerRole: 'property_owner'
-              }
-            ]
-          },
-          {
-            id: '3',
-            fileName: 'energy_assessment_martinez.pdf',
-            title: 'Energy Assessment Report - Martinez Home',
-            fileType: 'pdf',
-            fileSize: 3421000,
-            category: 'assessment',
-            status: 'active',
-            uploadedBy: 'Tom Wilson',
-            createdAt: '2024-12-26T16:20:00Z',
-            hasSignatures: false,
-            signatures: []
-          },
-          {
-            id: '4',
-            fileName: 'warranty_documentation_garcia.pdf',
-            title: 'Solar Panel Warranty - Garcia Installation',
-            fileType: 'pdf',
-            fileSize: 1567000,
-            category: 'warranty',
-            status: 'active',
-            uploadedBy: 'Anna Rodriguez',
-            createdAt: '2024-12-25T11:10:00Z',
-            hasSignatures: true,
-            signatures: [
-              {
-                id: '4',
-                signerName: 'Carlos Garcia',
-                signerEmail: 'carlos.garcia@email.com',
-                status: 'declined',
-                signerRole: 'customer'
-              }
-            ]
-          }
-        ]);
-      } finally {
-        setIsLoading(false);
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    console.log('📤 Starting upload:', file.name);
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('category', selectedCategory);
+
+      console.log('📡 Sending to API...');
+      const response = await fetch('/api/files', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      console.log('📥 Response:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
       }
-    };
 
-    fetchDocuments();
-  }, []);
+      // Add to documents list
+      setDocuments(prev => [result.document, ...prev]);
+      success(`File "${file.name}" uploaded successfully!`);
+      
+      // Reset file input
+      event.target.value = '';
 
-  const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = doc.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (doc.title?.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = filterCategory === 'all' || doc.category === filterCategory;
-    const matchesStatus = filterStatus === 'all' || doc.status === filterStatus;
-    
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+    } catch (err) {
+      console.error('❌ Upload error:', err);
+      error(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== id));
+    success('Document deleted');
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -215,340 +92,119 @@ export default function DocumentsPage() {
     });
   };
 
-  const getSignatureStatus = (document: Document) => {
-    if (!document.hasSignatures) {
-      return { status: 'none', label: 'No signatures required', color: 'bg-gray-100 text-gray-800' };
-    }
-
-    const signatures = document.signatures || [];
-    const pending = signatures.filter(s => s.status === 'pending').length;
-    const signed = signatures.filter(s => s.status === 'signed').length;
-    const declined = signatures.filter(s => s.status === 'declined').length;
-    const total = signatures.length;
-
-    if (declined > 0) {
-      return { status: 'declined', label: 'Signature declined', color: 'bg-red-100 text-red-800' };
-    }
-    if (signed === total) {
-      return { status: 'complete', label: 'All signed', color: 'bg-green-100 text-green-800' };
-    }
-    if (pending > 0) {
-      return { status: 'pending', label: `${pending} pending`, color: 'bg-yellow-100 text-yellow-800' };
-    }
-
-    return { status: 'none', label: 'No signatures', color: 'bg-gray-100 text-gray-800' };
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    console.log('📤 Starting file upload:', file.name, file.type, file.size);
-
-    try {
-      setIsLoading(true);
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('organizationId', '69dbb846-b799-42f8-91be-164ae3a589c4'); // Use actual org ID from database
-      formData.append('uploadedByUserId', '1026dab7-7ffc-45a3-82c7-e6eb961756cd'); // Use actual user ID from database
-      formData.append('category', selectedCategory);
-      formData.append('title', file.name.replace(/\.[^/.]+$/, "")); // Remove file extension
-      formData.append('description', `Uploaded ${selectedCategory} document via Documents page`);
-
-      console.log('📋 FormData prepared:', {
-        fileName: file.name,
-        category: selectedCategory,
-        fileSize: file.size,
-        fileType: file.type
-      });
-
-      const response = await fetch('/api/upload-simple', {
-        method: 'POST',
-        body: formData,
-      });
-
-      console.log('📡 Upload response status:', response.status);
-
-      const result = await response.json();
-      console.log('📄 Upload response data:', result);
-
-      if (!response.ok) {
-        throw new Error(result.error || result.details || 'Upload failed');
-      }
-
-      // Add the new document to the list
-      setDocuments(prev => [result.document, ...prev]);
-      
-      success(`File "${file.name}" uploaded successfully!`);
-      setIsUploadOpen(false);
-      
-      // Reset the file input
-      event.target.value = '';
-      
-    } catch (err) {
-      console.error('❌ Upload error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to upload file';
-      error(`Upload failed: ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRequestSignature = (documentId: string) => {
-    success('Signature request sent successfully!');
-    // In production, this would send signature requests
-  };
-
-  const categories = [
-    { value: 'all', label: 'All Categories' },
-    { value: 'contract', label: 'Contracts' },
-    { value: 'permit', label: 'Permits' },
-    { value: 'assessment', label: 'Assessments' },
-    { value: 'warranty', label: 'Warranties' },
-    { value: 'proposal', label: 'Proposals' },
-    { value: 'invoice', label: 'Invoices' }
-  ];
-
   return (
     <DashboardLayout
-      title="Documents"
-      subtitle="Manage contracts, permits, and other solar project documents with e-signature capabilities."
-      sidebarCollapsed={sidebarCollapsed}
-      onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      title="Document Management"
+      subtitle="Simple PDF upload and management system"
     >
-      {/* Debug Section - Remove in production */}
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-medium text-blue-900 mb-2">Debug Information</h3>
-        <div className="text-sm text-blue-800">
-          <p>Documents loaded: {documents.length}</p>
-          <p>Upload API: /api/upload-simple (test mode)</p>
-          <p>Selected category: {selectedCategory}</p>
-          <p>Loading state: {isLoading ? 'true' : 'false'}</p>
-        </div>
-      </div>
-
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search documents..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <div className="flex gap-2">
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-white text-sm"
-          >
-            {categories.map(cat => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
-            ))}
-          </select>
-
-          <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Document
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Upload New Document</DialogTitle>
-                <DialogDescription>
-                  Upload a PDF document and configure signature requirements.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Select File
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                    onChange={handleFileUpload}
-                    disabled={isLoading}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Supported formats: PDF, Word documents, Images (max 10MB)
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Category
-                  </label>
-                  <select 
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md"
-                  >
-                    <option value="contract">Contract</option>
-                    <option value="permit">Permit</option>
-                    <option value="assessment">Assessment</option>
-                    <option value="warranty">Warranty</option>
-                    <option value="proposal">Proposal</option>
-                    <option value="invoice">Invoice</option>
-                  </select>
-                </div>
-                
-                {isLoading && (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                    <span className="ml-2 text-sm text-gray-600">Uploading...</span>
-                  </div>
-                )}
+      {/* Upload Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Upload Document</CardTitle>
+          <CardDescription>
+            Upload PDF files for your solar projects
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+                />
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-3 py-2 border rounded-md bg-white"
+                disabled={isUploading}
+              >
+                <option value="contract">Contract</option>
+                <option value="permit">Permit</option>
+                <option value="invoice">Invoice</option>
+                <option value="proposal">Proposal</option>
+              </select>
+            </div>
+            
+            {isUploading && (
+              <div className="flex items-center text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                Uploading...
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Documents List */}
       <Card>
         <CardHeader>
-          <CardTitle>Documents ({filteredDocuments.length})</CardTitle>
+          <CardTitle>Uploaded Documents ({documents.length})</CardTitle>
           <CardDescription>
-            Manage and track document signatures for your solar projects
+            Manage your uploaded PDF documents
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : filteredDocuments.length === 0 ? (
+          {documents.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>No documents found</p>
-              <p className="text-sm">Upload your first document to get started</p>
+              <p>No documents uploaded yet</p>
+              <p className="text-sm">Upload your first PDF document to get started</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredDocuments.map((document) => {
-                const signatureStatus = getSignatureStatus(document);
-                
-                return (
-                  <div key={document.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3 flex-1">
-                        <div className="flex-shrink-0">
-                          <FileText className="h-8 w-8 text-red-600" />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-medium text-gray-900 truncate">
-                            {document.title || document.fileName}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {document.fileName} • {formatFileSize(document.fileSize)}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Uploaded by {document.uploadedBy} on {formatDate(document.createdAt)}
-                          </p>
-                          
-                          {/* Signature Status */}
-                          <div className="flex items-center space-x-2 mt-2">
-                            <Badge className={signatureStatus.color}>
-                              {signatureStatus.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
-                              {signatureStatus.status === 'complete' && <CheckCircle className="h-3 w-3 mr-1" />}
-                              {signatureStatus.status === 'declined' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                              {signatureStatus.label}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {document.category}
-                            </Badge>
-                          </div>
-                          
-                          {/* Signature Details */}
-                          {document.hasSignatures && document.signatures && document.signatures.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {document.signatures.map((signature) => (
-                                <div key={signature.id} className="flex items-center text-xs text-gray-600">
-                                  <span className="font-medium">{signature.signerName}</span>
-                                  <span className="mx-1">•</span>
-                                  <span className={
-                                    signature.status === 'signed' ? 'text-green-600' :
-                                    signature.status === 'declined' ? 'text-red-600' :
-                                    'text-yellow-600'
-                                  }>
-                                    {signature.status === 'signed' && signature.signedAt 
-                                      ? `Signed ${formatDate(signature.signedAt)}`
-                                      : signature.status.charAt(0).toUpperCase() + signature.status.slice(1)
-                                    }
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        
-                        {document.hasSignatures && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleRequestSignature(document.id)}
-                          >
-                            <Pen className="h-4 w-4 mr-1" />
-                            Sign
-                          </Button>
-                        )}
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Pen className="h-4 w-4 mr-2" />
-                              Request Signature
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
-                              Archive
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+            <div className="space-y-3">
+              {documents.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-8 w-8 text-red-600" />
+                    <div>
+                      <h3 className="font-medium">{doc.name}</h3>
+                      <p className="text-sm text-gray-500">
+                        {formatFileSize(doc.size)} • Uploaded {formatDate(doc.uploadedAt)}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
+                  
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline">{doc.category}</Badge>
+                    
+                    <Button variant="outline" size="sm">
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-1" />
+                      Download
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDelete(doc.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <FileText className="h-8 w-8 text-blue-600" />
-              </div>
-              <div className="ml-4">
+              <FileText className="h-8 w-8 text-blue-600 mr-3" />
+              <div>
                 <p className="text-sm font-medium text-gray-900">Total Documents</p>
                 <p className="text-2xl font-bold text-gray-900">{documents.length}</p>
               </div>
@@ -559,15 +215,11 @@ export default function DocumentsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Clock className="h-8 w-8 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-900">Pending Signatures</p>
+              <Upload className="h-8 w-8 text-green-600 mr-3" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Contracts</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {documents.reduce((acc, doc) => 
-                    acc + (doc.signatures?.filter(s => s.status === 'pending').length || 0), 0
-                  )}
+                  {documents.filter(d => d.category === 'contract').length}
                 </p>
               </div>
             </div>
@@ -577,34 +229,11 @@ export default function DocumentsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-900">Completed</p>
+              <Download className="h-8 w-8 text-purple-600 mr-3" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Total Size</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {documents.filter(doc => {
-                    const signatures = doc.signatures || [];
-                    return signatures.length > 0 && signatures.every(s => s.status === 'signed');
-                  }).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <AlertTriangle className="h-8 w-8 text-red-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-900">Needs Attention</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {documents.reduce((acc, doc) => 
-                    acc + (doc.signatures?.filter(s => s.status === 'declined').length || 0), 0
-                  )}
+                  {formatFileSize(documents.reduce((acc, doc) => acc + doc.size, 0))}
                 </p>
               </div>
             </div>
