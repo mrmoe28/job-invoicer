@@ -1,15 +1,13 @@
 {
-  "buildCommand": "turbo run build --filter=@pulsecrm/web",
-  "installCommand": "pnpm install",
-  "ignoreCommand": "npx turbo-ignore",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "framework": "nextjs",
   "outputDirectory": "apps/web/.next",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/apps/web/$1"
-    }
-  ],
+  "ignoreCommand": "npx turbo-ignore",
+  "env": {
+    "TURBO_REMOTE_ONLY": "false",
+    "TURBO_RUN_SUMMARY": "false"
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -28,9 +26,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "TURBO_REMOTE_ONLY": "false",
-    "TURBO_RUN_SUMMARY": "false"
-  }
+  ]
 }
