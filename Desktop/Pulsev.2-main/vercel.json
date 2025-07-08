@@ -8,12 +8,14 @@
   "regions": ["iad1"],
   "env": {
     "ENABLE_EXPERIMENTAL_COREPACK": "0",
-    "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+    "COREPACK_ENABLE_STRICT": "0",
+    "SKIP_ENV_VALIDATION": "1",
     "NODE_ENV": "production"
   },
   "build": {
     "env": {
       "ENABLE_EXPERIMENTAL_COREPACK": "0",
+      "COREPACK_ENABLE_STRICT": "0",
       "NODE_ENV": "production",
       "TURBO_TELEMETRY_DISABLED": "1"
     }
