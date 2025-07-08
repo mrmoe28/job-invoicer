@@ -11,7 +11,6 @@ export function middleware(request: NextRequest) {
   
   // Public paths that don't require authentication
   const publicPaths = [
-    '/login',
     '/auth',
     '/api/auth',      // Include all auth endpoints as public
     '/api/files',
@@ -60,9 +59,9 @@ export function middleware(request: NextRequest) {
     });
   }
   
-  // For page routes, redirect to login if no token
+  // For page routes, redirect to auth if no token
   if (!token) {
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/auth', request.url);
     loginUrl.searchParams.set('from', path);
     return NextResponse.redirect(loginUrl);
   }

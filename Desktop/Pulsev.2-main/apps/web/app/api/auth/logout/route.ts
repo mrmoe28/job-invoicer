@@ -20,6 +20,6 @@ export async function GET(request: NextRequest) {
   cookies().delete('next-auth.session-token');
   cookies().delete('__Secure-next-auth.session-token');
   
-  // Redirect to login page
-  return NextResponse.redirect(new URL('/login', request.url));
+  // Redirect to auth page
+  return NextResponse.redirect(new URL('/auth', request.url));
 }
