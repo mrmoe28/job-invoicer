@@ -8,16 +8,19 @@
   "regions": ["iad1"],
   "env": {
     "ENABLE_EXPERIMENTAL_COREPACK": "0",
-    "COREPACK_ENABLE_STRICT": "0", 
-    "SKIP_ENV_VALIDATION": "1",
+    "COREPACK_ENABLE_STRICT": "0",
+    "COREPACK_ROOT": "",
+    "PACKAGEMANAGER": "",
     "NODE_ENV": "production",
     "VERCEL_FORCE_NO_BUILD_CACHE": "1"
   },
   "build": {
     "env": {
-      "ENABLE_EXPERIMENTAL_COREPACK": "0",
+      "ENABLE_EXPERIMENTAL_COREPACK": "0", 
       "COREPACK_ENABLE_STRICT": "0",
-      "NODE_ENV": "production", 
+      "COREPACK_ROOT": "",
+      "PACKAGEMANAGER": "",
+      "NODE_ENV": "production",
       "TURBO_TELEMETRY_DISABLED": "1",
       "VERCEL_FORCE_NO_BUILD_CACHE": "1"
     }
