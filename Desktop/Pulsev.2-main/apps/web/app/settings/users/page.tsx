@@ -1,4 +1,4 @@
-import DashboardLayout from '../../../components/dashboard-layout';
+import { DashboardLayout } from '../../../components/dashboard-layout';
 
 // TODO: Replace with actual user data from API
 interface User {

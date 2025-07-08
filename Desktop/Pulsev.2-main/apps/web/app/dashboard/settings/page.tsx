@@ -1,4 +1,4 @@
-import DashboardLayout from '../../../components/dashboard-layout';
+import { DashboardLayout } from '../../../components/dashboard-layout';
 import Link from 'next/link';
 
 const settingsSections = [

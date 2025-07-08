@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import DashboardLayout from '../../../components/dashboard-layout';
+import { DashboardLayout } from '../../../components/dashboard-layout';
 
 interface UserProfile {
   firstName: string;

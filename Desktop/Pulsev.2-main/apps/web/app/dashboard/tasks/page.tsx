@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import DashboardLayout from '../../../components/dashboard-layout';
+import { DashboardLayout } from '../../../components/dashboard-layout';
 
 export default function TasksPage() {
   const [filter, setFilter] = useState('All');

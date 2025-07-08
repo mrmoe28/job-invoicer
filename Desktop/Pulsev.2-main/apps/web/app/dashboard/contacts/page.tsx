@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import DashboardLayout from '@/components/dashboard-layout';
+import { DashboardLayout } from '@/components/core/layouts/DashboardLayout';
 
 interface Contact {
   id: string;

@@ -5,7 +5,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import DashboardLayout from '../../../components/dashboard-layout';
+import { DashboardLayout } from '../../../components/dashboard-layout';
 import { trpc } from '../../../lib/trpc';
 import type { JobPriority, JobStatus } from '../../../lib/types';
 

@@ -1,4 +1,4 @@
-import DashboardLayout from '../../../components/dashboard-layout';
+import { DashboardLayout } from '../../../components/dashboard-layout';
 
 const backupHistory = [
   { id: 1, date: '2025-07-01 03:00:00', type: 'Automatic', size: '2.3 GB', status: 'Completed', duration: '8m 23s' },
