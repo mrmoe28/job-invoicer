@@ -1,12 +1,13 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "installCommand": "npm install --no-frozen-lockfile",
   "framework": "nextjs",
   "outputDirectory": "apps/web/.next",
   "ignoreCommand": "npx turbo-ignore",
   "env": {
     "TURBO_REMOTE_ONLY": "false",
-    "TURBO_RUN_SUMMARY": "false"
+    "TURBO_RUN_SUMMARY": "false",
+    "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
   },
   "headers": [
     {
