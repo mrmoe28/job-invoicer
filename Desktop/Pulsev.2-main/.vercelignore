@@ -2,6 +2,12 @@
 node_modules/
 .pnpm-store/
 
+# Package manager files (force npm only)
+pnpm-lock.yaml
+pnpm-workspace.yaml
+bun.lock
+yarn.lock
+
 # Build outputs (except the ones needed)
 .turbo/
 dist/
