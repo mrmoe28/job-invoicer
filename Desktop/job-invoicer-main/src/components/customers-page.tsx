@@ -36,8 +36,9 @@ import {
   User
 } from 'lucide-react';
 import { CustomerForm } from '@/components/customer-form';
+import type { CustomerFormData } from '@/lib/types';
 
-interface CustomerFormData {
+interface DialogFormData {
   name: string;
   email: string;
   phone: string;
@@ -52,9 +53,10 @@ export function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingFormData, setEditingFormData] = useState<CustomerFormData | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<CustomerFormData>({
+  const [formData, setFormData] = useState<DialogFormData>({
     name: '',
     email: '',
     phone: '',
@@ -128,7 +130,8 @@ export function CustomersPage() {
 
   const handleOpenForm = (customer?: Customer) => {
     if (customer) {
-      setEditingCustomer({
+      setEditingCustomer(customer);
+      setEditingFormData({
         customerType: customer.company ? 'commercial' : 'residential',
         firstName: customer.name?.split(' ')[0] || '',
         lastName: customer.name?.split(' ').slice(1).join(' ') || '',
@@ -145,6 +148,7 @@ export function CustomersPage() {
       });
     } else {
       setEditingCustomer(null);
+      setEditingFormData(null);
     }
     setIsFormOpen(true);
   };
@@ -152,6 +156,7 @@ export function CustomersPage() {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingCustomer(null);
+    setEditingFormData(null);
   };
 
   const handleSaveCustomer = async (customerData: {
@@ -298,7 +303,7 @@ export function CustomersPage() {
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         onSave={handleSaveCustomer}
-        customer={editingCustomer}
+        customer={editingFormData}
       />
 
       {/* Stats Cards */}
@@ -588,4 +593,6 @@ export function CustomersPage() {
       </Dialog>
     </div>
   );
-} 
+}
+
+export default CustomersPage;
