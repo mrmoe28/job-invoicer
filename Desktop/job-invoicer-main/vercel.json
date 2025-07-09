@@ -6,10 +6,7 @@
   "ignoreCommand": "exit 0",
   "devCommand": "npm run dev",
   "public": false,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ]
+  "env": {
+    "VERCEL_FORCE_NO_BUILD_CACHE": "1"
+  }
 }

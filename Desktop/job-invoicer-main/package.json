@@ -2,10 +2,9 @@
   "name": "job-invoicer-main",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "npm@9.6.7",
   "engines": {
-    "node": ">=18.17.0",
-    "npm": ">=9.0.0"
+    "node": "18.x",
+    "npm": "9.x"
   },
   "scripts": {
     "dev": "node scripts/dev-with-open.js",
