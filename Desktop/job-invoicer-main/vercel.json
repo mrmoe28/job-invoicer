@@ -1,12 +1,9 @@
 {
-  "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "npm run build",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm build",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "ignoreCommand": "exit 0",
-  "devCommand": "npm run dev",
-  "public": false,
-  "env": {
-    "VERCEL_FORCE_NO_BUILD_CACHE": "1"
-  }
+  "devCommand": "pnpm dev",
+  "public": false
 }
