@@ -1,0 +1,28 @@
+# Core web framework
+Flask==3.0.0
+Flask-CORS==4.0.0
+Flask-SocketIO==5.3.6
+
+# Audio processing
+numpy==1.24.3
+scipy==1.11.4
+librosa==0.10.1
+PyAudio==0.2.11
+
+# Real-time communication
+python-socketio==5.10.0
+
+# Audio format handling
+pydub==0.25.1
+
+# HTTP requests
+requests==2.31.0
+
+# Async support
+eventlet==0.33.3
+
+# System utilities
+psutil==5.9.6
+
+# Development
+python-dotenv==1.0.0

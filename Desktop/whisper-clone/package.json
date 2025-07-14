@@ -1,0 +1,62 @@
+{
+  "name": "whisper-clone",
+  "version": "1.0.0",
+  "description": "Real-time speech-to-text for Claude Code",
+  "main": "frontend/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "electron-builder",
+    "install-deps": "npm install && cd backend && pip install -r requirements.txt",
+    "setup": "./scripts/install-whisper.sh && npm run install-deps",
+    "demo": "./scripts/demo.sh",
+    "test-backend": "cd backend && python3 -c 'import app; print(\"Backend syntax OK\")'",
+    "test-frontend": "node -c frontend/main.js && node -c frontend/app.js && echo 'Frontend syntax OK'",
+    "test": "npm run test-backend && npm run test-frontend",
+    "clean": "rm -rf dist/ build/ node_modules/.cache/",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "whisper",
+    "speech-to-text",
+    "electron",
+    "claude",
+    "transcription"
+  ],
+  "author": "Whisper Clone Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "socket.io-client": "^4.7.4"
+  },
+  "build": {
+    "appId": "com.whisperclone.app",
+    "productName": "Whisper Clone",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "frontend/**/*",
+      "backend/**/*",
+      "whisper.cpp/main",
+      "models/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": "dmg"
+    },
+    "extraFiles": [
+      {
+        "from": "backend",
+        "to": "Resources/backend"
+      }
+    ]
+  }
+}
